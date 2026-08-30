@@ -16,7 +16,7 @@
         element.className = props[key];
       } else if (key === 'style' && typeof props[key] === 'object') {
         Object.assign(element.style, props[key]);
-      } else if (key === 'value') {
+      } else if (key === 'value' && tag !== 'select') {
         element.value = props[key];
       } else if (key === 'checked') {
         element.checked = !!props[key];
@@ -34,6 +34,10 @@
           element.appendChild(child);
         }
       }
+    }
+    // Set select value after options have been appended to DOM node
+    if (props.value !== undefined && tag === 'select') {
+      element.value = props.value;
     }
     return element;
   }
