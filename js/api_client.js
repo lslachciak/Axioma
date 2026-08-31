@@ -60,20 +60,6 @@
 
   /**
    * Main completion caller.
-   *
-   * @param {Object} config - Configuration options
-   * @param {string} config.provider - Provider key (openai, anthropic, gemini, xai, ollama, lmstudio, vllm, custom)
-   * @param {string} config.apiKey - API Key
-   * @param {string} config.baseUrl - Custom or default Base URL
-   * @param {string} config.model - Model identifier
-   * @param {number} [config.temperature] - Temperature setting
-   * @param {number} [config.seed] - Seed for deterministic outputs
-   * @param {string} [config.systemPrompt] - Custom System Prompt
-   * @param {boolean} [config.enableReasoning] - Enable reasoning / thinking mode
-   * @param {number} [config.reasoningBudget] - Reasoning token budget
-   * @param {Array<{role: string, content: string}>} messages - Conversation history messages
-   *
-   * @returns {Promise<{text: string, reasoning: string, tokenUsage: {promptTokens: number, completionTokens: number, reasoningTokens: number, totalTokens: number}}>}
    */
   async function completeChat(config, messages) {
     const provider = config.provider || 'openai';
@@ -82,8 +68,109 @@
       return callAnthropicAPI(config, messages);
     }
 
-    // OpenAI and OpenAI-compatible providers (OpenAI, Gemini, xAI, Ollama, LM Studio, vLLM, Custom)
+    if (provider === 'gemini' || (config.baseUrl && config.baseUrl.includes("generativelanguage.googleapis.com") && !config.baseUrl.includes("/openai"))) {
+      return callGeminiNativeAPI(config, messages);
+    }
+
+    // OpenAI and OpenAI-compatible providers (OpenAI, OpenAI-compatible Gemini endpoint, xAI, Ollama, LM Studio, vLLM, Custom)
     return callOpenAICompatibleAPI(config, messages);
+  }
+
+  /**
+   * Helper for Gemini Native REST API fallback.
+   * Endpoint format: https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={apiKey}
+   */
+  async function callGeminiNativeAPI(config, messages) {
+    const rawModel = (config.model || "gemini-1.5-flash").replace(/^models\//, "");
+    const apiKey = (config.apiKey || "").trim();
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${rawModel}:generateContent?key=${encodeURIComponent(apiKey)}`;
+
+    let systemInstructionText = config.systemPrompt || "";
+    const contents = [];
+
+    for (const msg of messages) {
+      if (msg.role === "system") {
+        systemInstructionText = systemInstructionText ? `${systemInstructionText}\n${msg.content}` : msg.content;
+      } else {
+        const role = msg.role === "assistant" || msg.role === "model" ? "model" : "user";
+        contents.push({
+          role: role,
+          parts: [{ text: msg.content }]
+        });
+      }
+    }
+
+    const payload = {
+      contents: contents
+    };
+
+    if (systemInstructionText) {
+      payload.systemInstruction = {
+        parts: [{ text: systemInstructionText }]
+      };
+    }
+
+    const generationConfig = {};
+    if (typeof config.temperature === 'number' && !isNaN(config.temperature)) {
+      generationConfig.temperature = config.temperature;
+    }
+
+    if (Object.keys(generationConfig).length > 0) {
+      payload.generationConfig = generationConfig;
+    }
+
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      let errorText = "";
+      try {
+        const errJson = await response.json();
+        errorText = errJson.error?.message || errJson.message || JSON.stringify(errJson);
+      } catch (e) {
+        errorText = await response.text();
+      }
+
+      // If OpenAI-compatible format was attempted or vice versa
+      throw new Error(`Gemini API Error [${response.status}]: ${errorText}`);
+    }
+
+    const data = await response.json();
+    const candidate = data.candidates && data.candidates[0];
+    const parts = candidate?.content?.parts || [];
+
+    let text = "";
+    for (const part of parts) {
+      if (part.text) text += part.text;
+    }
+
+    let reasoning = "";
+    if (text.includes("<think>")) {
+      const match = text.match(/<think>([\s\S]*?)<\/think>/);
+      if (match) {
+        reasoning = match[1].trim();
+        text = text.replace(/<think>[\s\S]*?<\/think>/, "").trim();
+      }
+    }
+
+    const usage = data.usageMetadata || {};
+    const promptTokens = usage.promptTokenCount || 0;
+    const completionTokens = usage.candidatesTokenCount || 0;
+    const totalTokens = usage.totalTokenCount || (promptTokens + completionTokens);
+
+    return {
+      text: text.trim(),
+      reasoning: reasoning,
+      tokenUsage: {
+        promptTokens,
+        completionTokens,
+        reasoningTokens: 0,
+        totalTokens
+      }
+    };
   }
 
   /**
@@ -127,9 +214,8 @@
       if (config.reasoningBudget && config.reasoningBudget > 0) {
         payload.max_completion_tokens = config.reasoningBudget;
       }
-      // Standard o1/o3 reasoning_effort if specified
       if (config.reasoningEffort) {
-        payload.reasoning_effort = config.reasoningEffort; // "low", "medium", "high"
+        payload.reasoning_effort = config.reasoningEffort;
       }
     }
 
@@ -147,6 +233,12 @@
       } catch (e) {
         errorText = await response.text();
       }
+
+      // Fallback: If OpenAI endpoint failed on Gemini base URL, automatically fall back to Gemini native REST API
+      if (config.provider === 'gemini' || (config.baseUrl && config.baseUrl.includes("generativelanguage.googleapis.com"))) {
+        return callGeminiNativeAPI(config, messages);
+      }
+
       throw new Error(`API Error [${response.status}]: ${errorText}`);
     }
 
