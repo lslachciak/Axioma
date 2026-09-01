@@ -319,7 +319,11 @@
             el('button', {
               onClick: () => window.DataExporter.exportToTSV(state.results, `Axioma_PVQ_RR_${state.model}_${new Date().toISOString().slice(0, 10)}.tsv`),
               className: 'bg-slate-800 hover:bg-slate-700 text-emerald-400 text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-700 flex items-center gap-1.5 transition'
-            }, el('i', { className: 'fa-solid fa-file-csv' }), ' TSV')
+            }, el('i', { className: 'fa-solid fa-file-csv' }), ' TSV'),
+            el('button', {
+              onClick: () => window.DataExporter.exportToXLSX(state.results, `Axioma_PVQ_RR_${state.model}_${new Date().toISOString().slice(0, 10)}.xlsx`),
+              className: 'bg-slate-800 hover:bg-slate-700 text-green-400 text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-700 flex items-center gap-1.5 transition'
+            }, el('i', { className: 'fa-solid fa-file-excel' }), ' XLSX')
           ) : null
         )
       )
