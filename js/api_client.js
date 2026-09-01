@@ -171,9 +171,6 @@
    */
   async function callGeminiNativeAPI(config, messages) {
     let userModel = (config.model || "gemini-1.5-flash").replace(/^models\//, "");
-    if (userModel === "gemini-2.5-flash" || userModel === "gemini-3.6-flash") {
-      userModel = "gemini-1.5-flash";
-    }
 
     const apiKey = (config.apiKey || "").trim();
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${userModel}:generateContent?key=${encodeURIComponent(apiKey)}`;
