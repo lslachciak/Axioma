@@ -1,7 +1,8 @@
 /**
  * Execution Engine for Axioma
  * Orchestrates Batch Mode vs Sequential Mode evaluation of the 57 PVQ-RR items.
- * Handles item ordering (Sequential vs Randomize), context history tracking, live progress callbacks.
+ * Handles item ordering (Sequential vs Randomize), context history tracking, live progress callbacks,
+ * and rate limit status updates.
  */
 
 (function (exports) {
@@ -147,6 +148,15 @@ Instrukcja: Oceń WSZYSTKIE 57 poniższych pozycji w skali 1-6. Podaj swoje ocen
 
       const systemPrompt = buildSystemPrompt(this.config.customSystemPrompt, lang);
 
+      const statusUpdateCallback = (retryMsg) => {
+        if (onProgress) {
+          onProgress({
+            type: 'rate_limit_pause',
+            statusMessage: retryMsg
+          });
+        }
+      };
+
       if (isBatch) {
         // --- BATCH MODE ---
         if (onProgress) {
@@ -167,7 +177,7 @@ Instrukcja: Oceń WSZYSTKIE 57 poniższych pozycji w skali 1-6. Podaj swoje ocen
           const apiRes = await this.apiClient.completeChat({
             ...this.config,
             systemPrompt: systemPrompt
-          }, messages);
+          }, messages, statusUpdateCallback);
 
           if (this.shouldAbort) throw new Error("Evaluation cancelled by user.");
 
@@ -244,7 +254,7 @@ Instrukcja: Oceń WSZYSTKIE 57 poniższych pozycji w skali 1-6. Podaj swoje ocen
           const apiRes = await this.apiClient.completeChat({
             ...this.config,
             systemPrompt: systemPrompt
-          }, requestMessages);
+          }, requestMessages, statusUpdateCallback);
 
           if (this.shouldAbort) throw new Error("Evaluation cancelled by user.");
 

@@ -2,7 +2,7 @@
  * Multi-Provider API Client for Axioma LLM Evaluation
  * Supports: OpenAI, Anthropic, Google Gemini, xAI, Local Endpoints (Ollama, LM Studio, vLLM)
  * Handles custom Base URL, temperature, seed, reasoning/thinking token budget, system prompt,
- * and live model fetching from provider endpoints.
+ * live model fetching, and automatic rate-limit (429) retry logic.
  */
 
 (function (exports) {
@@ -60,12 +60,36 @@
   };
 
   /**
+   * Helper function to delay execution with cancellation support.
+   */
+  function delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  /**
+   * Parses retry-after header or error message to extract wait duration in milliseconds.
+   */
+  function parseRetryDelayMs(errorText, responseHeaders) {
+    if (responseHeaders && responseHeaders.get) {
+      const retryHeader = responseHeaders.get("retry-after");
+      if (retryHeader) {
+        const seconds = parseFloat(retryHeader);
+        if (!isNaN(seconds)) return Math.ceil(seconds * 1000);
+      }
+    }
+
+    // Try extracting delay from error text e.g. "Please retry in 17.769353143s" or "retry after 10 seconds"
+    const matchSeconds = errorText.match(/retry\s+in\s+([\d\.]+)\s*s/i) || errorText.match(/retry\s+after\s+([\d\.]+)\s*s/i);
+    if (matchSeconds) {
+      const sec = parseFloat(matchSeconds[1]);
+      if (!isNaN(sec)) return Math.ceil(sec * 1000) + 500; // Add 500ms safety buffer
+    }
+
+    return 5000; // Default fallback wait 5s
+  }
+
+  /**
    * Fetches available model IDs from provider endpoint.
-   *
-   * @param {string} provider
-   * @param {string} baseUrl
-   * @param {string} apiKey
-   * @returns {Promise<string[]>} List of model IDs
    */
   async function fetchAvailableModels(provider, baseUrl, apiKey) {
     if (provider === 'gemini' || (baseUrl && baseUrl.includes("generativelanguage.googleapis.com"))) {
@@ -109,20 +133,39 @@
   }
 
   /**
-   * Main completion caller.
+   * Main completion caller with rate limit retry logic.
    */
-  async function completeChat(config, messages) {
+  async function completeChat(config, messages, onStatusUpdate) {
     const provider = config.provider || 'openai';
+    const maxRetries = config.maxRetries ?? 5;
 
-    if (provider === 'anthropic') {
-      return callAnthropicAPI(config, messages);
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        if (provider === 'anthropic') {
+          return await callAnthropicAPI(config, messages);
+        }
+
+        if (provider === 'gemini' || (config.baseUrl && config.baseUrl.includes("generativelanguage.googleapis.com") && !config.baseUrl.includes("/openai"))) {
+          return await callGeminiNativeAPI(config, messages);
+        }
+
+        return await callOpenAICompatibleAPI(config, messages);
+
+      } catch (err) {
+        const isRateLimit = err.status === 429 || /429|quota|rate limit|too many requests/i.test(err.message);
+
+        if (isRateLimit && attempt < maxRetries) {
+          const waitMs = parseRetryDelayMs(err.message, err.responseHeaders);
+          const msg = `Rate limit (429) hit. Pausing ${Math.ceil(waitMs / 1000)}s before retry ${attempt + 1}/${maxRetries}...`;
+          console.warn(msg);
+          if (onStatusUpdate) onStatusUpdate(msg);
+          await delay(waitMs);
+          continue;
+        }
+
+        throw err;
+      }
     }
-
-    if (provider === 'gemini' || (config.baseUrl && config.baseUrl.includes("generativelanguage.googleapis.com") && !config.baseUrl.includes("/openai"))) {
-      return callGeminiNativeAPI(config, messages);
-    }
-
-    return callOpenAICompatibleAPI(config, messages);
   }
 
   /**
@@ -148,14 +191,10 @@
       }
     }
 
-    const payload = {
-      contents: contents
-    };
+    const payload = { contents: contents };
 
     if (systemInstructionText) {
-      payload.systemInstruction = {
-        parts: [{ text: systemInstructionText }]
-      };
+      payload.systemInstruction = { parts: [{ text: systemInstructionText }] };
     }
 
     const generationConfig = {};
@@ -181,7 +220,11 @@
       } catch (e) {
         errorText = await response.text();
       }
-      throw new Error(`Gemini API Error [${response.status}]: ${errorText}`);
+
+      const err = new Error(`Gemini API Error [${response.status}]: ${errorText}`);
+      err.status = response.status;
+      err.responseHeaders = response.headers;
+      throw err;
     }
 
     const data = await response.json();
@@ -226,10 +269,7 @@
     const baseUrl = (config.baseUrl || PROVIDER_DEFAULTS[config.provider]?.baseUrl || "https://api.openai.com/v1").replace(/\/+$/, "");
     const endpoint = `${baseUrl}/chat/completions`;
 
-    const headers = {
-      "Content-Type": "application/json"
-    };
-
+    const headers = { "Content-Type": "application/json" };
     if (config.apiKey) {
       headers["Authorization"] = `Bearer ${config.apiKey.trim()}`;
     }
@@ -281,7 +321,10 @@
         return callGeminiNativeAPI(config, messages);
       }
 
-      throw new Error(`API Error [${response.status}]: ${errorText}`);
+      const err = new Error(`API Error [${response.status}]: ${errorText}`);
+      err.status = response.status;
+      err.responseHeaders = response.headers;
+      throw err;
     }
 
     const data = await response.json();
@@ -380,7 +423,11 @@
       } catch (e) {
         errorText = await response.text();
       }
-      throw new Error(`Anthropic API Error [${response.status}]: ${errorText}`);
+
+      const err = new Error(`Anthropic API Error [${response.status}]: ${errorText}`);
+      err.status = response.status;
+      err.responseHeaders = response.headers;
+      throw err;
     }
 
     const data = await response.json();
