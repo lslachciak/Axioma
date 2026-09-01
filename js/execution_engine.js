@@ -96,6 +96,26 @@ Instrukcja: Oceń WSZYSTKIE 57 poniższych pozycji w skali 1-6. Podaj swoje ocen
   }
 
   /**
+   * Formats full conversation history into a readable prompt string for display.
+   */
+  function formatConversationDisplay(systemPrompt, conversationHistory, currentPrompt) {
+    let output = "";
+    if (systemPrompt) {
+      output += `[SYSTEM PROMPT]\n${systemPrompt}\n\n`;
+    }
+    if (conversationHistory && conversationHistory.length > 0) {
+      output += `--- CONVERSATION HISTORY (${conversationHistory.length} messages) ---\n`;
+      for (const msg of conversationHistory) {
+        const roleLabel = msg.role === 'user' ? 'USER' : (msg.role === 'assistant' ? 'ASSISTANT' : msg.role.toUpperCase());
+        output += `[${roleLabel}]: ${msg.content}\n\n`;
+      }
+      output += `--- CURRENT MESSAGE ---\n`;
+    }
+    output += `[USER]: ${currentPrompt}`;
+    return output;
+  }
+
+  /**
    * Main Evaluator Engine class.
    */
   class EvaluatorEngine {
@@ -159,18 +179,19 @@ Instrukcja: Oceń WSZYSTKIE 57 poniższych pozycji w skali 1-6. Podaj swoje ocen
 
       if (isBatch) {
         // --- BATCH MODE ---
+        const batchUserPrompt = buildBatchPrompt(this.pvqData.ITEMS, lang);
+
         if (onProgress) {
           onProgress({
             type: 'batch_start',
             statusMessage: 'Evaluating all 57 items in single batch prompt...',
             completedCount: 0,
             totalItems: 57,
-            currentPrompt: 'Batch 1-57',
+            currentPrompt: formatConversationDisplay(systemPrompt, [], batchUserPrompt),
             tokenUsage: { promptTokens: 0, completionTokens: 0, reasoningTokens: 0, totalTokens: 0 }
           });
         }
 
-        const batchUserPrompt = buildBatchPrompt(this.pvqData.ITEMS, lang);
         const messages = [{ role: "user", content: batchUserPrompt }];
 
         try {
@@ -200,6 +221,7 @@ Instrukcja: Oceń WSZYSTKIE 57 poniższych pozycji w skali 1-6. Podaj swoje ocen
               statusMessage: 'Batch evaluation complete!',
               completedCount: 57,
               totalItems: 57,
+              currentPrompt: formatConversationDisplay(systemPrompt, [], batchUserPrompt),
               lastResponse: apiRes.text,
               lastReasoning: apiRes.reasoning,
               parsedScoresMap: { ...parsedItemScores },
@@ -233,6 +255,10 @@ Instrukcja: Oceń WSZYSTKIE 57 poniższych pozycji w skali 1-6. Podaj swoje ocen
           const currentItem = itemsToRun[idx];
           const itemPromptText = buildSequentialPrompt(currentItem, lang);
 
+          const displayedPromptText = keepContext
+            ? formatConversationDisplay(systemPrompt, conversationHistory, itemPromptText)
+            : formatConversationDisplay(systemPrompt, [], itemPromptText);
+
           if (onProgress) {
             onProgress({
               type: 'item_start',
@@ -240,7 +266,7 @@ Instrukcja: Oceń WSZYSTKIE 57 poniższych pozycji w skali 1-6. Podaj swoje ocen
               completedCount: idx,
               totalItems: totalItems,
               currentItemId: currentItem.id,
-              currentPrompt: itemPromptText,
+              currentPrompt: displayedPromptText,
               tokenUsage: {
                 promptTokens: totalPromptTokens,
                 completionTokens: totalCompletionTokens,
@@ -283,6 +309,7 @@ Instrukcja: Oceń WSZYSTKIE 57 poniższych pozycji w skali 1-6. Podaj swoje ocen
               completedCount: idx + 1,
               totalItems: totalItems,
               currentItemId: currentItem.id,
+              currentPrompt: displayedPromptText,
               lastScore: parsed.score,
               lastResponse: apiRes.text,
               lastReasoning: apiRes.reasoning,
@@ -324,6 +351,7 @@ Instrukcja: Oceń WSZYSTKIE 57 poniższych pozycji w skali 1-6. Podaj swoje ocen
   exports.buildSystemPrompt = buildSystemPrompt;
   exports.buildBatchPrompt = buildBatchPrompt;
   exports.buildSequentialPrompt = buildSequentialPrompt;
+  exports.formatConversationDisplay = formatConversationDisplay;
   exports.EvaluatorEngine = EvaluatorEngine;
 
 })(typeof exports !== 'undefined' ? exports : (window.ExecutionEngine = {}));
