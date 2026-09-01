@@ -202,6 +202,9 @@ Instrukcja: Oceń WSZYSTKIE 57 poniższych pozycji w skali 1-6. Podaj swoje ocen
               totalItems: 57,
               lastResponse: apiRes.text,
               lastReasoning: apiRes.reasoning,
+              parsedScoresMap: { ...parsedItemScores },
+              rawResponses: { ...rawResponses },
+              reasoningTraces: { ...reasoningTraces },
               tokenUsage: {
                 promptTokens: totalPromptTokens,
                 completionTokens: totalCompletionTokens,
@@ -285,6 +288,8 @@ Instrukcja: Oceń WSZYSTKIE 57 poniższych pozycji w skali 1-6. Podaj swoje ocen
               lastReasoning: apiRes.reasoning,
               isRefusal: parsed.isRefusal,
               parsedScoresMap: { ...parsedItemScores },
+              rawResponses: { ...rawResponses },
+              reasoningTraces: { ...reasoningTraces },
               tokenUsage: {
                 promptTokens: totalPromptTokens,
                 completionTokens: totalCompletionTokens,

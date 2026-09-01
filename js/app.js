@@ -70,6 +70,11 @@
     activeItemResponse: '',
     activeReasoningTrace: '',
 
+    // Interim live responses in Sequential Mode
+    liveItemRatings: {},
+    liveRawResponses: {},
+    liveReasoningTraces: {},
+
     // Results State
     results: null,
     selectedCoTItem: null,
@@ -212,6 +217,9 @@
     state.liveStreamLogs = [];
     state.completedCount = 0;
     state.tokenUsage = { promptTokens: 0, completionTokens: 0, reasoningTokens: 0, totalTokens: 0 };
+    state.liveItemRatings = {};
+    state.liveRawResponses = {};
+    state.liveReasoningTraces = {};
     renderApp();
 
     const config = {
@@ -243,6 +251,10 @@
         if (event.currentPrompt) state.activeItemPrompt = event.currentPrompt;
         if (event.lastResponse) state.activeItemResponse = event.lastResponse;
         if (event.lastReasoning) state.activeReasoningTrace = event.lastReasoning;
+
+        if (event.parsedScoresMap) state.liveItemRatings = event.parsedScoresMap;
+        if (event.rawResponses) state.liveRawResponses = event.rawResponses;
+        if (event.reasoningTraces) state.liveReasoningTraces = event.reasoningTraces;
 
         if (event.type === 'item_complete' || event.type === 'batch_complete') {
           state.liveStreamLogs.push(`[${new Date().toLocaleTimeString()}] ${event.statusMessage}`);
@@ -631,6 +643,10 @@
   }
 
   function ItemsTab() {
+    const activeRatings = state.results?.psychometrics?.itemRatings || state.liveItemRatings || {};
+    const activeRawResponses = state.results?.rawResponses || state.liveRawResponses || {};
+    const activeReasoningTraces = state.results?.reasoningTraces || state.liveReasoningTraces || {};
+
     return el('div', { className: 'space-y-4' },
       el('div', { className: 'overflow-x-auto' },
         el('table', { className: 'w-full text-left text-xs border-collapse' },
@@ -645,18 +661,22 @@
           ),
           el('tbody', { className: 'divide-y divide-slate-800/50' },
             window.PVQData.ITEMS.map(item => {
-              const score = state.results?.psychometrics?.itemRatings?.[item.id];
-              const reasoning = state.results?.reasoningTraces?.[item.id];
+              const score = activeRatings[item.id];
+              const reasoning = activeReasoningTraces[item.id];
+              const rawResponse = activeRawResponses[item.id];
+
               return el('tr', { key: item.id, className: 'hover:bg-slate-800/30' },
                 el('td', { className: 'py-2 px-3 font-bold text-slate-400 code-font' }, item.id),
                 el('td', { className: 'py-2 px-3 text-slate-200' }, state.lang === 'pl' ? item.pl : item.en),
                 el('td', { className: 'py-2 px-3 text-sky-400 code-font' }, item.valueKey),
                 el('td', { className: 'py-2 px-3' },
-                  score !== undefined && score !== null ? el('span', { className: 'px-2 py-0.5 rounded bg-sky-500/20 text-sky-400 font-bold code-font' }, score) : el('span', { className: 'px-2 py-0.5 rounded bg-rose-500/20 text-rose-400 font-medium text-[10px]' }, 'Refused / N/A')
+                  score !== undefined && score !== null ? el('span', { className: 'px-2 py-0.5 rounded bg-sky-500/20 text-sky-400 font-bold code-font' }, score) : (
+                    rawResponse ? el('span', { className: 'px-2 py-0.5 rounded bg-rose-500/20 text-rose-400 font-medium text-[10px]' }, 'Refused / N/A') : el('span', { className: 'text-slate-600 text-[10px]' }, 'Pending')
+                  )
                 ),
                 el('td', { className: 'py-2 px-3' },
                   reasoning ? el('button', {
-                    onClick: () => { state.selectedCoTItem = { id: item.id, reasoning, rawResponse: state.results?.rawResponses?.[item.id] }; renderApp(); },
+                    onClick: () => { state.selectedCoTItem = { id: item.id, reasoning, rawResponse }; renderApp(); },
                     className: 'text-xs text-purple-400 hover:text-purple-300 font-medium flex items-center gap-1'
                   }, el('i', { className: 'fa-solid fa-brain' }), ' View CoT') : el('span', { className: 'text-slate-600 text-[10px]' }, 'None')
                 )
