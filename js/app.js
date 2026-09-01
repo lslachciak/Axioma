@@ -48,6 +48,8 @@
     apiKey: '',
     baseUrl: 'https://api.openai.com/v1',
     model: 'gpt-4o-mini',
+    fetchedModelsList: [],
+    isFetchingModels: false,
     temperature: 0.7,
     seed: '',
     lang: 'en',
@@ -83,6 +85,28 @@
     if (defaults) {
       state.baseUrl = defaults.baseUrl;
       state.model = defaults.defaultModel;
+    }
+    state.fetchedModelsList = [];
+  }
+
+  async function loadModelsFromAPI() {
+    if (!window.ApiClient?.fetchAvailableModels) return;
+    state.isFetchingModels = true;
+    renderApp();
+
+    try {
+      const models = await window.ApiClient.fetchAvailableModels(state.provider, state.baseUrl, state.apiKey);
+      if (models && models.length > 0) {
+        state.fetchedModelsList = models;
+        if (!state.model || !models.includes(state.model)) {
+          state.model = models[0];
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to fetch models from API:", e);
+    } finally {
+      state.isFetchingModels = false;
+      renderApp();
     }
   }
 
@@ -334,8 +358,21 @@
         })
       ),
       el('div', {},
-        el('label', { className: 'block text-xs font-medium text-slate-400 mb-1' }, 'Model ID'),
-        el('input', {
+        el('div', { className: 'flex items-center justify-between mb-1' },
+          el('label', { className: 'block text-xs font-medium text-slate-400' }, 'Model ID'),
+          el('button', {
+            type: 'button',
+            onClick: loadModelsFromAPI,
+            className: 'text-[10px] text-sky-400 hover:text-sky-300 font-semibold flex items-center gap-1'
+          }, el('i', { className: `fa-solid fa-rotate ${state.isFetchingModels ? 'animate-spin' : ''}` }), ' Fetch Models from API')
+        ),
+        state.fetchedModelsList.length > 0 ? el('select', {
+          value: state.model,
+          onChange: (e) => { state.model = e.target.value; renderApp(); },
+          className: 'w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-sky-500 code-font'
+        },
+          state.fetchedModelsList.map(m => el('option', { key: m, value: m }, m))
+        ) : el('input', {
           type: 'text',
           value: state.model,
           onInput: (e) => { state.model = e.target.value; },

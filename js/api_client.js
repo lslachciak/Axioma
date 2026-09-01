@@ -1,7 +1,8 @@
 /**
  * Multi-Provider API Client for Axioma LLM Evaluation
  * Supports: OpenAI, Anthropic, Google Gemini, xAI, Local Endpoints (Ollama, LM Studio, vLLM)
- * Handles custom Base URL, temperature, seed, reasoning/thinking token budget, system prompt
+ * Handles custom Base URL, temperature, seed, reasoning/thinking token budget, system prompt,
+ * and live model fetching from provider endpoints.
  */
 
 (function (exports) {
@@ -23,7 +24,7 @@
     gemini: {
       name: "Google Gemini",
       baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
-      defaultModel: "gemini-1.5-flash",
+      defaultModel: "gemini-2.5-flash",
       requiresApiKey: true
     },
     xai: {
@@ -59,6 +60,55 @@
   };
 
   /**
+   * Fetches available model IDs from provider endpoint.
+   *
+   * @param {string} provider
+   * @param {string} baseUrl
+   * @param {string} apiKey
+   * @returns {Promise<string[]>} List of model IDs
+   */
+  async function fetchAvailableModels(provider, baseUrl, apiKey) {
+    if (provider === 'gemini' || (baseUrl && baseUrl.includes("generativelanguage.googleapis.com"))) {
+      try {
+        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent((apiKey || "").trim())}`;
+        const res = await fetch(endpoint);
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.models)) {
+            return data.models
+              .filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes("generateContent"))
+              .map(m => m.name.replace(/^models\//, ""));
+          }
+        }
+      } catch (e) {
+        console.warn("Could not fetch Gemini native models list", e);
+      }
+    }
+
+    // OpenAI-compatible /models endpoint
+    try {
+      const cleanBase = (baseUrl || PROVIDER_DEFAULTS[provider]?.baseUrl || "https://api.openai.com/v1").replace(/\/+$/, "");
+      const endpoint = `${cleanBase}/models`;
+      const headers = {};
+      if (apiKey) headers["Authorization"] = `Bearer ${apiKey.trim()}`;
+
+      const res = await fetch(endpoint, { headers });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.data)) {
+          return data.data.map(m => m.id);
+        } else if (Array.isArray(data.models)) {
+          return data.models.map(m => m.id || m.name);
+        }
+      }
+    } catch (e) {
+      console.warn("Could not fetch models from /models endpoint", e);
+    }
+
+    return [];
+  }
+
+  /**
    * Main completion caller.
    */
   async function completeChat(config, messages) {
@@ -72,16 +122,14 @@
       return callGeminiNativeAPI(config, messages);
     }
 
-    // OpenAI and OpenAI-compatible providers (OpenAI, OpenAI-compatible Gemini endpoint, xAI, Ollama, LM Studio, vLLM, Custom)
     return callOpenAICompatibleAPI(config, messages);
   }
 
   /**
-   * Helper for Gemini Native REST API fallback.
-   * Endpoint format: https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={apiKey}
+   * Helper for Gemini Native REST API.
    */
   async function callGeminiNativeAPI(config, messages) {
-    const rawModel = (config.model || "gemini-1.5-flash").replace(/^models\//, "");
+    const rawModel = (config.model || "gemini-2.5-flash").replace(/^models\//, "");
     const apiKey = (config.apiKey || "").trim();
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${rawModel}:generateContent?key=${encodeURIComponent(apiKey)}`;
 
@@ -133,8 +181,6 @@
       } catch (e) {
         errorText = await response.text();
       }
-
-      // If OpenAI-compatible format was attempted or vice versa
       throw new Error(`Gemini API Error [${response.status}]: ${errorText}`);
     }
 
@@ -193,12 +239,10 @@
       messages: []
     };
 
-    // System prompt insertion
     if (config.systemPrompt) {
       payload.messages.push({ role: "system", content: config.systemPrompt });
     }
 
-    // Append conversation messages
     payload.messages.push(...messages);
 
     if (typeof config.temperature === 'number' && !isNaN(config.temperature)) {
@@ -209,7 +253,6 @@
       payload.seed = config.seed;
     }
 
-    // Reasoning token configuration for models supporting reasoning_effort or max_completion_tokens
     if (config.enableReasoning) {
       if (config.reasoningBudget && config.reasoningBudget > 0) {
         payload.max_completion_tokens = config.reasoningBudget;
@@ -234,7 +277,6 @@
         errorText = await response.text();
       }
 
-      // Fallback: If OpenAI endpoint failed on Gemini base URL, automatically fall back to Gemini native REST API
       if (config.provider === 'gemini' || (config.baseUrl && config.baseUrl.includes("generativelanguage.googleapis.com"))) {
         return callGeminiNativeAPI(config, messages);
       }
@@ -249,7 +291,6 @@
     let text = message.content || "";
     let reasoning = message.reasoning_content || choice?.reasoning || "";
 
-    // Extract thinking tags if present in text e.g. <think>...</think>
     if (!reasoning && text.includes("<think>")) {
       const match = text.match(/<think>([\s\S]*?)<\/think>/);
       if (match) {
@@ -290,7 +331,6 @@
       "anthropic-dangerous-direct-browser-access": "true"
     };
 
-    // Filter messages for system prompt vs standard roles
     let systemText = config.systemPrompt || "";
     const anthropicMessages = [];
 
@@ -375,6 +415,7 @@
   }
 
   exports.PROVIDER_DEFAULTS = PROVIDER_DEFAULTS;
+  exports.fetchAvailableModels = fetchAvailableModels;
   exports.completeChat = completeChat;
 
 })(typeof exports !== 'undefined' ? exports : (window.ApiClient = {}));
