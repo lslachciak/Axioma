@@ -24,7 +24,7 @@
     gemini: {
       name: "Google Gemini",
       baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
-      defaultModel: "gemini-2.5-flash",
+      defaultModel: "gemini-1.5-flash",
       requiresApiKey: true
     },
     xai: {
@@ -78,14 +78,13 @@
       }
     }
 
-    // Try extracting delay from error text e.g. "Please retry in 17.769353143s" or "retry after 10 seconds"
     const matchSeconds = errorText.match(/retry\s+in\s+([\d\.]+)\s*s/i) || errorText.match(/retry\s+after\s+([\d\.]+)\s*s/i);
     if (matchSeconds) {
       const sec = parseFloat(matchSeconds[1]);
-      if (!isNaN(sec)) return Math.ceil(sec * 1000) + 500; // Add 500ms safety buffer
+      if (!isNaN(sec)) return Math.ceil(sec * 1000) + 500;
     }
 
-    return 5000; // Default fallback wait 5s
+    return 5000;
   }
 
   /**
@@ -109,7 +108,6 @@
       }
     }
 
-    // OpenAI-compatible /models endpoint
     try {
       const cleanBase = (baseUrl || PROVIDER_DEFAULTS[provider]?.baseUrl || "https://api.openai.com/v1").replace(/\/+$/, "");
       const endpoint = `${cleanBase}/models`;
@@ -172,9 +170,13 @@
    * Helper for Gemini Native REST API.
    */
   async function callGeminiNativeAPI(config, messages) {
-    const rawModel = (config.model || "gemini-2.5-flash").replace(/^models\//, "");
+    let userModel = (config.model || "gemini-1.5-flash").replace(/^models\//, "");
+    if (userModel === "gemini-2.5-flash" || userModel === "gemini-3.6-flash") {
+      userModel = "gemini-1.5-flash";
+    }
+
     const apiKey = (config.apiKey || "").trim();
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${rawModel}:generateContent?key=${encodeURIComponent(apiKey)}`;
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${userModel}:generateContent?key=${encodeURIComponent(apiKey)}`;
 
     let systemInstructionText = config.systemPrompt || "";
     const contents = [];
