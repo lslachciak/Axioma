@@ -2,7 +2,7 @@
  * Multi-Provider API Client for Axioma LLM Evaluation
  * Supports: OpenAI, Anthropic, Google Gemini, xAI, Local Endpoints (Ollama, LM Studio, vLLM)
  * Handles custom Base URL, temperature, seed, reasoning/thinking token budget, system prompt,
- * live model fetching, and automatic rate-limit (429) retry logic.
+ * live model fetching (including Ollama local models), and automatic rate-limit (429) retry logic.
  */
 
 (function (exports) {
@@ -89,8 +89,10 @@
 
   /**
    * Fetches available model IDs from provider endpoint.
+   * Supports Gemini, OpenAI-compatible /models, and native Ollama /api/tags endpoints.
    */
   async function fetchAvailableModels(provider, baseUrl, apiKey) {
+    // 1. Google Gemini Native Models endpoint
     if (provider === 'gemini' || (baseUrl && baseUrl.includes("generativelanguage.googleapis.com"))) {
       try {
         const endpoint = `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent((apiKey || "").trim())}`;
@@ -108,6 +110,24 @@
       }
     }
 
+    // 2. Ollama Native /api/tags endpoint fallback
+    if (provider === 'ollama' || (baseUrl && baseUrl.includes("11434"))) {
+      try {
+        const ollamaBase = (baseUrl || "http://localhost:11434/v1").replace(/\/v1\/?$/, "").replace(/\/+$/, "");
+        const endpoint = `${ollamaBase}/api/tags`;
+        const res = await fetch(endpoint);
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.models)) {
+            return data.models.map(m => m.name || m.model);
+          }
+        }
+      } catch (e) {
+        console.warn("Could not fetch Ollama models from /api/tags", e);
+      }
+    }
+
+    // 3. OpenAI-compatible /models endpoint
     try {
       const cleanBase = (baseUrl || PROVIDER_DEFAULTS[provider]?.baseUrl || "https://api.openai.com/v1").replace(/\/+$/, "");
       const endpoint = `${cleanBase}/models`;
