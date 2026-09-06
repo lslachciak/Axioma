@@ -12,43 +12,43 @@
     openai: {
       name: "OpenAI",
       baseUrl: "https://api.openai.com/v1",
-      defaultModel: "gpt-4o-mini",
+      defaultModel: "",
       requiresApiKey: true
     },
     anthropic: {
       name: "Anthropic",
       baseUrl: "https://api.anthropic.com/v1",
-      defaultModel: "claude-3-5-haiku-20241022",
+      defaultModel: "",
       requiresApiKey: true
     },
     gemini: {
       name: "Google Gemini",
       baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
-      defaultModel: "gemini-1.5-flash",
+      defaultModel: "",
       requiresApiKey: true
     },
     xai: {
       name: "xAI (Grok)",
       baseUrl: "https://api.xai.com/v1",
-      defaultModel: "grok-beta",
+      defaultModel: "",
       requiresApiKey: true
     },
     ollama: {
       name: "Ollama (Local)",
       baseUrl: "http://localhost:11434/v1",
-      defaultModel: "llama3.2",
+      defaultModel: "",
       requiresApiKey: false
     },
     lmstudio: {
       name: "LM Studio (Local)",
       baseUrl: "http://localhost:1234/v1",
-      defaultModel: "local-model",
+      defaultModel: "",
       requiresApiKey: false
     },
     vllm: {
       name: "vLLM (Local)",
       baseUrl: "http://localhost:8000/v1",
-      defaultModel: "default",
+      defaultModel: "",
       requiresApiKey: false
     },
     custom: {

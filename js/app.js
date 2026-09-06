@@ -48,7 +48,7 @@
     provider: 'openai',
     apiKey: '',
     baseUrl: 'https://api.openai.com/v1',
-    model: 'gpt-4o-mini',
+    model: '',
     fetchedModelsList: [],
     isFetchingModels: false,
     temperature: 0.7,
@@ -139,11 +139,7 @@
       state.apiKey = localStorage.getItem(`axioma_key_${provider}`) || '';
 
       const savedModel = localStorage.getItem(`axioma_model_${provider}`);
-      if (savedModel) {
-        state.model = savedModel;
-      } else if (defaults) {
-        state.model = defaults.defaultModel;
-      }
+      state.model = savedModel || '';
 
       if (defaults) {
         state.baseUrl = defaults.baseUrl;
@@ -180,6 +176,10 @@
     savePersistedOption('selected_provider', state.provider);
     loadProviderSettings(state.provider);
     state.fetchedModelsList = [];
+    const reqKey = window.ApiClient?.PROVIDER_DEFAULTS?.[state.provider]?.requiresApiKey;
+    if (!reqKey || (state.apiKey && state.apiKey.trim())) {
+      loadModelsFromAPI();
+    }
   }
 
   async function loadModelsFromAPI() {
