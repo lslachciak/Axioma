@@ -2,7 +2,7 @@
  * Multi-Provider API Client for Axioma LLM Evaluation
  * Supports: OpenAI, Anthropic, Google Gemini, xAI, Local Endpoints (Ollama, LM Studio, vLLM)
  * Handles custom Base URL, temperature, seed, reasoning/thinking token budget, system prompt,
- * live model fetching (including Ollama local models), and automatic rate-limit (429) retry logic.
+ * live model fetching, automatic rate-limit (429) retry logic, and robust internal thinking block extraction.
  */
 
 (function (exports) {
@@ -88,8 +88,37 @@
   }
 
   /**
+   * Extracts thinking / reasoning traces from response text or structured fields.
+   * Supports: <think>, <thought>, <thinking>, <reasoning> XML tags.
+   */
+  function extractReasoning(rawText, structuredReasoning) {
+    let reasoning = structuredReasoning ? String(structuredReasoning).trim() : "";
+    let cleanText = rawText ? String(rawText) : "";
+
+    const tagRegex = /<(think|thought|thinking|reasoning)>([\s\S]*?)<\/\1>/gi;
+    let match;
+    const tagTraces = [];
+
+    while ((match = tagRegex.exec(cleanText)) !== null) {
+      if (match[2] && match[2].trim()) {
+        tagTraces.push(match[2].trim());
+      }
+    }
+
+    if (tagTraces.length > 0) {
+      cleanText = cleanText.replace(tagRegex, "").trim();
+      const combinedTagTraces = tagTraces.join("\n\n");
+      reasoning = reasoning ? `${reasoning}\n\n${combinedTagTraces}` : combinedTagTraces;
+    }
+
+    return {
+      text: cleanText.trim(),
+      reasoning: reasoning.trim()
+    };
+  }
+
+  /**
    * Fetches available model IDs from provider endpoint.
-   * Supports Gemini, OpenAI-compatible /models, and native Ollama /api/tags endpoints.
    */
   async function fetchAvailableModels(provider, baseUrl, apiKey) {
     // 1. Google Gemini Native Models endpoint
@@ -251,18 +280,17 @@
     const parts = candidate?.content?.parts || [];
 
     let text = "";
-    for (const part of parts) {
-      if (part.text) text += part.text;
-    }
+    let structuredReasoning = "";
 
-    let reasoning = "";
-    if (text.includes("<think>")) {
-      const match = text.match(/<think>([\s\S]*?)<\/think>/);
-      if (match) {
-        reasoning = match[1].trim();
-        text = text.replace(/<think>[\s\S]*?<\/think>/, "").trim();
+    for (const part of parts) {
+      if (part.thought) {
+        structuredReasoning += part.thought + "\n";
+      } else if (part.text) {
+        text += part.text;
       }
     }
+
+    const extracted = extractReasoning(text, structuredReasoning);
 
     const usage = data.usageMetadata || {};
     const promptTokens = usage.promptTokenCount || 0;
@@ -270,8 +298,8 @@
     const totalTokens = usage.totalTokenCount || (promptTokens + completionTokens);
 
     return {
-      text: text.trim(),
-      reasoning: reasoning,
+      text: extracted.text,
+      reasoning: extracted.reasoning,
       tokenUsage: {
         promptTokens,
         completionTokens,
@@ -351,15 +379,9 @@
     const message = choice?.message || {};
 
     let text = message.content || "";
-    let reasoning = message.reasoning_content || choice?.reasoning || "";
+    let structuredReasoning = message.reasoning_content || choice?.reasoning || message.thinking || choice?.thinking || "";
 
-    if (!reasoning && text.includes("<think>")) {
-      const match = text.match(/<think>([\s\S]*?)<\/think>/);
-      if (match) {
-        reasoning = match[1].trim();
-        text = text.replace(/<think>[\s\S]*?<\/think>/, "").trim();
-      }
-    }
+    const extracted = extractReasoning(text, structuredReasoning);
 
     const usage = data.usage || {};
     const promptTokens = usage.prompt_tokens || 0;
@@ -368,8 +390,8 @@
     const totalTokens = usage.total_tokens || (promptTokens + completionTokens);
 
     return {
-      text: text,
-      reasoning: reasoning,
+      text: extracted.text,
+      reasoning: extracted.reasoning,
       tokenUsage: {
         promptTokens,
         completionTokens,
@@ -463,14 +485,16 @@
       }
     }
 
+    const extracted = extractReasoning(text, reasoning);
+
     const usage = data.usage || {};
     const promptTokens = usage.input_tokens || 0;
     const completionTokens = usage.output_tokens || 0;
     const reasoningTokens = usage.thinking_tokens || 0;
 
     return {
-      text: text.trim(),
-      reasoning: reasoning.trim(),
+      text: extracted.text,
+      reasoning: extracted.reasoning,
       tokenUsage: {
         promptTokens,
         completionTokens,
@@ -481,6 +505,7 @@
   }
 
   exports.PROVIDER_DEFAULTS = PROVIDER_DEFAULTS;
+  exports.extractReasoning = extractReasoning;
   exports.fetchAvailableModels = fetchAvailableModels;
   exports.completeChat = completeChat;
 

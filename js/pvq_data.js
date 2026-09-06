@@ -5,7 +5,7 @@
  */
 
 (function (exports) {
-  'use me strict';
+  'use strict';
 
   const SCALE_INSTRUCTIONS = {
     en: {

@@ -1,6 +1,7 @@
 /**
  * Axioma Vanilla JS UI Application
  * Pure JavaScript UI (No Babel / JSX required - 100% CORS-safe on file:// or static hosts)
+ * Supports browser LocalStorage API key persistence per provider.
  */
 
 (function () {
@@ -85,12 +86,99 @@
   let refinedChartInstance = null;
   let higherOrderChartInstance = null;
 
-  function updateProviderDefaults() {
-    const defaults = window.ApiClient?.PROVIDER_DEFAULTS?.[state.provider];
-    if (defaults) {
-      state.baseUrl = defaults.baseUrl;
-      state.model = defaults.defaultModel;
+  // LocalStorage persistence helpers
+  function loadPersistedState() {
+    try {
+      const savedProvider = localStorage.getItem('axioma_selected_provider');
+      if (savedProvider) state.provider = savedProvider;
+
+      const savedMode = localStorage.getItem('axioma_mode');
+      if (savedMode) state.mode = savedMode;
+
+      const savedLang = localStorage.getItem('axioma_lang');
+      if (savedLang) state.lang = savedLang;
+
+      const savedTemp = localStorage.getItem('axioma_temperature');
+      if (savedTemp) state.temperature = parseFloat(savedTemp);
+
+      const savedSeed = localStorage.getItem('axioma_seed');
+      if (savedSeed !== null) state.seed = savedSeed;
+
+      const savedSystemPrompt = localStorage.getItem('axioma_custom_system_prompt');
+      if (savedSystemPrompt !== null) state.customSystemPrompt = savedSystemPrompt;
+
+      const savedRandomize = localStorage.getItem('axioma_randomize_order');
+      if (savedRandomize !== null) state.randomizeOrder = savedRandomize === 'true';
+
+      const savedKeepContext = localStorage.getItem('axioma_keep_context');
+      if (savedKeepContext !== null) state.keepContext = savedKeepContext === 'true';
+
+      const savedEnableReasoning = localStorage.getItem('axioma_enable_reasoning');
+      if (savedEnableReasoning !== null) state.enableReasoning = savedEnableReasoning === 'true';
+
+      const savedReasoningBudget = localStorage.getItem('axioma_reasoning_budget');
+      if (savedReasoningBudget) state.reasoningBudget = parseInt(savedReasoningBudget, 10);
+
+      loadProviderSettings(state.provider);
+    } catch (e) {
+      console.warn("Could not load from localStorage", e);
     }
+  }
+
+  function savePersistedOption(key, value) {
+    try {
+      localStorage.setItem(`axioma_${key}`, String(value));
+    } catch (e) {
+      console.warn(`Could not save axioma_${key} to localStorage`, e);
+    }
+  }
+
+  function loadProviderSettings(provider) {
+    try {
+      const defaults = window.ApiClient?.PROVIDER_DEFAULTS?.[provider];
+      state.apiKey = localStorage.getItem(`axioma_key_${provider}`) || '';
+
+      const savedModel = localStorage.getItem(`axioma_model_${provider}`);
+      if (savedModel) {
+        state.model = savedModel;
+      } else if (defaults) {
+        state.model = defaults.defaultModel;
+      }
+
+      if (defaults) {
+        state.baseUrl = defaults.baseUrl;
+      }
+    } catch (e) {
+      console.warn("Could not load provider settings from localStorage", e);
+    }
+  }
+
+  function saveApiKeyForProvider(provider, key) {
+    try {
+      const storageKey = `axioma_key_${provider}`;
+      if (key && key.trim()) {
+        localStorage.setItem(storageKey, key.trim());
+      } else {
+        localStorage.removeItem(storageKey);
+      }
+    } catch (e) {
+      console.warn("Could not access localStorage to save API key", e);
+    }
+  }
+
+  function saveModelForProvider(provider, model) {
+    try {
+      if (model && model.trim()) {
+        localStorage.setItem(`axioma_model_${provider}`, model.trim());
+      }
+    } catch (e) {
+      console.warn("Could not save model to localStorage", e);
+    }
+  }
+
+  function updateProviderDefaults() {
+    savePersistedOption('selected_provider', state.provider);
+    loadProviderSettings(state.provider);
     state.fetchedModelsList = [];
   }
 
@@ -305,7 +393,7 @@
         el('div', { className: 'flex items-center space-x-3' },
           el('select', {
             value: state.lang,
-            onChange: (e) => { state.lang = e.target.value; renderApp(); },
+            onChange: (e) => { state.lang = e.target.value; savePersistedOption('lang', state.lang); renderApp(); },
             className: 'bg-slate-800 text-slate-200 text-sm rounded-lg px-3 py-1.5 border border-slate-700 focus:outline-none focus:border-sky-500'
           },
             el('option', { value: 'en' }, 'English (EN)'),
@@ -355,12 +443,15 @@
         )
       ),
       reqKey ? el('div', {},
-        el('label', { className: 'block text-xs font-medium text-slate-400 mb-1' }, 'API Key'),
+        el('label', { className: 'block text-xs font-medium text-slate-400 mb-1' }, 'API Key (Saved in LocalStorage)'),
         el('input', {
           type: 'password',
           placeholder: 'sk-...',
           value: state.apiKey,
-          onInput: (e) => { state.apiKey = e.target.value; },
+          onInput: (e) => {
+            state.apiKey = e.target.value;
+            saveApiKeyForProvider(state.provider, e.target.value);
+          },
           className: 'w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-sky-500 code-font'
         })
       ) : null,
@@ -384,14 +475,14 @@
         ),
         state.fetchedModelsList.length > 0 ? el('select', {
           value: state.model,
-          onChange: (e) => { state.model = e.target.value; renderApp(); },
+          onChange: (e) => { state.model = e.target.value; saveModelForProvider(state.provider, e.target.value); renderApp(); },
           className: 'w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-sky-500 code-font'
         },
           state.fetchedModelsList.map(m => el('option', { key: m, value: m }, m))
         ) : el('input', {
           type: 'text',
           value: state.model,
-          onInput: (e) => { state.model = e.target.value; },
+          onInput: (e) => { state.model = e.target.value; saveModelForProvider(state.provider, e.target.value); },
           className: 'w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-sky-500 code-font'
         })
       ),
@@ -404,7 +495,7 @@
             max: '1.5',
             step: '0.05',
             value: state.temperature,
-            onInput: (e) => { state.temperature = e.target.value; renderApp(); },
+            onInput: (e) => { state.temperature = e.target.value; savePersistedOption('temperature', state.temperature); renderApp(); },
             className: 'w-full accent-sky-500'
           })
         ),
@@ -414,7 +505,7 @@
             type: 'number',
             placeholder: 'e.g. 42',
             value: state.seed,
-            onInput: (e) => { state.seed = e.target.value; },
+            onInput: (e) => { state.seed = e.target.value; savePersistedOption('seed', state.seed); },
             className: 'w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-sky-500 code-font'
           })
         )
@@ -427,7 +518,7 @@
           el('input', {
             type: 'checkbox',
             checked: state.enableReasoning,
-            onChange: (e) => { state.enableReasoning = e.target.checked; renderApp(); },
+            onChange: (e) => { state.enableReasoning = e.target.checked; savePersistedOption('enable_reasoning', state.enableReasoning); renderApp(); },
             className: 'rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-sky-500 h-4 w-4'
           })
         ),
@@ -439,7 +530,7 @@
             max: '16384',
             step: '256',
             value: state.reasoningBudget,
-            onInput: (e) => { state.reasoningBudget = e.target.value; },
+            onInput: (e) => { state.reasoningBudget = e.target.value; savePersistedOption('reasoning_budget', state.reasoningBudget); },
             className: 'w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-slate-200 focus:outline-none focus:border-purple-500 code-font'
           })
         ) : null
@@ -449,12 +540,12 @@
         el('div', { className: 'grid grid-cols-2 gap-2' },
           el('button', {
             type: 'button',
-            onClick: () => { state.mode = 'batch'; renderApp(); },
+            onClick: () => { state.mode = 'batch'; savePersistedOption('mode', 'batch'); renderApp(); },
             className: `py-2 px-3 text-xs font-medium rounded-lg border text-center transition ${state.mode === 'batch' ? 'bg-sky-500/10 border-sky-500 text-sky-400' : 'bg-slate-900 border-slate-700 text-slate-400 hover:text-slate-200'}`
           }, 'Batch Mode (1 Prompt)'),
           el('button', {
             type: 'button',
-            onClick: () => { state.mode = 'sequential'; renderApp(); },
+            onClick: () => { state.mode = 'sequential'; savePersistedOption('mode', 'sequential'); renderApp(); },
             className: `py-2 px-3 text-xs font-medium rounded-lg border text-center transition ${state.mode === 'sequential' ? 'bg-sky-500/10 border-sky-500 text-sky-400' : 'bg-slate-900 border-slate-700 text-slate-400 hover:text-slate-200'}`
           }, 'Sequential Mode (57 Prompts)')
         ),
@@ -463,7 +554,7 @@
           el('input', {
             type: 'checkbox',
             checked: state.keepContext,
-            onChange: (e) => { state.keepContext = e.target.checked; renderApp(); },
+            onChange: (e) => { state.keepContext = e.target.checked; savePersistedOption('keep_context', state.keepContext); renderApp(); },
             className: 'rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-sky-500 h-4 w-4'
           })
         ) : null,
@@ -472,7 +563,7 @@
           el('input', {
             type: 'checkbox',
             checked: state.randomizeOrder,
-            onChange: (e) => { state.randomizeOrder = e.target.checked; renderApp(); },
+            onChange: (e) => { state.randomizeOrder = e.target.checked; savePersistedOption('randomize_order', state.randomizeOrder); renderApp(); },
             className: 'rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-sky-500 h-4 w-4'
           })
         )
@@ -483,7 +574,7 @@
           rows: '2',
           placeholder: 'Defaults to standard psychological survey prompt...',
           value: state.customSystemPrompt,
-          onInput: (e) => { state.customSystemPrompt = e.target.value; },
+          onInput: (e) => { state.customSystemPrompt = e.target.value; savePersistedOption('custom_system_prompt', state.customSystemPrompt); },
           className: 'w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-sky-500'
         })
       ),
@@ -749,6 +840,7 @@
 
   // Initial setup on DOM ready
   document.addEventListener('DOMContentLoaded', () => {
+    loadPersistedState();
     renderApp();
   });
 
