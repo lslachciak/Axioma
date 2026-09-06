@@ -22,14 +22,14 @@
     },
     pl: {
       title: "Instrukcja Kwestionariusza PVQ-RR",
-      description: "Poniżej znajdują się krótkie opisy różnych osób. Oceń, na ile każda z tych osób jest lub nie jest do Ciebie podobna.",
+      description: "Poniżej krótko zostaną scharakteryzowani niektórzy ludzie. Przeczytaj każdy opis i zastanów się, na ile przedstawiony człowiek jest lub nie jest podobny do Ciebie. Następnie zaznacz „X” w okienku, które określa stopień podobieństwa między opisanym człowiekiem a Tobą.",
       scale: [
-        { value: 1, label: "1 - Zupełnie niepodobna/y do mnie" },
-        { value: 2, label: "2 - Niepodobna/y do mnie" },
-        { value: 3, label: "3 - Trochę podobna/y do mnie" },
-        { value: 4, label: "4 - Średnio podobna/y do mnie" },
-        { value: 5, label: "5 - Podobna/y do mnie" },
-        { value: 6, label: "6 - Bardzo podobna/y do mnie" }
+        { value: 1, label: "1 - zupełnie niepodobny do mnie" },
+        { value: 2, label: "2 - niepodobny do mnie" },
+        { value: 3, label: "3 - trochę podobny do mnie" },
+        { value: 4, label: "4 - średnio podobny do mnie" },
+        { value: 5, label: "5 - podobny do mnie" },
+        { value: 6, label: "6 - bardzo podobny do mnie" }
       ]
     }
   };
@@ -39,343 +39,343 @@
       id: 1,
       valueKey: "SDT",
       en: "It is important to them to form their views independently.",
-      pl: "Ważne jest dla tej osoby, aby samodzielnie kształtować własne poglądy."
+      pl: "Jest dla niego ważne, aby być niezależnym w kształtowaniu swoich poglądów."
     },
     {
       id: 2,
       valueKey: "SES",
       en: "It is important to them that their country is secure and stable.",
-      pl: "Ważne jest dla tej osoby, aby jej kraj był bezpieczny i stabilny."
+      pl: "Jest dla niego ważne, aby jego kraj był bezpieczny i stabilny."
     },
     {
       id: 3,
       valueKey: "HED",
       en: "It is important to them to have a good time.",
-      pl: "Ważne jest dla tej osoby, aby dobrze się bawić i czerpać przyjemność z życia."
+      pl: "Jest dla niego ważne, aby przyjemnie spędzać czas."
     },
     {
       id: 4,
       valueKey: "COI",
       en: "It is important to them to avoid upsetting other people.",
-      pl: "Ważne jest dla tej osoby, aby unikać sprawiania przykrości innym ludziom."
+      pl: "Jest dla niego ważne, aby unikać irytowania innych."
     },
     {
       id: 5,
       valueKey: "UNC",
       en: "It is important to them that the weak and vulnerable in society be protected.",
-      pl: "Ważne jest dla tej osoby, aby chronić osoby słabe i wrażliwe w społeczeństwie."
+      pl: "Jest dla niego ważne, aby słabi i bezbronni ludzie w społeczeństwie byli chronieni."
     },
     {
       id: 6,
       valueKey: "POD",
       en: "It is important to them to be the one who tells others what to do.",
-      pl: "Ważne jest dla tej osoby, aby kierować innymi i mówić im, co mają robić."
+      pl: "Jest dla niego ważne, aby ludzie robili wszystko, cokolwiek im nakaże."
     },
     {
       id: 7,
       valueKey: "HUM",
       en: "It is important to them never to think they are more important than others.",
-      pl: "Ważne jest dla tej osoby, aby nigdy nie uważać się za ważniejszą/ego od innych."
+      pl: "Jest dla niego ważne, aby nigdy nie myśleć, że zasługuje na coś więcej niż inni ludzie."
     },
     {
       id: 8,
       valueKey: "UNN",
       en: "It is important to them to care for nature and the environment.",
-      pl: "Ważne jest dla tej osoby, aby dbać o przyrodę i środowisko naturalne."
+      pl: "Jest dla niego ważne, aby troszczyć się o przyrodę."
     },
     {
       id: 9,
       valueKey: "FAC",
       en: "It is important to them that no one ever embarrasses them or makes them feel ashamed.",
-      pl: "Ważne jest dla tej osoby, aby nikt jej nie zawstydzał ani nie wprawiał w zakłopotanie."
+      pl: "Jest dla niego ważne, aby nikt go nigdy nie upokorzył."
     },
     {
       id: 10,
       valueKey: "STI",
       en: "It is important to them to seek excitement and take risks.",
-      pl: "Ważne jest dla tej osoby, aby szukać emocji i podejmować ryzyko."
+      pl: "Jest dla niego ważne, aby ciągle robić coś innego."
     },
     {
       id: 11,
       valueKey: "BEC",
       en: "It is important to them to care for the well-being of people they are close to.",
-      pl: "Ważne jest dla tej osoby, aby dbać o dobrobyt i pomyślność bliskich osób."
+      pl: "Jest dla niego ważne, aby troszczyć się o bliskie mu osoby."
     },
     {
       id: 12,
       valueKey: "POR",
       en: "It is important to them to be wealthy and own expensive things.",
-      pl: "Ważne jest dla tej osoby, aby być zamożną/ym i posiadać kosztowne rzeczy."
+      pl: "Jest dla niego ważna siła, którą mogą dać pieniądze."
     },
     {
       id: 13,
       valueKey: "SEP",
       en: "It is important to them to protect themselves against any threats to their personal safety.",
-      pl: "Ważne jest dla tej osoby, aby chronić się przed wszelkimi zagrożeniami osobistego bezpieczeństwa."
+      pl: "Jest dla niego bardzo ważne, aby unikać chorób i chronić swoje zdrowie."
     },
     {
       id: 14,
       valueKey: "UNT",
       en: "It is important to them to accept people even when they disagree with them.",
-      pl: "Ważne jest dla tej osoby, aby akceptować ludzi nawet wtedy, gdy się z nimi nie zgadza."
+      pl: "Jest dla niego ważne, aby być tolerancyjnym w stosunku do wszystkich rodzajów ludzi i grup."
     },
     {
       id: 15,
       valueKey: "COR",
       en: "It is important to them to follow all rules even when no one is watching.",
-      pl: "Ważne jest dla tej osoby, aby przestrzegać wszelkich reguł, nawet gdy nikt nie patrzy."
+      pl: "Jest dla niego ważne, aby nigdy nie naruszać reguł lub regulaminu."
     },
     {
       id: 16,
       valueKey: "SDA",
       en: "It is important to them to make their own decisions about their life.",
-      pl: "Ważne jest dla tej osoby, aby samodzielnie podejmować decyzje dotyczące własnego życia."
+      pl: "Jest dla niego ważne, aby samemu podejmować decyzje dotyczące swojego życia."
     },
     {
       id: 17,
       valueKey: "ACH",
       en: "It is important to them to show their abilities and be admired for their success.",
-      pl: "Ważne jest dla tej osoby, aby pokazywać swoje umiejętności i być podziwianą/ym za sukcesy."
+      pl: "Jest dla niego ważne, aby wiele w życiu zdobyć."
     },
     {
       id: 18,
       valueKey: "TRD",
       en: "It is important to them to maintain traditional values and customs.",
-      pl: "Ważne jest dla tej osoby, aby podtrzymywać tradycyjne wartości i zwyczaje."
+      pl: "Jest dla niego ważne, aby podtrzymywać tradycyjne wartości i sposoby myślenia."
     },
     {
       id: 19,
       valueKey: "BED",
       en: "It is important to them that people they know can rely on them completely.",
-      pl: "Ważne jest dla tej osoby, aby znajomi mogli na niej całkowicie polegać."
+      pl: "Jest dla niego ważne, aby ludzie, których zna, mieli do niego pełne zaufanie."
     },
     {
       id: 20,
       valueKey: "POR",
       en: "It is important to them to have control over financial resources and money.",
-      pl: "Ważne jest dla tej osoby, aby mieć kontrolę nad zasobami finansowymi i pieniędzmi."
+      pl: "Jest dla niego ważne, aby być bogatym."
     },
     {
       id: 21,
       valueKey: "UNN",
       en: "It is important to them to protect animals and preserve plant life.",
-      pl: "Ważne jest dla tej osoby, aby chronić zwierzęta i dbać o roślinność."
+      pl: "Jest dla niego ważne, aby brać udział w działaniach na rzecz ochrony przyrody."
     },
     {
       id: 22,
       valueKey: "COI",
       en: "It is important to them never to irritate or offend other people.",
-      pl: "Ważne jest dla tej osoby, aby nigdy nie irytować ani nie obrażać innych ludzi."
+      pl: "Jest dla niego ważne, aby nigdy nikogo nie denerwować."
     },
     {
       id: 23,
       valueKey: "SDT",
       en: "It is important to them to figure out things by themselves.",
-      pl: "Ważne jest dla tej osoby, aby samodzielnie dochodzić do wszystkiego i rozumieć rzeczy po swojemu."
+      pl: "Jest dla niego ważne, aby samemu kształtować swoje opinie na różne tematy."
     },
     {
       id: 24,
       valueKey: "FAC",
       en: "It is important to them to protect their public image and reputation.",
-      pl: "Ważne jest dla tej osoby, aby chronić swój wizerunek publiczny i reputację."
+      pl: "Jest dla niego ważna ochrona jego publicznego wizerunku."
     },
     {
       id: 25,
       valueKey: "BEC",
       en: "It is important to them to help the people close to them whenever they need it.",
-      pl: "Ważne jest dla tej osoby, aby pomagać bliskim za każdym razem, gdy tego potrzebują."
+      pl: "Jest dla niego bardzo ważne, by pomagać drogim mu osobom."
     },
     {
       id: 26,
       valueKey: "SEP",
       en: "It is important to them to live in secure surroundings.",
-      pl: "Ważne jest dla tej osoby, aby żyć w bezpiecznym otoczeniu."
+      pl: "Jest dla niego ważne osobiste bezpieczeństwo i brak zagrożeń."
     },
     {
       id: 27,
       valueKey: "BED",
       en: "It is important to them to be trustworthy and reliable in all relationships.",
-      pl: "Ważne jest dla tej osoby, aby być godną/ym zaufania i niezawodną/ym w relacjach."
+      pl: "Jest dla niego ważne, aby być niezawodnym i godnym zaufania przyjacielem."
     },
     {
       id: 28,
       valueKey: "STI",
       en: "It is important to them to do novel and exciting things.",
-      pl: "Ważne jest dla tej osoby, aby robić nowe i ekscytujące rzeczy."
+      pl: "Jest dla niego ważne, aby podejmować ryzyko, które sprawia, że życie jest bardziej ekscytujące."
     },
     {
       id: 29,
       valueKey: "POD",
       en: "It is important to them to hold power and exercise control over others.",
-      pl: "Ważne jest dla tej osoby, aby posiadać władzę i sprawować kontrolę nad innymi."
+      pl: "Jest dla niego ważne, aby mieć władzę, która sprawia, że ludzie robią to, co on chce."
     },
     {
       id: 30,
       valueKey: "SDA",
       en: "It is important to them to choose their own goals and direct their own activities.",
-      pl: "Ważne jest dla tej osoby, aby wyznaczać własne cele i kierować własnymi działaniami."
+      pl: "Jest dla niego ważne, aby być niezależnym w planowaniu swoich działań."
     },
     {
       id: 31,
       valueKey: "COR",
       en: "It is important to them to obey laws and formal regulations strictly.",
-      pl: "Ważne jest dla tej osoby, aby ściśle przestrzegać prawa i formalnych przepisów."
+      pl: "Jest dla niego ważne, aby postępować zgodnie z regułami nawet wtedy, gdy nikt tego nie widzi."
     },
     {
       id: 32,
       valueKey: "ACH",
       en: "It is important to them to achieve ambitious goals and succeed.",
-      pl: "Ważne jest dla tej osoby, aby osiągać ambitne cele i odnosić sukcesy."
+      pl: "Jest dla niego ważne, aby odnieść dużo sukcesów."
     },
     {
       id: 33,
       valueKey: "TRD",
       en: "It is important to them to honor the religious and cultural traditions of their group.",
-      pl: "Ważne jest dla tej osoby, aby szanować tradycje religijne i kulturowe swojej grupy."
+      pl: "Jest dla niego ważne, aby przestrzegać obyczajów swojej rodziny lub obyczajów religii."
     },
     {
       id: 34,
       valueKey: "UNT",
       en: "It is important to them to listen to people who are different from them with open-mindedness.",
-      pl: "Ważne jest dla tej osoby, aby z otwartym umysłem słuchać ludzi różniących się od niej."
+      pl: "Jest dla niego ważne, aby słuchać i rozumieć ludzi, którzy się od niego różnią."
     },
     {
       id: 35,
       valueKey: "SES",
       en: "It is important to them that order and stability in society are preserved.",
-      pl: "Ważne jest dla tej osoby, aby zachowany był porządek i stabilność w społeczeństwie."
+      pl: "Jest dla niego ważne, aby państwo było silne i mogło bronić swoich obywateli."
     },
     {
       id: 36,
       valueKey: "HED",
       en: "It is important to them to indulge themselves and enjoy life's pleasures.",
-      pl: "Ważne jest dla tej osoby, aby dogadzać sobie i czerpać przyjemność z życiowych uciech."
+      pl: "Jest dla niego ważne, aby czerpać z życia przyjemności."
     },
     {
       id: 37,
       valueKey: "UNC",
       en: "It is important to them that social justice is promoted and every person is treated fairly.",
-      pl: "Ważne jest dla tej osoby, aby promować sprawiedliwość społeczną i traktować każdego równo."
+      pl: "Jest dla niego ważne, aby każdy człowiek na świecie miał równe szanse w życiu."
     },
     {
       id: 38,
       valueKey: "HUM",
       en: "It is important to them to remain humble and modest in all circumstances.",
-      pl: "Ważne jest dla tej osoby, aby zachować skromność i pokorę w każdych okolicznościach."
+      pl: "Jest dla niego ważne, aby być skromnym człowiekiem."
     },
     {
       id: 39,
       valueKey: "SDT",
       en: "It is important to them to explore new ideas and think independently.",
-      pl: "Ważne jest dla tej osoby, aby poznawać nowe pomysły i myśleć niezależnie."
+      pl: "Jest dla niego ważne, aby po swojemu zrozumieć różne rzeczy."
     },
     {
       id: 40,
       valueKey: "TRD",
       en: "It is important to them to preserve traditional customs handed down by ancestors.",
-      pl: "Ważne jest dla tej osoby, aby pielęgnować tradycyjne zwyczaje przekazane przez przodków."
+      pl: "Jest dla niego ważne, aby szanować tradycyjne zwyczaje swojej kultury."
     },
     {
       id: 41,
       valueKey: "POD",
       en: "It is important to them to command respect and lead others.",
-      pl: "Ważne jest dla tej osoby, aby budzić szacunek i przewodzić innym."
+      pl: "Jest dla niego ważne, aby być tym, kto mówi innym, co mają robić."
     },
     {
       id: 42,
       valueKey: "COR",
       en: "It is important to them to avoid doing anything that violates society's rules.",
-      pl: "Ważne jest dla tej osoby, aby unikać wszystkiego, co narusza zasady społeczne."
+      pl: "Jest dla niego ważne, aby przestrzegać wszystkich przepisów prawnych."
     },
     {
       id: 43,
       valueKey: "STI",
       en: "It is important to them to seek out adventures and intense experiences.",
-      pl: "Ważne jest dla tej osoby, aby szukać przygód i mocnych wrażeń."
+      pl: "Jest dla niego ważne, aby doświadczać wszelkich nowych przeżyć."
     },
     {
       id: 44,
       valueKey: "POR",
       en: "It is important to them to accumulate wealth and possess material resources.",
-      pl: "Ważne jest dla tej osoby, aby gromadzić majątek i posiadać zasoby materialne."
+      pl: "Jest dla niego ważne, aby posiadać drogie rzeczy, które świadczą o jego bogactwie."
     },
     {
       id: 45,
       valueKey: "UNN",
       en: "It is important to them to prevent pollution and protect the natural environment.",
-      pl: "Ważne jest dla tej osoby, aby zapobiegać zanieczyszczeniom i chronić środowisko naturalne."
+      pl: "Jest dla niego ważne, aby chronić środowisko naturalne przed zniszczeniem lub zanieczyszczeniem."
     },
     {
       id: 46,
       valueKey: "HED",
       en: "It is important to them to seek fun, enjoyment, and personal satisfaction.",
-      pl: "Ważne jest dla tej osoby, aby dążyć do zabawy, przyjemności i osobistej satysfakcji."
+      pl: "Jest dla niego ważne, aby dobrze się bawić w każdej sytuacji."
     },
     {
       id: 47,
       valueKey: "BEC",
       en: "It is important to them to devote themselves to helping people close to them.",
-      pl: "Ważne jest dla tej osoby, aby poświęcać się pomocy najbliższym."
+      pl: "Jest dla niego ważne, aby zajmować się każdą potrzebą drogich mu osób."
     },
     {
       id: 48,
       valueKey: "ACH",
       en: "It is important to them to perform at a high level and demonstrate competence.",
-      pl: "Ważne jest dla tej osoby, aby osiągać wysokie wyniki i wykazywać się kompetencjami."
+      pl: "Jest dla niego ważne, aby ludzie docenili jego osiągnięcia."
     },
     {
       id: 49,
       valueKey: "FAC",
       en: "It is important to them to protect their dignity and maintain their social standing.",
-      pl: "Ważne jest dla tej osoby, aby chronić swoją godność i utrzymać pozycję społeczną."
+      pl: "Jest dla niego ważne, aby nigdy nie zostać poniżonym."
     },
     {
       id: 50,
       valueKey: "SES",
       en: "It is important to them that state and national security is preserved at all times.",
-      pl: "Ważne jest dla tej osoby, aby bezpieczeństwo państwa i narodu było zawsze chronione."
+      pl: "Jest dla niego ważne, aby jego kraj mógł obronić się przed wszystkimi zagrożeniami."
     },
     {
       id: 51,
       valueKey: "COI",
       en: "It is important to them to avoid causing conflict or upsetting people around them.",
-      pl: "Ważne jest dla tej osoby, aby unikać wywoływania konfliktów i sprawiania przykrości ludziom wokół."
+      pl: "Jest dla niego ważne, aby nigdy nikogo nie rozgniewać."
     },
     {
       id: 52,
       valueKey: "UNC",
       en: "It is important to them to defend equality and advocate for vulnerable groups.",
-      pl: "Ważne jest dla tej osoby, aby bronić równości i występować w obronie grup słabszych."
+      pl: "Jest dla niego ważne, aby wszyscy byli traktowani sprawiedliwie, nawet ci, których nie zna."
     },
     {
       id: 53,
       valueKey: "SEP",
       en: "It is important to them to stay safe and protect themselves from bodily harm.",
-      pl: "Ważne jest dla tej osoby, aby dbać o własne bezpieczeństwo i chronić się przed krzywdą fizyczną."
+      pl: "Jest dla niego ważne, aby unikać wszystkiego, co jest niebezpieczne."
     },
     {
       id: 54,
       valueKey: "HUM",
       en: "It is important to them to avoid boasting and remain modest about achievements.",
-      pl: "Ważne jest dla tej osoby, aby unikać chwalenia się i zachowywać skromność wobec osiągnięć."
+      pl: "Jest dla niego ważne, aby być zadowolonym z tego, co posiada, i nie chcieć niczego więcej."
     },
     {
       id: 55,
       valueKey: "BED",
       en: "It is important to them to stand by friends and family through thick and thin.",
-      pl: "Ważne jest dla tej osoby, aby trwać przy rodzinie i przyjaciołach na dobre i na złe."
+      pl: "Jest dla niego ważne, aby wszyscy jego przyjaciele i rodzina mogli na nim całkowicie polegać."
     },
     {
       id: 56,
       valueKey: "SDA",
       en: "It is important to them to act autonomously and be freedom-oriented in life.",
-      pl: "Ważne jest dla tej osoby, aby postępować autonomicznie i cenić wolność w życiu."
+      pl: "Jest dla niego ważne, aby być wolnym w wyborze tego, co robi."
     },
     {
       id: 57,
       valueKey: "UNT",
       en: "It is important to them to accept people even when their beliefs disagree with theirs.",
-      pl: "Ważne jest dla tej osoby, aby akceptować ludzi nawet wtedy, gdy ich przekonania różnią się od jej własnych."
+      pl: "Jest dla niego ważne, aby akceptować ludzi nawet wtedy, gdy się z nimi nie zgadza."
     }
   ];
 
