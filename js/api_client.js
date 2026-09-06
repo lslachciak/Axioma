@@ -209,10 +209,14 @@
 
         if (isRateLimit && attempt < maxRetries) {
           const waitMs = parseRetryDelayMs(err.message, err.responseHeaders);
-          const msg = `Rate limit (429) hit. Pausing ${Math.ceil(waitMs / 1000)}s before retry ${attempt + 1}/${maxRetries}...`;
-          console.warn(msg);
-          if (onStatusUpdate) onStatusUpdate(msg);
-          await delay(waitMs);
+          let totalSeconds = Math.max(1, Math.ceil(waitMs / 1000));
+          console.warn(`Rate limit (429) hit. Waiting ${totalSeconds}s before retry ${attempt + 1}/${maxRetries}...`);
+
+          for (let sec = totalSeconds; sec > 0; sec--) {
+            const countdownMsg = `Rate limit (429) hit. Waiting ${sec}s before retry ${attempt + 1}/${maxRetries}...`;
+            if (onStatusUpdate) onStatusUpdate(countdownMsg);
+            await delay(1000);
+          }
           continue;
         }
 
