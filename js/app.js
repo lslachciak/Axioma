@@ -437,6 +437,7 @@
           el('option', { value: 'gemini' }, 'Google Gemini'),
           el('option', { value: 'xai' }, 'xAI (Grok)'),
           el('option', { value: 'ollama' }, 'Ollama (Local localhost:11434)'),
+          el('option', { value: 'ollama_cloud' }, 'Ollama Cloud API'),
           el('option', { value: 'lmstudio' }, 'LM Studio (Local localhost:1234)'),
           el('option', { value: 'vllm' }, 'vLLM (Local localhost:8000)'),
           el('option', { value: 'custom' }, 'Custom Endpoint')

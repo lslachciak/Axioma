@@ -39,6 +39,12 @@
       defaultModel: "",
       requiresApiKey: false
     },
+    ollama_cloud: {
+      name: "Ollama Cloud API",
+      baseUrl: "https://ollama.com/v1",
+      defaultModel: "",
+      requiresApiKey: true
+    },
     lmstudio: {
       name: "LM Studio (Local)",
       baseUrl: "http://localhost:1234/v1",
