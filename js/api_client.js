@@ -122,6 +122,16 @@
       reasoning = reasoning ? `${reasoning}\n\n${combinedTagTraces}` : combinedTagTraces;
     }
 
+    // Check for unclosed reasoning tags (e.g. truncated responses or streaming)
+    const unclosedMatch = cleanText.match(/<(think|thought|thinking|reasoning)>([\s\S]*)$/i);
+    if (unclosedMatch) {
+      const unclosedContent = unclosedMatch[2].trim();
+      if (unclosedContent) {
+        reasoning = reasoning ? `${reasoning}\n\n${unclosedContent}` : unclosedContent;
+      }
+      cleanText = cleanText.substring(0, unclosedMatch.index).trim();
+    }
+
     return {
       text: cleanText.trim(),
       reasoning: reasoning.trim()
@@ -356,10 +366,10 @@
     }
 
     if (config.enableReasoning) {
-      if (config.reasoningBudget && config.reasoningBudget > 0) {
-        payload.max_completion_tokens = config.reasoningBudget;
+      if (config.reasoningBudget && Number(config.reasoningBudget) > 0) {
+        payload.max_completion_tokens = Number(config.reasoningBudget);
       }
-      if (config.reasoningEffort) {
+      if (config.reasoningEffort && ['low', 'medium', 'high'].includes(config.reasoningEffort)) {
         payload.reasoning_effort = config.reasoningEffort;
       }
     }
@@ -444,9 +454,15 @@
       }
     }
 
+    const budgetTokens = (config.enableReasoning && config.reasoningBudget) ? Number(config.reasoningBudget) : 1024;
+    // Anthropic API strictly requires max_tokens > budget_tokens when thinking is enabled
+    const maxTokens = config.enableReasoning
+      ? Math.max(budgetTokens + 2048, 4096)
+      : (config.maxTokens || 2048);
+
     const payload = {
       model: config.model || PROVIDER_DEFAULTS.anthropic.defaultModel,
-      max_tokens: config.enableReasoning && config.reasoningBudget ? Math.max(config.reasoningBudget + 1000, 4000) : 2048,
+      max_tokens: maxTokens,
       messages: anthropicMessages
     };
 
@@ -461,7 +477,7 @@
     if (config.enableReasoning) {
       payload.thinking = {
         type: "enabled",
-        budget_tokens: config.reasoningBudget || 1024
+        budget_tokens: budgetTokens
       };
     }
 
