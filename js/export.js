@@ -47,6 +47,7 @@
     lines.push(`# Timestamp\t${results.metadata?.timestamp || new Date().toISOString()}`);
     lines.push(`# Provider\t${results.metadata?.config?.provider || ""}`);
     lines.push(`# Model\t${results.metadata?.config?.model || ""}`);
+    lines.push(`# System Prompt\t${(results.metadata?.config?.customSystemPrompt || "").replace(/[\r\n\t]+/g, " ")}`);
     lines.push(`# Language\t${results.metadata?.config?.lang || "en"}`);
     lines.push(`# Mode\t${results.metadata?.config?.mode || ""}`);
     lines.push(`# Keep Chat Context History\t${results.metadata?.config?.keepContext ? "Yes (Enabled)" : "No (Disabled)"}`);
@@ -130,6 +131,7 @@
       ["Timestamp", results.metadata?.timestamp || new Date().toISOString()],
       ["Provider", results.metadata?.config?.provider || ""],
       ["Model", results.metadata?.config?.model || ""],
+      ["System Prompt", results.metadata?.config?.customSystemPrompt || ""],
       ["Base URL", results.metadata?.config?.baseUrl || ""],
       ["Language", results.metadata?.config?.lang || "en"],
       ["Execution Mode", results.metadata?.config?.mode || ""],
