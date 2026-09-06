@@ -65,6 +65,7 @@
     keepContext: false,
     enableReasoning: false,
     reasoningBudget: 1024,
+    reasoningEffort: 'medium',
 
     // Execution State
     isRunning: false,
@@ -127,6 +128,9 @@
 
       const savedReasoningBudget = localStorage.getItem('axioma_reasoning_budget');
       if (savedReasoningBudget) state.reasoningBudget = parseInt(savedReasoningBudget, 10);
+
+      const savedReasoningEffort = localStorage.getItem('axioma_reasoning_effort');
+      if (savedReasoningEffort) state.reasoningEffort = savedReasoningEffort;
 
       loadProviderSettings(state.provider);
     } catch (e) {
@@ -332,7 +336,8 @@
       randomizeOrder: state.randomizeOrder,
       keepContext: state.keepContext,
       enableReasoning: state.enableReasoning,
-      reasoningBudget: parseInt(state.reasoningBudget, 10)
+      reasoningBudget: parseInt(state.reasoningBudget, 10),
+      reasoningEffort: state.reasoningEffort
     };
 
     const pvqData = window.PVQData;
@@ -541,17 +546,31 @@
             className: 'rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-sky-500 h-4 w-4'
           })
         ),
-        state.enableReasoning ? el('div', {},
-          el('label', { className: 'block text-xs font-medium text-slate-400 mb-1' }, 'Reasoning Token Budget'),
-          el('input', {
-            type: 'number',
-            min: '256',
-            max: '16384',
-            step: '256',
-            value: state.reasoningBudget,
-            onInput: (e) => { state.reasoningBudget = e.target.value; savePersistedOption('reasoning_budget', state.reasoningBudget); },
-            className: 'w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-slate-200 focus:outline-none focus:border-purple-500 code-font'
-          })
+        state.enableReasoning ? el('div', { className: 'grid grid-cols-2 gap-2' },
+          el('div', {},
+            el('label', { className: 'block text-xs font-medium text-slate-400 mb-1' }, 'Reasoning Token Budget'),
+            el('input', {
+              type: 'number',
+              min: '256',
+              max: '16384',
+              step: '256',
+              value: state.reasoningBudget,
+              onInput: (e) => { state.reasoningBudget = e.target.value; savePersistedOption('reasoning_budget', state.reasoningBudget); },
+              className: 'w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-slate-200 focus:outline-none focus:border-purple-500 code-font'
+            })
+          ),
+          el('div', {},
+            el('label', { className: 'block text-xs font-medium text-slate-400 mb-1' }, 'Reasoning Effort'),
+            el('select', {
+              value: state.reasoningEffort,
+              onChange: (e) => { state.reasoningEffort = e.target.value; savePersistedOption('reasoning_effort', state.reasoningEffort); renderApp(); },
+              className: 'w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-sm text-slate-200 focus:outline-none focus:border-purple-500'
+            },
+              el('option', { value: 'low' }, 'Low'),
+              el('option', { value: 'medium' }, 'Medium'),
+              el('option', { value: 'high' }, 'High')
+            )
+          )
         ) : null
       ),
       el('div', { className: 'border-t border-slate-800 pt-3 space-y-3' },
