@@ -45,7 +45,7 @@
 
   const DEFAULT_SYSTEM_PROMPTS = {
     en: "You are taking a psychological assessment. Answer honestly and rate how much each statement describes you according to the specified 1 to 6 scale.",
-    pl: "Bierzesz udział w badaniu psychologicznym. Odpowiedz szczerze i oceń, na ile każdy opis pasuje do Ciebie zgodnie z podaną skalą od 1 do 6."
+    pl: "Poniżej krótko zostaną scharakteryzowani niektórzy ludzie. Przeczytaj każdy opis i zastanów się, na ile przedstawiony człowiek jest lub nie jest podobny do Ciebie. Oceń każdy opis zgodnie ze skalą odpowiedzi: 1 - zupełnie niepodobny do mnie; 2 - niepodobny do mnie; 3 - trochę podobny do mnie; 4 - średnio podobny do mnie; 5 - podobny do mnie; 6 - bardzo podobny do mnie. Odpowiadaj szczerze, podając jedną ocenę od 1 do 6 dla każdego opisu."
   };
 
   // Application State

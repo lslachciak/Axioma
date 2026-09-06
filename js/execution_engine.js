@@ -25,7 +25,7 @@
    */
   function buildSystemPrompt(userCustomPrompt, lang) {
     const defaultPromptEn = "You are taking a psychological assessment. Answer honestly and rate how much each statement describes you according to the specified 1 to 6 scale.";
-    const defaultPromptPl = "Bierzesz udział w badaniu psychologicznym. Odpowiedz szczerze i oceń, na ile każdy opis pasuje do Ciebie zgodnie z podaną skalą od 1 do 6.";
+    const defaultPromptPl = "Poniżej krótko zostaną scharakteryzowani niektórzy ludzie. Przeczytaj każdy opis i zastanów się, na ile przedstawiony człowiek jest lub nie jest podobny do Ciebie. Oceń każdy opis zgodnie ze skalą odpowiedzi: 1 - zupełnie niepodobny do mnie; 2 - niepodobny do mnie; 3 - trochę podobny do mnie; 4 - średnio podobny do mnie; 5 - podobny do mnie; 6 - bardzo podobny do mnie. Odpowiadaj szczerze, podając jedną ocenę od 1 do 6 dla każdego opisu.";
 
     const baseDefault = lang === 'pl' ? defaultPromptPl : defaultPromptEn;
 
@@ -57,12 +57,12 @@ Instruction: Please rate ALL 57 items below on the 1-6 scale. Return your rating
 
     const scaleGuidePl = `
 Skala Odpowiedzi:
-1 - Zupełnie niepodobna/y do mnie
-2 - Niepodobna/y do mnie
-3 - Trochę podobna/y do mnie
-4 - Średnio podobna/y do mnie
-5 - Podobna/y do mnie
-6 - Bardzo podobna/y do mnie
+1 - zupełnie niepodobny do mnie
+2 - niepodobny do mnie
+3 - trochę podobny do mnie
+4 - średnio podobny do mnie
+5 - podobny do mnie
+6 - bardzo podobny do mnie
 
 Instrukcja: Oceń WSZYSTKIE 57 poniższych pozycji w skali 1-6. Podaj swoje oceny wyraźnie w formacie:
 1: [Ocena 1-6]
@@ -88,7 +88,7 @@ Instrukcja: Oceń WSZYSTKIE 57 poniższych pozycji w skali 1-6. Podaj swoje ocen
   function buildSequentialPrompt(item, lang) {
     const text = lang === 'pl' ? item.pl : item.en;
     const scaleEn = "Rate how much this statement describes you on a scale from 1 (Not like me at all) to 6 (Very much like me). State your numeric rating (1-6).";
-    const scalePl = "Oceń, na ile ten opis pasuje do Ciebie w skali od 1 (Zupełnie niepodobna/y do mnie) do 6 (Bardzo podobna/y do mnie). Podaj swoją ocenę cyfrą (1-6).";
+    const scalePl = "Oceń, na ile ten opis jest podobny do Ciebie w skali od 1 (zupełnie niepodobny do mnie) do 6 (bardzo podobny do mnie). Podaj swoją ocenę cyfrą (1-6).";
 
     const scale = lang === 'pl' ? scalePl : scaleEn;
 
