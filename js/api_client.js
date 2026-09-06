@@ -80,14 +80,19 @@
       const retryHeader = responseHeaders.get("retry-after");
       if (retryHeader) {
         const seconds = parseFloat(retryHeader);
-        if (!isNaN(seconds)) return Math.ceil(seconds * 1000);
+        if (!isNaN(seconds)) return Math.ceil(seconds) * 1000;
       }
     }
 
-    const matchSeconds = errorText.match(/retry\s+in\s+([\d\.]+)\s*s/i) || errorText.match(/retry\s+after\s+([\d\.]+)\s*s/i);
+    const matchSeconds = errorText.match(/retry\s+(?:in|after)\s+([\d\.]+)\s*s?/i) ||
+                         errorText.match(/retry\s+in\s+([\d\.]+)/i) ||
+                         errorText.match(/(\d+(?:\.\d+)?)\s*s\b/i);
+
     if (matchSeconds) {
       const sec = parseFloat(matchSeconds[1]);
-      if (!isNaN(sec)) return Math.ceil(sec * 1000) + 500;
+      if (!isNaN(sec) && sec > 0) {
+        return Math.ceil(sec) * 1000;
+      }
     }
 
     return 5000;
