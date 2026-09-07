@@ -275,6 +275,13 @@
       generationConfig.temperature = config.temperature;
     }
 
+    if (config.enableReasoning) {
+      const budget = Number(config.reasoningBudget);
+      generationConfig.thinkingConfig = {
+        thinkingBudget: (!isNaN(budget) && budget !== 0) ? budget : 1024
+      };
+    }
+
     if (Object.keys(generationConfig).length > 0) {
       payload.generationConfig = generationConfig;
     }
@@ -320,6 +327,7 @@
     const usage = data.usageMetadata || {};
     const promptTokens = usage.promptTokenCount || 0;
     const completionTokens = usage.candidatesTokenCount || 0;
+    const reasoningTokens = usage.thoughtsTokenCount || usage.candidatesTokenDetails?.find(d => d.modality === "THOUGHT")?.tokenCount || 0;
     const totalTokens = usage.totalTokenCount || (promptTokens + completionTokens);
 
     return {
@@ -328,7 +336,7 @@
       tokenUsage: {
         promptTokens,
         completionTokens,
-        reasoningTokens: 0,
+        reasoningTokens,
         totalTokens
       }
     };
@@ -372,6 +380,13 @@
       if (config.reasoningEffort && ['low', 'medium', 'high'].includes(config.reasoningEffort)) {
         payload.reasoning_effort = config.reasoningEffort;
       }
+      if (config.provider === 'gemini' || (config.baseUrl && config.baseUrl.includes("generativelanguage.googleapis.com"))) {
+        const budget = Number(config.reasoningBudget) || 1024;
+        payload.thinking_config = { thinking_budget: budget };
+        payload.extra_body = {
+          thinking_config: { thinking_budget: budget }
+        };
+      }
     }
 
     const response = await fetch(endpoint, {
@@ -404,7 +419,7 @@
     const message = choice?.message || {};
 
     let text = message.content || "";
-    let structuredReasoning = message.reasoning_content || choice?.reasoning || message.thinking || choice?.thinking || "";
+    let structuredReasoning = message.reasoning_content || choice?.reasoning || message.thinking || choice?.thinking || message.thought || choice?.thought || "";
 
     const extracted = extractReasoning(text, structuredReasoning);
 
