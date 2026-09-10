@@ -221,9 +221,244 @@
     XLSX.writeFile(wb, filename);
   }
 
+  /**
+   * Helper function to escape CSV cell values.
+   */
+  function escapeCSVCell(value) {
+    if (value === null || value === undefined) return '""';
+    const str = String(value);
+    if (str.includes('"') || str.includes(',') || str.includes('\n') || str.includes('\r')) {
+      return `"${str.replace(/"/g, '""')}"`;
+    }
+    return `"${str}"`;
+  }
+
+  /**
+   * Exports all evaluation runs from the current session to a single CSV file.
+   * Each run produces a new row in the CSV file.
+   *
+   * @param {Array<Object>} sessionResults - Array of evaluation result objects from the session
+   * @param {string} [filename] - Output filename
+   */
+  function exportSessionToCSV(sessionResults, filename = "axioma_session_results.csv") {
+    if (!sessionResults || !Array.isArray(sessionResults) || sessionResults.length === 0) return;
+
+    const items = window.PVQData ? window.PVQData.ITEMS : [];
+
+    // Header row
+    const headers = [
+      "Run #",
+      "Timestamp",
+      "Provider",
+      "Model",
+      "Base URL",
+      "Language",
+      "Execution Mode",
+      "Keep Context History",
+      "Randomize Order",
+      "Temperature",
+      "Seed",
+      "Reasoning Enabled",
+      "Reasoning Budget",
+      "Reasoning Effort",
+      "Prompt Tokens",
+      "Completion Tokens",
+      "Reasoning Tokens",
+      "Total Tokens",
+      "MRAT Grand Mean",
+      "Items Answered"
+    ];
+
+    // Add 4 Higher-Order Values (Raw & Centered)
+    const hoKeys = ["SELF_TRANSCENDENCE", "CONSERVATION", "SELF_ENHANCEMENT", "OPENNESS_TO_CHANGE"];
+    for (const key of hoKeys) {
+      headers.push(`${key}_Raw`, `${key}_Centered`);
+    }
+
+    // Add 19 Refined Basic Values (Raw & Centered)
+    if (sessionResults[0]?.psychometrics?.refinedValues) {
+      for (const code in sessionResults[0].psychometrics.refinedValues) {
+        headers.push(`${code}_Raw`, `${code}_Centered`);
+      }
+    }
+
+    // Add 57 Item Scores
+    for (let i = 1; i <= 57; i++) {
+      headers.push(`Item_${i}_Score`);
+    }
+
+    const rows = [headers.map(escapeCSVCell).join(",")];
+
+    sessionResults.forEach((results, idx) => {
+      const meta = results.metadata || {};
+      const cfg = meta.config || {};
+      const psych = results.psychometrics || {};
+      const token = results.tokenUsage || {};
+
+      const row = [
+        idx + 1,
+        meta.timestamp || "",
+        cfg.provider || "",
+        cfg.model || "",
+        cfg.baseUrl || "",
+        cfg.lang || "en",
+        cfg.mode || "",
+        cfg.keepContext ? "Yes" : "No",
+        cfg.randomizeOrder ? "Yes" : "No",
+        cfg.temperature ?? "",
+        cfg.seed ?? "",
+        cfg.enableReasoning ? "Yes" : "No",
+        cfg.enableReasoning ? (cfg.reasoningBudget || 1024) : "N/A",
+        cfg.enableReasoning ? (cfg.reasoningEffort || "medium") : "N/A",
+        token.promptTokens ?? 0,
+        token.completionTokens ?? 0,
+        token.reasoningTokens ?? 0,
+        token.totalTokens ?? 0,
+        psych.mrat ?? "N/A",
+        `${psych.totalAnswered ?? 0}/57`
+      ];
+
+      // 4 Higher-Order Values
+      for (const key of hoKeys) {
+        const ho = psych.higherOrderValues?.[key];
+        row.push(ho?.rawMean ?? "N/A", ho?.centeredMean ?? "N/A");
+      }
+
+      // 19 Refined Basic Values
+      if (psych.refinedValues) {
+        for (const code in psych.refinedValues) {
+          const rv = psych.refinedValues[code];
+          row.push(rv?.rawMean ?? "N/A", rv?.centeredMean ?? "N/A");
+        }
+      }
+
+      // 57 Items
+      for (let i = 1; i <= 57; i++) {
+        row.push(psych.itemRatings?.[i] ?? "N/A");
+      }
+
+      rows.push(row.map(escapeCSVCell).join(","));
+    });
+
+    const csvContent = rows.join("\r\n");
+    downloadBlob(csvContent, filename, "text/csv;charset=utf-8;");
+  }
+
+  /**
+   * Exports all evaluation runs from the current session to an Excel workbook (.xlsx).
+   * Primary Tab ("Session Summary"): One row per evaluation run in the session.
+   *
+   * @param {Array<Object>} sessionResults - Array of evaluation result objects from the session
+   * @param {string} [filename] - Output filename
+   */
+  function exportSessionToXLSX(sessionResults, filename = "axioma_session_results.xlsx") {
+    if (!sessionResults || !Array.isArray(sessionResults) || sessionResults.length === 0) return;
+    if (typeof window.XLSX === 'undefined') {
+      alert("XLSX library not loaded. Please ensure you have internet access or CDN loaded.");
+      return;
+    }
+
+    const XLSX = window.XLSX;
+    const wb = XLSX.utils.book_new();
+
+    // Summary Sheet: 1 row per run
+    const headers = [
+      "Run #",
+      "Timestamp",
+      "Provider",
+      "Model",
+      "Base URL",
+      "Language",
+      "Execution Mode",
+      "Keep Context History",
+      "Randomize Order",
+      "Temperature",
+      "Seed",
+      "Reasoning Enabled",
+      "Reasoning Token Budget",
+      "Prompt Tokens",
+      "Completion Tokens",
+      "Reasoning Tokens",
+      "Total Tokens",
+      "MRAT Grand Mean",
+      "Items Answered"
+    ];
+
+    const hoKeys = ["SELF_TRANSCENDENCE", "CONSERVATION", "SELF_ENHANCEMENT", "OPENNESS_TO_CHANGE"];
+    for (const key of hoKeys) {
+      headers.push(`${key} (Raw)`, `${key} (Centered)`);
+    }
+
+    if (sessionResults[0]?.psychometrics?.refinedValues) {
+      for (const code in sessionResults[0].psychometrics.refinedValues) {
+        headers.push(`${code} (Raw)`, `${code} (Centered)`);
+      }
+    }
+
+    for (let i = 1; i <= 57; i++) {
+      headers.push(`Item ${i} Score`);
+    }
+
+    const summaryRows = [headers];
+
+    sessionResults.forEach((results, idx) => {
+      const meta = results.metadata || {};
+      const cfg = meta.config || {};
+      const psych = results.psychometrics || {};
+      const token = results.tokenUsage || {};
+
+      const row = [
+        idx + 1,
+        meta.timestamp || "",
+        cfg.provider || "",
+        cfg.model || "",
+        cfg.baseUrl || "",
+        cfg.lang || "en",
+        cfg.mode || "",
+        cfg.keepContext ? "Yes" : "No",
+        cfg.randomizeOrder ? "Yes" : "No",
+        cfg.temperature ?? "",
+        cfg.seed ?? "",
+        cfg.enableReasoning ? "Yes" : "No",
+        cfg.enableReasoning ? (cfg.reasoningBudget || 1024) : "N/A",
+        token.promptTokens ?? 0,
+        token.completionTokens ?? 0,
+        token.reasoningTokens ?? 0,
+        token.totalTokens ?? 0,
+        psych.mrat ?? "N/A",
+        `${psych.totalAnswered ?? 0}/57`
+      ];
+
+      for (const key of hoKeys) {
+        const ho = psych.higherOrderValues?.[key];
+        row.push(ho?.rawMean ?? "N/A", ho?.centeredMean ?? "N/A");
+      }
+
+      if (psych.refinedValues) {
+        for (const code in psych.refinedValues) {
+          const rv = psych.refinedValues[code];
+          row.push(rv?.rawMean ?? "N/A", rv?.centeredMean ?? "N/A");
+        }
+      }
+
+      for (let i = 1; i <= 57; i++) {
+        row.push(psych.itemRatings?.[i] ?? "N/A");
+      }
+
+      summaryRows.push(row);
+    });
+
+    const wsSummary = XLSX.utils.aoa_to_sheet(summaryRows);
+    XLSX.utils.book_append_sheet(wb, wsSummary, "Session Runs Summary");
+
+    XLSX.writeFile(wb, filename);
+  }
+
   exports.exportToJSON = exportToJSON;
   exports.generateTSVContent = generateTSVContent;
   exports.exportToTSV = exportToTSV;
   exports.exportToXLSX = exportToXLSX;
+  exports.exportSessionToCSV = exportSessionToCSV;
+  exports.exportSessionToXLSX = exportSessionToXLSX;
 
 })(typeof exports !== 'undefined' ? exports : (window.DataExporter = {}));
