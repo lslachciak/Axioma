@@ -84,6 +84,7 @@
 
     // Results State
     results: null,
+    sessionResults: [],
     selectedCoTItem: null,
     activeTab: 'results' // 'results' | 'items' | 'logs'
   };
@@ -365,6 +366,7 @@
       });
 
       state.results = runResult;
+      state.sessionResults.push(runResult);
       state.progressStatus = 'Evaluation completed successfully!';
     } catch (err) {
       state.progressStatus = `Error: ${err.message}`;
@@ -422,17 +424,26 @@
             el('option', { value: 'en' }, 'English (EN)'),
             el('option', { value: 'pl' }, 'Polski (PL)')
           ),
-          state.results ? el('div', { className: 'flex space-x-2' },
+          el('button', {
+            onClick: () => {
+              const confirmed = window.confirm("Are you sure you want to start a new session? All current session evaluation data will be lost.");
+              if (confirmed) {
+                state.sessionResults = [];
+                state.results = null;
+                state.completedCount = 0;
+                state.progressStatus = 'New session started.';
+                renderApp();
+              }
+            },
+            className: 'bg-slate-800 hover:bg-rose-900/40 text-rose-400 hover:text-rose-300 text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-700 hover:border-rose-500/50 flex items-center gap-1.5 transition'
+          }, el('i', { className: 'fa-solid fa-rotate-left' }), ' New Session'),
+          state.sessionResults.length > 0 ? el('div', { className: 'flex space-x-2' },
             el('button', {
-              onClick: () => window.DataExporter.exportToJSON(state.results, `Axioma_PVQ_RR_${state.model}_${new Date().toISOString().slice(0, 10)}.json`),
-              className: 'bg-slate-800 hover:bg-slate-700 text-sky-400 text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-700 flex items-center gap-1.5 transition'
-            }, el('i', { className: 'fa-solid fa-download' }), ' JSON'),
-            el('button', {
-              onClick: () => window.DataExporter.exportToTSV(state.results, `Axioma_PVQ_RR_${state.model}_${new Date().toISOString().slice(0, 10)}.tsv`),
+              onClick: () => window.DataExporter.exportSessionToCSV(state.sessionResults, `Axioma_Session_${new Date().toISOString().slice(0, 10)}.csv`),
               className: 'bg-slate-800 hover:bg-slate-700 text-emerald-400 text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-700 flex items-center gap-1.5 transition'
-            }, el('i', { className: 'fa-solid fa-file-csv' }), ' TSV'),
+            }, el('i', { className: 'fa-solid fa-file-csv' }), ' CSV'),
             el('button', {
-              onClick: () => window.DataExporter.exportToXLSX(state.results, `Axioma_PVQ_RR_${state.model}_${new Date().toISOString().slice(0, 10)}.xlsx`),
+              onClick: () => window.DataExporter.exportSessionToXLSX(state.sessionResults, `Axioma_Session_${new Date().toISOString().slice(0, 10)}.xlsx`),
               className: 'bg-slate-800 hover:bg-slate-700 text-green-400 text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-700 flex items-center gap-1.5 transition'
             }, el('i', { className: 'fa-solid fa-file-excel' }), ' XLSX')
           ) : null
