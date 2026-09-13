@@ -87,6 +87,7 @@
     sessionResults: [],
     selectedCoTItem: null,
     showCircleModal: false,
+    showHoModal: false,
     activeTab: 'results' // 'results' | 'items' | 'logs'
   };
 
@@ -94,6 +95,7 @@
   let refinedChartInstance = null;
   let higherOrderChartInstance = null;
   let circleChartInstance = null;
+  let hoEnlargedChartInstance = null;
 
   // LocalStorage persistence helpers
   function loadPersistedState() {
@@ -344,6 +346,57 @@
       });
     }
 
+
+    const hoEnlargedCanvas = document.getElementById('hoEnlargedChartCanvas');
+    if (hoEnlargedCanvas && window.Chart) {
+      if (hoEnlargedChartInstance) hoEnlargedChartInstance.destroy();
+
+      const hoLabels = Object.values(psych.higherOrderValues).map(v => state.lang === 'pl' ? v.namePl : v.nameEn);
+      const hoRaw = Object.values(psych.higherOrderValues).map(v => v.rawMean ?? 0);
+      const hoCentered = Object.values(psych.higherOrderValues).map(v => v.centeredMean ?? 0);
+
+      hoEnlargedChartInstance = new Chart(hoEnlargedCanvas.getContext('2d'), {
+        type: 'radar',
+        data: {
+          labels: hoLabels,
+          datasets: [
+            {
+              label: state.lang === 'pl' ? 'Średnia surowa' : 'Raw Mean',
+              data: hoRaw,
+              backgroundColor: 'rgba(14, 165, 233, 0.2)',
+              borderColor: '#0ea5e9',
+              pointBackgroundColor: '#0ea5e9',
+              borderWidth: 2
+            },
+            {
+              label: state.lang === 'pl' ? 'Wynik wycentrowany' : 'Centered Score',
+              data: hoCentered,
+              backgroundColor: 'rgba(236, 72, 153, 0.2)',
+              borderColor: '#ec4899',
+              pointBackgroundColor: '#ec4899',
+              borderWidth: 2
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            r: {
+              grid: { color: 'rgba(255, 255, 255, 0.15)' },
+              angleLines: { color: 'rgba(255, 255, 255, 0.15)' },
+              pointLabels: { color: '#f8fafc', font: { size: 14, weight: 'bold' } },
+              ticks: { color: '#94a3b8', backdropColor: 'transparent', z: 10 }
+            }
+          },
+          plugins: {
+            legend: { labels: { color: '#f8fafc', font: { size: 14 } }, position: 'bottom' },
+            tooltip: { bodyFont: { size: 14 }, titleFont: { size: 14 } }
+          }
+        }
+      });
+    }
+
       higherOrderChartInstance = new Chart(hoCanvas.getContext('2d'), {
         type: 'radar',
         data: {
@@ -461,7 +514,8 @@
         el('div', { className: 'lg:col-span-8 space-y-6' }, ExecutionDashboard())
       ),
       selectedCoTModal(),
-      circleModal()
+      circleModal(),
+      hoModal()
     );
   }
 
@@ -787,14 +841,19 @@
       el('div', { className: 'grid grid-cols-1 lg:grid-cols-2 gap-6' },
         el('div', {
             className: 'bg-slate-950/50 p-4 rounded-xl border border-slate-800 cursor-pointer hover:border-sky-500/50 transition relative group',
-            onClick: () => { state.showCircleModal = true; renderApp(); },
-            title: state.lang === 'pl' ? 'Kliknij, aby powiększyć Koło Wartości' : 'Click to enlarge Value Circle'
+            onClick: () => { state.showHoModal = true; renderApp(); },
+            title: state.lang === 'pl' ? 'Kliknij, aby powiększyć' : 'Click to enlarge'
           },
           el('div', { className: 'absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition text-sky-400' }, el('i', { className: 'fa-solid fa-expand' })),
           el('h3', { className: 'text-xs font-bold text-slate-300 mb-3 uppercase tracking-wider' }, '4 Higher-Order Value Dimensions'),
           el('div', { className: 'h-64' }, el('canvas', { id: 'higherOrderChartCanvas' }))
         ),
-        el('div', { className: 'bg-slate-950/50 p-4 rounded-xl border border-slate-800' },
+        el('div', {
+            className: 'bg-slate-950/50 p-4 rounded-xl border border-slate-800 cursor-pointer hover:border-sky-500/50 transition relative group',
+            onClick: () => { state.showCircleModal = true; renderApp(); },
+            title: state.lang === 'pl' ? 'Kliknij, aby powiększyć Koło Wartości' : 'Click to enlarge Value Circle'
+          },
+          el('div', { className: 'absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition text-sky-400' }, el('i', { className: 'fa-solid fa-expand' })),
           el('h3', { className: 'text-xs font-bold text-slate-300 mb-3 uppercase tracking-wider' }, '19 Refined Basic Values'),
           el('div', { className: 'h-64' }, el('canvas', { id: 'refinedChartCanvas' }))
         )
@@ -929,6 +988,32 @@
     );
   }
 
+
+
+  function hoModal() {
+    if (!state.showHoModal) return null;
+
+    return el('div', {
+        className: 'fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4',
+        onClick: (e) => { if (e.target === e.currentTarget) { state.showHoModal = false; renderApp(); } }
+      },
+      el('div', { className: 'glass-panel bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-5xl p-6 shadow-2xl relative flex flex-col', style: { height: '90vh' } },
+        el('div', { className: 'flex justify-between items-center border-b border-slate-800 pb-3 mb-4 shrink-0' },
+          el('h3', { className: 'text-lg font-bold text-sky-400 flex items-center gap-2' },
+            el('i', { className: 'fa-solid fa-expand' }),
+            state.lang === 'pl' ? '4 Wymiary Wartości Wyższego Rzędu' : '4 Higher-Order Value Dimensions'
+          ),
+          el('button', {
+            onClick: () => { state.showHoModal = false; renderApp(); },
+            className: 'text-slate-400 hover:text-slate-200 text-xl'
+          }, el('i', { className: 'fa-solid fa-xmark' }))
+        ),
+        el('div', { className: 'flex-1 min-h-0 relative' },
+          el('canvas', { id: 'hoEnlargedChartCanvas' })
+        )
+      )
+    );
+  }
 
   function circleModal() {
     if (!state.showCircleModal) return null;
