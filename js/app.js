@@ -22,7 +22,13 @@
       } else if (key === 'checked') {
         element.checked = !!props[key];
       } else if (key === 'innerHTML') {
-        element.innerHTML = props[key];
+        element.innerHTML = String(props[key]).replace(/[&<>'"]/g, match => ({
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          "'": '&#39;',
+          '"': '&quot;'
+        }[match]));
       } else if (key !== 'key') {
         element.setAttribute(key, props[key]);
       }
