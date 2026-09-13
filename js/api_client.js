@@ -76,22 +76,32 @@
    * Parses retry-after header or error message to extract wait duration in milliseconds.
    */
   function parseRetryDelayMs(errorText, responseHeaders) {
-    if (responseHeaders && responseHeaders.get) {
+    if (responseHeaders && typeof responseHeaders.get === 'function') {
       const retryHeader = responseHeaders.get("retry-after");
       if (retryHeader) {
+        // Try parsing as seconds
         const seconds = parseFloat(retryHeader);
         if (!isNaN(seconds)) return Math.ceil(seconds) * 1000;
+
+        // Try parsing as HTTP Date
+        const date = new Date(retryHeader);
+        if (!isNaN(date.getTime())) {
+          const delayMs = date.getTime() - Date.now();
+          if (delayMs > 0) return delayMs;
+        }
       }
     }
 
-    const matchSeconds = errorText.match(/retry\s+(?:in|after)\s+([\d\.]+)\s*s?/i) ||
-                         errorText.match(/retry\s+in\s+([\d\.]+)/i) ||
-                         errorText.match(/(\d+(?:\.\d+)?)\s*s\b/i);
+    if (typeof errorText === 'string') {
+      const matchSeconds = errorText.match(/retry\s+(?:in|after)\s+([\d\.]+)\s*s?/i) ||
+                           errorText.match(/retry\s+in\s+([\d\.]+)/i) ||
+                           errorText.match(/(\d+(?:\.\d+)?)\s*s\b/i);
 
-    if (matchSeconds) {
-      const sec = parseFloat(matchSeconds[1]);
-      if (!isNaN(sec) && sec > 0) {
-        return Math.ceil(sec) * 1000;
+      if (matchSeconds) {
+        const sec = parseFloat(matchSeconds[1]);
+        if (!isNaN(sec) && sec > 0) {
+          return Math.ceil(sec) * 1000;
+        }
       }
     }
 
@@ -555,4 +565,5 @@
   exports.fetchAvailableModels = fetchAvailableModels;
   exports.completeChat = completeChat;
 
+  exports.parseRetryDelayMs = parseRetryDelayMs;
 })(typeof exports !== 'undefined' ? exports : (window.ApiClient = {}));
