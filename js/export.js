@@ -9,6 +9,12 @@
   /**
    * Triggers a browser download for blob content.
    */
+  function getFormattedTime() {
+    const pad = (n) => n.toString().padStart(2, '0');
+    const d = new Date();
+    return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+  }
+
   function downloadBlob(content, filename, contentType) {
     const blob = new Blob([content], { type: contentType });
     const url = URL.createObjectURL(blob);
@@ -27,7 +33,7 @@
    * @param {Object} results - Full evaluation results object
    * @param {string} [filename] - Output filename
    */
-  function exportToJSON(results, filename = "axioma_pvq_rr_results.json") {
+  function exportToJSON(results, filename = "axioma_pvq_rr_results_" + getFormattedTime() + ".json") {
     if (!results) return;
     const jsonStr = JSON.stringify(results, null, 2);
     downloadBlob(jsonStr, filename, "application/json");
@@ -101,7 +107,7 @@
     return lines.join("\n");
   }
 
-  function exportToTSV(results, filename = "axioma_pvq_rr_results.tsv") {
+  function exportToTSV(results, filename = "axioma_pvq_rr_results_" + getFormattedTime() + ".tsv") {
     const tsvText = generateTSVContent(results);
     if (!tsvText) return;
     downloadBlob(tsvText, filename, "text/tab-separated-values");
@@ -115,7 +121,7 @@
    * Tab 4: 57 Items & Responses
    * Tab 5: Token Usage
    */
-  function exportToXLSX(results, filename = "axioma_pvq_rr_results.xlsx") {
+  function exportToXLSX(results, filename = "axioma_pvq_rr_results_" + getFormattedTime() + ".xlsx") {
     if (!results || !results.psychometrics) return;
     if (typeof window.XLSX === 'undefined') {
       alert("XLSX library not loaded. Please ensure you have internet access or CDN loaded.");
@@ -240,7 +246,7 @@
    * @param {Array<Object>} sessionResults - Array of evaluation result objects from the session
    * @param {string} [filename] - Output filename
    */
-  function exportSessionToCSV(sessionResults, filename = "axioma_session_results.csv") {
+  function exportSessionToCSV(sessionResults, filename = "axioma_session_results_" + getFormattedTime() + ".csv") {
     if (!sessionResults || !Array.isArray(sessionResults) || sessionResults.length === 0) return;
 
     const items = window.PVQData ? window.PVQData.ITEMS : [];
@@ -351,7 +357,7 @@
    * @param {Array<Object>} sessionResults - Array of evaluation result objects from the session
    * @param {string} [filename] - Output filename
    */
-  function exportSessionToXLSX(sessionResults, filename = "axioma_session_results.xlsx") {
+  function exportSessionToXLSX(sessionResults, filename = "axioma_session_results_" + getFormattedTime() + ".xlsx") {
     if (!sessionResults || !Array.isArray(sessionResults) || sessionResults.length === 0) return;
     if (typeof window.XLSX === 'undefined') {
       alert("XLSX library not loaded. Please ensure you have internet access or CDN loaded.");
