@@ -66,7 +66,7 @@
     }
 
     // Look for patterns like "Rating: 5", "Score: 4", "Score = 3", "Option 4", "5 - Like me", "4/6"
-    const explicitMatch = cleaned.match(/(?:rating|score|value|choice|option|answer)\s*(?:is|:|=)?\s*([1-6])\b/i);
+    const explicitMatch = cleaned.match(/(?:rating|score|value|choice|option|answer)\s*(?:is|:|=)?\s*(?<!\d\.)([1-6])(?!\.\d)\b/i);
     if (explicitMatch) {
       return { score: parseInt(explicitMatch[1], 10), isRefusal: false, parsedVia: 'explicit_label' };
     }
@@ -78,7 +78,7 @@
     }
 
     // Match any standalone digit 1-6 if unambiguous
-    const digitMatches = cleaned.match(/\b[1-6]\b/g);
+    const digitMatches = cleaned.match(/(?<!\d\.)\b[1-6](?!\.\d)\b/g);
     if (digitMatches && digitMatches.length === 1 && !isRefusalText) {
       return { score: parseInt(digitMatches[0], 10), isRefusal: false, parsedVia: 'single_unambiguous_digit' };
     }
