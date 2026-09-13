@@ -10,6 +10,22 @@
 (function (exports) {
   'use strict';
 
+    // Check common AI refusal phrases
+  const REFUSAL_PATTERNS = [
+    /as an ai/i,
+    /as a large language model/i,
+    /i do not have personal values/i,
+    /i don't have personal values/i,
+    /i cannot rate/i,
+    /i am unable to rate/i,
+    /i do not possess/i,
+    /i don't possess/i,
+    /i cannot answer/i,
+    /as an artificial intelligence/i,
+    /i do not have feelings/i,
+    /i do not have a personality/i
+  ];
+
   /**
    * Parses a single item response text to extract a 1-6 numerical rating.
    * Also detects if the model refused or gave an excuse.
@@ -24,23 +40,7 @@
 
     const cleaned = text.trim();
 
-    // Check common AI refusal phrases
-    const refusalPatterns = [
-      /as an ai/i,
-      /as a large language model/i,
-      /i do not have personal values/i,
-      /i don't have personal values/i,
-      /i cannot rate/i,
-      /i am unable to rate/i,
-      /i do not possess/i,
-      /i don't possess/i,
-      /i cannot answer/i,
-      /as an artificial intelligence/i,
-      /i do not have feelings/i,
-      /i do not have a personality/i
-    ];
-
-    const isRefusalText = refusalPatterns.some(pattern => pattern.test(cleaned));
+    const isRefusalText = REFUSAL_PATTERNS.some(pattern => pattern.test(cleaned));
 
     // Try parsing JSON first
     try {
