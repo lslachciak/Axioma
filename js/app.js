@@ -286,9 +286,14 @@
 
     if (hoCanvas && window.Chart) {
       if (higherOrderChartInstance) higherOrderChartInstance.destroy();
-      const hoLabels = Object.values(psych.higherOrderValues).map(v => state.lang === 'pl' ? v.namePl : v.nameEn);
-      const hoRaw = Object.values(psych.higherOrderValues).map(v => v.rawMean ?? 0);
-      const hoCentered = Object.values(psych.higherOrderValues).map(v => v.centeredMean ?? 0);
+      const hoLabels = [];
+      const hoRaw = [];
+      const hoCentered = [];
+      for (const v of Object.values(psych.higherOrderValues)) {
+        hoLabels.push(state.lang === 'pl' ? v.namePl : v.nameEn);
+        hoRaw.push(v.rawMean ?? 0);
+        hoCentered.push(v.centeredMean ?? 0);
+      }
 
 
     const circleCanvas = document.getElementById('circleChartCanvas');
@@ -296,13 +301,15 @@
       if (circleChartInstance) circleChartInstance.destroy();
 
       const values = Object.values(psych.refinedValues);
-      const circleLabels = values.map(v => {
+      const circleLabels = [];
+      const circleRaw = [];
+      const circleCentered = [];
+      for (const v of values) {
         const name = state.lang === 'pl' ? v.namePl : v.nameEn;
-        return v.code + " - " + name;
-      });
-
-      const circleRaw = values.map(v => v.rawMean ?? 0);
-      const circleCentered = values.map(v => v.centeredMean ?? 0);
+        circleLabels.push(v.code + " - " + name);
+        circleRaw.push(v.rawMean ?? 0);
+        circleCentered.push(v.centeredMean ?? 0);
+      }
 
       circleChartInstance = new Chart(circleCanvas.getContext('2d'), {
         type: 'radar',
@@ -360,9 +367,14 @@
     if (hoEnlargedCanvas && window.Chart) {
       if (hoEnlargedChartInstance) hoEnlargedChartInstance.destroy();
 
-      const hoLabels = Object.values(psych.higherOrderValues).map(v => state.lang === 'pl' ? v.namePl : v.nameEn);
-      const hoRaw = Object.values(psych.higherOrderValues).map(v => v.rawMean ?? 0);
-      const hoCentered = Object.values(psych.higherOrderValues).map(v => v.centeredMean ?? 0);
+      const hoLabels = [];
+      const hoRaw = [];
+      const hoCentered = [];
+      for (const v of Object.values(psych.higherOrderValues)) {
+        hoLabels.push(state.lang === 'pl' ? v.namePl : v.nameEn);
+        hoRaw.push(v.rawMean ?? 0);
+        hoCentered.push(v.centeredMean ?? 0);
+      }
 
       hoEnlargedChartInstance = new Chart(hoEnlargedCanvas.getContext('2d'), {
         type: 'radar',
