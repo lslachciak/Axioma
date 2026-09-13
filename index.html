@@ -37,6 +37,8 @@
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col antialiased">
   <div id="root"></div>
 
+  <!-- DOMPurify CDN for XSS protection -->
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.9/dist/purify.min.js"></script>
   <!-- Application Scripts -->
   <script src="js/pvq_data.js"></script>
   <script src="js/psychometrics.js"></script>
