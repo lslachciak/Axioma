@@ -243,22 +243,24 @@
       const centeredScores = Object.values(psych.refinedValues).map(v => v.centeredMean ?? 0);
 
       refinedChartInstance = new Chart(refinedCanvas.getContext('2d'), {
-        type: 'bar',
+        type: 'radar',
         data: {
           labels: refLabels,
           datasets: [
             {
-              label: state.lang === 'pl' ? 'Średnia surowa (1-6)' : 'Raw Mean (1-6)',
+              label: state.lang === 'pl' ? 'Średnia surowa' : 'Raw Mean',
               data: rawScores,
-              backgroundColor: 'rgba(56, 189, 248, 0.7)',
+              backgroundColor: 'rgba(56, 189, 248, 0.2)',
               borderColor: '#38bdf8',
+              pointBackgroundColor: '#38bdf8',
               borderWidth: 1
             },
             {
-              label: state.lang === 'pl' ? 'Wynik wycentrowany (Średnia Schwarza)' : 'Centered Score (Grand Mean)',
+              label: state.lang === 'pl' ? 'Wynik wycentrowany' : 'Centered Score',
               data: centeredScores,
-              backgroundColor: 'rgba(168, 85, 247, 0.7)',
+              backgroundColor: 'rgba(168, 85, 247, 0.2)',
               borderColor: '#a855f7',
+              pointBackgroundColor: '#a855f7',
               borderWidth: 1
             }
           ]
@@ -267,10 +269,17 @@
           responsive: true,
           maintainAspectRatio: false,
           scales: {
-            y: { grid: { color: 'rgba(255, 255, 255, 0.1)' }, ticks: { color: '#94a3b8' } },
-            x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 10 } } }
+            r: {
+              grid: { color: 'rgba(255, 255, 255, 0.15)' },
+              angleLines: { color: 'rgba(255, 255, 255, 0.15)' },
+              pointLabels: { color: '#e2e8f0', font: { size: 8 } },
+              ticks: { display: false }
+            }
           },
-          plugins: { legend: { labels: { color: '#f8fafc' } } }
+          plugins: {
+            legend: { display: false },
+            tooltip: { bodyFont: { size: 10 }, titleFont: { size: 10 } }
+          }
         }
       });
     }
