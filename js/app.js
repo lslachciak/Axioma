@@ -21,8 +21,6 @@
         element.value = props[key];
       } else if (key === 'checked') {
         element.checked = !!props[key];
-      } else if (key === 'innerHTML') {
-        element.innerHTML = props[key];
       } else if (key !== 'key') {
         element.setAttribute(key, props[key]);
       }
