@@ -1,0 +1,11 @@
+{
+  "name": "axioma-tests",
+  "version": "1.0.0",
+  "description": "Tests for axioma",
+  "main": "js/app.js",
+  "scripts": {
+    "test": "node --test"
+  },
+  "author": "",
+  "license": "ISC"
+}
