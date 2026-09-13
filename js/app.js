@@ -86,12 +86,14 @@
     results: null,
     sessionResults: [],
     selectedCoTItem: null,
+    showCircleModal: false,
     activeTab: 'results' // 'results' | 'items' | 'logs'
   };
 
   let engineInstance = null;
   let refinedChartInstance = null;
   let higherOrderChartInstance = null;
+  let circleChartInstance = null;
 
   // LocalStorage persistence helpers
   function loadPersistedState() {
@@ -224,6 +226,7 @@
     renderCharts();
   }
 
+
   function renderCharts() {
     if (state.activeTab !== 'results' || !state.results || !state.results.psychometrics) return;
 
@@ -275,6 +278,71 @@
       const hoLabels = Object.values(psych.higherOrderValues).map(v => state.lang === 'pl' ? v.namePl : v.nameEn);
       const hoRaw = Object.values(psych.higherOrderValues).map(v => v.rawMean ?? 0);
       const hoCentered = Object.values(psych.higherOrderValues).map(v => v.centeredMean ?? 0);
+
+
+    const circleCanvas = document.getElementById('circleChartCanvas');
+    if (circleCanvas && window.Chart) {
+      if (circleChartInstance) circleChartInstance.destroy();
+
+      const values = Object.values(psych.refinedValues);
+      const circleLabels = values.map(v => {
+        const name = state.lang === 'pl' ? v.namePl : v.nameEn;
+        return v.code + " - " + name;
+      });
+
+      const circleRaw = values.map(v => v.rawMean ?? 0);
+      const circleCentered = values.map(v => v.centeredMean ?? 0);
+
+      circleChartInstance = new Chart(circleCanvas.getContext('2d'), {
+        type: 'radar',
+        data: {
+          labels: circleLabels,
+          datasets: [
+            {
+              label: state.lang === 'pl' ? 'Średnia surowa' : 'Raw Mean',
+              data: circleRaw,
+              backgroundColor: 'rgba(56, 189, 248, 0.2)',
+              borderColor: '#38bdf8',
+              pointBackgroundColor: '#38bdf8',
+              borderWidth: 2
+            },
+            {
+              label: state.lang === 'pl' ? 'Wynik wycentrowany' : 'Centered Score',
+              data: circleCentered,
+              backgroundColor: 'rgba(168, 85, 247, 0.2)',
+              borderColor: '#a855f7',
+              pointBackgroundColor: '#a855f7',
+              borderWidth: 2
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            r: {
+              grid: { color: 'rgba(255, 255, 255, 0.15)' },
+              angleLines: { color: 'rgba(255, 255, 255, 0.15)' },
+              pointLabels: {
+                color: '#e2e8f0',
+                font: { size: 12 }
+              },
+              ticks: { color: '#94a3b8', backdropColor: 'transparent', z: 10 }
+            }
+          },
+          plugins: {
+            legend: {
+              labels: { color: '#f8fafc', font: { size: 14 } },
+              position: 'bottom'
+            },
+            tooltip: {
+              bodyFont: { size: 14 },
+              titleFont: { size: 14 }
+            }
+          }
+        }
+      });
+    }
 
       higherOrderChartInstance = new Chart(hoCanvas.getContext('2d'), {
         type: 'radar',
@@ -392,7 +460,8 @@
         el('div', { className: 'lg:col-span-4 space-y-6' }, ConfigPanel()),
         el('div', { className: 'lg:col-span-8 space-y-6' }, ExecutionDashboard())
       ),
-      selectedCoTModal()
+      selectedCoTModal(),
+      circleModal()
     );
   }
 
@@ -716,7 +785,12 @@
         )
       ),
       el('div', { className: 'grid grid-cols-1 lg:grid-cols-2 gap-6' },
-        el('div', { className: 'bg-slate-950/50 p-4 rounded-xl border border-slate-800' },
+        el('div', {
+            className: 'bg-slate-950/50 p-4 rounded-xl border border-slate-800 cursor-pointer hover:border-sky-500/50 transition relative group',
+            onClick: () => { state.showCircleModal = true; renderApp(); },
+            title: state.lang === 'pl' ? 'Kliknij, aby powiększyć Koło Wartości' : 'Click to enlarge Value Circle'
+          },
+          el('div', { className: 'absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition text-sky-400' }, el('i', { className: 'fa-solid fa-expand' })),
           el('h3', { className: 'text-xs font-bold text-slate-300 mb-3 uppercase tracking-wider' }, '4 Higher-Order Value Dimensions'),
           el('div', { className: 'h-64' }, el('canvas', { id: 'higherOrderChartCanvas' }))
         ),
@@ -850,6 +924,32 @@
         el('h4', { className: 'text-xs font-semibold text-slate-400 mb-1 uppercase tracking-wider' }, 'Stream Events Log'),
         el('div', { className: 'bg-slate-950 p-3 rounded-xl border border-slate-800 text-xs code-font text-slate-400 space-y-1 max-h-48 overflow-y-auto' },
           state.liveStreamLogs.length === 0 ? el('p', { className: 'text-slate-600' }, 'No events logged yet.') : state.liveStreamLogs.map((log, i) => el('div', { key: i }, log))
+        )
+      )
+    );
+  }
+
+
+  function circleModal() {
+    if (!state.showCircleModal) return null;
+
+    return el('div', {
+        className: 'fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4',
+        onClick: (e) => { if (e.target === e.currentTarget) { state.showCircleModal = false; renderApp(); } }
+      },
+      el('div', { className: 'glass-panel bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-5xl p-6 shadow-2xl relative flex flex-col', style: { height: '90vh' } },
+        el('div', { className: 'flex justify-between items-center border-b border-slate-800 pb-3 mb-4 shrink-0' },
+          el('h3', { className: 'text-lg font-bold text-sky-400 flex items-center gap-2' },
+            el('i', { className: 'fa-solid fa-circle-nodes' }),
+            state.lang === 'pl' ? 'Kołowy Model 19 Wartości (Schwartz)' : '19 Refined Basic Values (Schwartz Value Circle)'
+          ),
+          el('button', {
+            onClick: () => { state.showCircleModal = false; renderApp(); },
+            className: 'text-slate-400 hover:text-slate-200 text-xl'
+          }, el('i', { className: 'fa-solid fa-xmark' }))
+        ),
+        el('div', { className: 'flex-1 min-h-0 relative' },
+          el('canvas', { id: 'circleChartCanvas' })
         )
       )
     );
