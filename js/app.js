@@ -595,11 +595,11 @@
           }, el('i', { className: 'fa-solid fa-rotate-left' }), ' New Session'),
           state.sessionResults.length > 0 ? el('div', { className: 'flex space-x-2' },
             el('button', {
-              onClick: () => window.DataExporter.exportSessionToCSV(state.sessionResults, `Axioma_Session_${new Date().toISOString().slice(0, 10)}.csv`),
+              onClick: () => window.DataExporter.exportSessionToCSV(state.sessionResults, undefined),
               className: 'bg-slate-800 hover:bg-slate-700 text-emerald-400 text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-700 flex items-center gap-1.5 transition'
             }, el('i', { className: 'fa-solid fa-file-csv' }), ' CSV'),
             el('button', {
-              onClick: () => window.DataExporter.exportSessionToXLSX(state.sessionResults, `Axioma_Session_${new Date().toISOString().slice(0, 10)}.xlsx`),
+              onClick: () => window.DataExporter.exportSessionToXLSX(state.sessionResults, undefined),
               className: 'bg-slate-800 hover:bg-slate-700 text-green-400 text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-700 flex items-center gap-1.5 transition'
             }, el('i', { className: 'fa-solid fa-file-excel' }), ' XLSX')
           ) : null
