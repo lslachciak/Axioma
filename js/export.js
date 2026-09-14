@@ -53,6 +53,7 @@
     lines.push(`# Timestamp\t${results.metadata?.timestamp || new Date().toISOString()}`);
     lines.push(`# Provider\t${results.metadata?.config?.provider || ""}`);
     lines.push(`# Model\t${results.metadata?.config?.model || ""}`);
+    lines.push(`# Base URL\t${results.metadata?.config?.baseUrl || ""}`);
     lines.push(`# System Prompt\t${(results.metadata?.config?.customSystemPrompt || "").replace(/[\r\n\t]+/g, " ")}`);
     lines.push(`# Language\t${results.metadata?.config?.lang || "en"}`);
     lines.push(`# Mode\t${results.metadata?.config?.mode || ""}`);
@@ -62,6 +63,7 @@
     lines.push(`# Seed\t${results.metadata?.config?.seed ?? ""}`);
     lines.push(`# Reasoning Enabled\t${results.metadata?.config?.enableReasoning ? "Yes" : "No"}`);
     lines.push(`# Reasoning Token Budget\t${results.metadata?.config?.enableReasoning ? (results.metadata?.config?.reasoningBudget || 1024) : "N/A"}`);
+    lines.push(`# Reasoning Effort\t${results.metadata?.config?.enableReasoning ? (results.metadata?.config?.reasoningEffort || "medium") : "N/A"}`);
     lines.push(`# Grand Mean (MRAT)\t${results.psychometrics.mrat}`);
     lines.push(`# Items Answered\t${results.psychometrics.totalAnswered} / 57`);
     lines.push("");
@@ -147,6 +149,7 @@
       ["Seed", results.metadata?.config?.seed ?? "None"],
       ["Reasoning Enabled", results.metadata?.config?.enableReasoning ? "Yes" : "No"],
       ["Reasoning Token Budget", results.metadata?.config?.enableReasoning ? (results.metadata?.config?.reasoningBudget || 1024) : "N/A"],
+      ["Reasoning Effort", results.metadata?.config?.enableReasoning ? (results.metadata?.config?.reasoningEffort || "medium") : "N/A"],
       ["Grand Mean Score (MRAT)", results.psychometrics.mrat],
       ["Total Items Answered", `${results.psychometrics.totalAnswered} / 57`]
     ];
@@ -258,6 +261,7 @@
       "Provider",
       "Model",
       "Base URL",
+      "System Prompt",
       "Language",
       "Execution Mode",
       "Keep Context History",
@@ -307,6 +311,7 @@
         cfg.provider || "",
         cfg.model || "",
         cfg.baseUrl || "",
+        cfg.customSystemPrompt || "",
         cfg.lang || "en",
         cfg.mode || "",
         cfg.keepContext ? "Yes" : "No",
@@ -374,6 +379,7 @@
       "Provider",
       "Model",
       "Base URL",
+      "System Prompt",
       "Language",
       "Execution Mode",
       "Keep Context History",
@@ -382,6 +388,7 @@
       "Seed",
       "Reasoning Enabled",
       "Reasoning Token Budget",
+      "Reasoning Effort",
       "Prompt Tokens",
       "Completion Tokens",
       "Reasoning Tokens",
@@ -419,6 +426,7 @@
         cfg.provider || "",
         cfg.model || "",
         cfg.baseUrl || "",
+        cfg.customSystemPrompt || "",
         cfg.lang || "en",
         cfg.mode || "",
         cfg.keepContext ? "Yes" : "No",
@@ -427,6 +435,7 @@
         cfg.seed ?? "",
         cfg.enableReasoning ? "Yes" : "No",
         cfg.enableReasoning ? (cfg.reasoningBudget || 1024) : "N/A",
+        cfg.enableReasoning ? (cfg.reasoningEffort || "medium") : "N/A",
         token.promptTokens ?? 0,
         token.completionTokens ?? 0,
         token.reasoningTokens ?? 0,
