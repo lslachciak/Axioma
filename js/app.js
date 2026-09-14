@@ -22,7 +22,7 @@
       } else if (key === 'checked') {
         element.checked = !!props[key];
       } else if (key === 'innerHTML') {
-        element.innerHTML = props[key];
+        element.innerHTML = typeof DOMPurify !== 'undefined' ? DOMPurify.sanitize(props[key]) : props[key];
       } else if (key !== 'key') {
         element.setAttribute(key, props[key]);
       }
