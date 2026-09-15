@@ -280,7 +280,7 @@
     ];
 
     // Add 4 Higher-Order Values (Raw & Centered)
-    const hoKeys = ["SELF_TRANSCENDENCE", "CONSERVATION", "SELF_ENHANCEMENT", "OPENNESS_TO_CHANGE"];
+    const hoKeys = ["Transcendence", "Conservation", "Enhancement", "Openness"];
     for (const key of hoKeys) {
       headers.push(`${key}_Raw`, `${key}_Centered`);
     }
@@ -397,7 +397,7 @@
       "Items Answered"
     ];
 
-    const hoKeys = ["SELF_TRANSCENDENCE", "CONSERVATION", "SELF_ENHANCEMENT", "OPENNESS_TO_CHANGE"];
+    const hoKeys = ["Transcendence", "Conservation", "Enhancement", "Openness"];
     for (const key of hoKeys) {
       headers.push(`${key} (Raw)`, `${key} (Centered)`);
     }
