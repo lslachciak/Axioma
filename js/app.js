@@ -312,13 +312,17 @@
       if (circleChartInstance) circleChartInstance.destroy();
 
       const values = Object.values(psych.refinedValues);
-      const circleLabels = values.map(v => {
+      const circleLen = values.length;
+      const circleLabels = new Array(circleLen);
+      const circleRaw = new Array(circleLen);
+      const circleCentered = new Array(circleLen);
+      for (let i = 0; i < circleLen; i++) {
+        const v = values[i];
         const name = state.lang === 'pl' ? v.namePl : v.nameEn;
-        return v.code + " - " + name;
-      });
-
-      const circleRaw = values.map(v => v.rawMean ?? 0);
-      const circleCentered = values.map(v => v.centeredMean ?? 0);
+        circleLabels[i] = v.code + " - " + name;
+        circleRaw[i] = v.rawMean ?? 0;
+        circleCentered[i] = v.centeredMean ?? 0;
+      }
 
       circleChartInstance = new Chart(circleCanvas.getContext('2d'), {
         type: 'radar',
