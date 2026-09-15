@@ -138,46 +138,8 @@ Instrukcja: Oceń WSZYSTKIE 57 poniższych pozycji w skali 1-6. Podaj swoje ocen
      * @param {Function} onProgress - Callback for live progress updates
      * @returns {Promise<Object>} Final evaluation results object
      */
-    async run(onProgress) {
-      this.isRunning = true;
-      this.shouldAbort = false;
 
-      const lang = this.config.lang || 'en';
-      const isBatch = this.config.mode === 'batch';
-      const randomize = !!this.config.randomizeOrder;
-      const keepContext = !!this.config.keepContext;
-
-      let itemsToRun = this.pvqData.ITEMS.slice();
-      if (randomize) {
-        itemsToRun = shuffleArray(itemsToRun);
-      }
-
-      const totalItems = itemsToRun.length;
-      const rawResponses = {};
-      const parsedItemScores = {};
-      const reasoningTraces = {};
-      let totalPromptTokens = 0;
-      let totalCompletionTokens = 0;
-      let totalReasoningTokens = 0;
-
-      const runMetadata = {
-        timestamp: new Date().toISOString(),
-        config: { ...this.config, apiKey: this.config.apiKey ? "***HIDDEN***" : "" },
-        itemOrder: itemsToRun.map(it => it.id)
-      };
-
-      const systemPrompt = buildSystemPrompt(this.config.customSystemPrompt, lang);
-
-      const statusUpdateCallback = (retryMsg) => {
-        if (onProgress) {
-          onProgress({
-            type: 'rate_limit_pause',
-            statusMessage: retryMsg
-          });
-        }
-      };
-
-      if (isBatch) {
+    async _runBatch(lang, systemPrompt, statusUpdateCallback, onProgress, state) {
         // --- BATCH MODE ---
         const batchUserPrompt = buildBatchPrompt(this.pvqData.ITEMS, lang);
 
@@ -202,17 +164,17 @@ Instrukcja: Oceń WSZYSTKIE 57 poniższych pozycji w skali 1-6. Podaj swoje ocen
 
           if (this.shouldAbort) throw new Error("Evaluation cancelled by user.");
 
-          totalPromptTokens += apiRes.tokenUsage.promptTokens;
-          totalCompletionTokens += apiRes.tokenUsage.completionTokens;
-          totalReasoningTokens += apiRes.tokenUsage.reasoningTokens;
+          state.totalPromptTokens += apiRes.tokenUsage.promptTokens;
+          state.totalCompletionTokens += apiRes.tokenUsage.completionTokens;
+          state.totalReasoningTokens += apiRes.tokenUsage.reasoningTokens;
 
           const batchParsed = this.psychometrics.parseBatchResponse(apiRes.text);
 
           for (let i = 1; i <= 57; i++) {
             const parsedInfo = batchParsed[i] || { score: null, rawText: "", isRefusal: false };
-            parsedItemScores[i] = parsedInfo.score;
-            rawResponses[i] = parsedInfo.rawText || apiRes.text;
-            reasoningTraces[i] = apiRes.reasoning;
+            state.parsedItemScores[i] = parsedInfo.score;
+            state.rawResponses[i] = parsedInfo.rawText || apiRes.text;
+            state.reasoningTraces[i] = apiRes.reasoning;
           }
 
           if (onProgress) {
@@ -224,14 +186,14 @@ Instrukcja: Oceń WSZYSTKIE 57 poniższych pozycji w skali 1-6. Podaj swoje ocen
               currentPrompt: formatConversationDisplay(systemPrompt, [], batchUserPrompt),
               lastResponse: apiRes.text,
               lastReasoning: apiRes.reasoning,
-              parsedScoresMap: { ...parsedItemScores },
-              rawResponses: { ...rawResponses },
-              reasoningTraces: { ...reasoningTraces },
+              parsedScoresMap: { ...state.parsedItemScores },
+              rawResponses: { ...state.rawResponses },
+              reasoningTraces: { ...state.reasoningTraces },
               tokenUsage: {
-                promptTokens: totalPromptTokens,
-                completionTokens: totalCompletionTokens,
-                reasoningTokens: totalReasoningTokens,
-                totalTokens: totalPromptTokens + totalCompletionTokens
+                promptTokens: state.totalPromptTokens,
+                completionTokens: state.totalCompletionTokens,
+                reasoningTokens: state.totalReasoningTokens,
+                totalTokens: state.totalPromptTokens + state.totalCompletionTokens
               }
             });
           }
@@ -242,8 +204,10 @@ Instrukcja: Oceń WSZYSTKIE 57 poniższych pozycji w skali 1-6. Podaj swoje ocen
           }
           throw err;
         }
+    }
 
-      } else {
+    async _runSequential(keepContext, itemsToRun, lang, systemPrompt, statusUpdateCallback, onProgress, state) {
+        const totalItems = itemsToRun.length;
         if (keepContext) {
           // --- FULLY SEQUENTIAL WITH CONTEXT ---
           const conversationHistory = [];
@@ -267,10 +231,10 @@ Instrukcja: Oceń WSZYSTKIE 57 poniższych pozycji w skali 1-6. Podaj swoje ocen
                 currentItemId: currentItem.id,
                 currentPrompt: displayedPromptText,
                 tokenUsage: {
-                  promptTokens: totalPromptTokens,
-                  completionTokens: totalCompletionTokens,
-                  reasoningTokens: totalReasoningTokens,
-                  totalTokens: totalPromptTokens + totalCompletionTokens
+                  promptTokens: state.totalPromptTokens,
+                  completionTokens: state.totalCompletionTokens,
+                  reasoningTokens: state.totalReasoningTokens,
+                  totalTokens: state.totalPromptTokens + state.totalCompletionTokens
                 }
               });
             }
@@ -284,15 +248,15 @@ Instrukcja: Oceń WSZYSTKIE 57 poniższych pozycji w skali 1-6. Podaj swoje ocen
 
             if (this.shouldAbort) throw new Error("Evaluation cancelled by user.");
 
-            totalPromptTokens += apiRes.tokenUsage.promptTokens;
-            totalCompletionTokens += apiRes.tokenUsage.completionTokens;
-            totalReasoningTokens += apiRes.tokenUsage.reasoningTokens;
+            state.totalPromptTokens += apiRes.tokenUsage.promptTokens;
+            state.totalCompletionTokens += apiRes.tokenUsage.completionTokens;
+            state.totalReasoningTokens += apiRes.tokenUsage.reasoningTokens;
 
-            rawResponses[currentItem.id] = apiRes.text;
-            reasoningTraces[currentItem.id] = apiRes.reasoning;
+            state.rawResponses[currentItem.id] = apiRes.text;
+            state.reasoningTraces[currentItem.id] = apiRes.reasoning;
 
             const parsed = this.psychometrics.parseItemResponse(apiRes.text);
-            parsedItemScores[currentItem.id] = parsed.score;
+            state.parsedItemScores[currentItem.id] = parsed.score;
 
             conversationHistory.push({ role: "user", content: itemPromptText });
             conversationHistory.push({ role: "assistant", content: apiRes.text });
@@ -309,14 +273,14 @@ Instrukcja: Oceń WSZYSTKIE 57 poniższych pozycji w skali 1-6. Podaj swoje ocen
                 lastResponse: apiRes.text,
                 lastReasoning: apiRes.reasoning,
                 isRefusal: parsed.isRefusal,
-                parsedScoresMap: { ...parsedItemScores },
-                rawResponses: { ...rawResponses },
-                reasoningTraces: { ...reasoningTraces },
+                parsedScoresMap: { ...state.parsedItemScores },
+                rawResponses: { ...state.rawResponses },
+                reasoningTraces: { ...state.reasoningTraces },
                 tokenUsage: {
-                  promptTokens: totalPromptTokens,
-                  completionTokens: totalCompletionTokens,
-                  reasoningTokens: totalReasoningTokens,
-                  totalTokens: totalPromptTokens + totalCompletionTokens
+                  promptTokens: state.totalPromptTokens,
+                  completionTokens: state.totalCompletionTokens,
+                  reasoningTokens: state.totalReasoningTokens,
+                  totalTokens: state.totalPromptTokens + state.totalCompletionTokens
                 }
               });
             }
@@ -347,10 +311,10 @@ Instrukcja: Oceń WSZYSTKIE 57 poniższych pozycji w skali 1-6. Podaj swoje ocen
                   currentItemId: currentItem.id,
                   currentPrompt: displayedPromptText,
                   tokenUsage: {
-                    promptTokens: totalPromptTokens,
-                    completionTokens: totalCompletionTokens,
-                    reasoningTokens: totalReasoningTokens,
-                    totalTokens: totalPromptTokens + totalCompletionTokens
+                    promptTokens: state.totalPromptTokens,
+                    completionTokens: state.totalCompletionTokens,
+                    reasoningTokens: state.totalReasoningTokens,
+                    totalTokens: state.totalPromptTokens + state.totalCompletionTokens
                   }
                 });
               }
@@ -372,15 +336,15 @@ Instrukcja: Oceń WSZYSTKIE 57 poniższych pozycji w skali 1-6. Podaj swoje ocen
 
               if (this.shouldAbort) throw new Error("Evaluation cancelled by user.");
 
-              totalPromptTokens += apiRes.tokenUsage.promptTokens;
-              totalCompletionTokens += apiRes.tokenUsage.completionTokens;
-              totalReasoningTokens += apiRes.tokenUsage.reasoningTokens;
+              state.totalPromptTokens += apiRes.tokenUsage.promptTokens;
+              state.totalCompletionTokens += apiRes.tokenUsage.completionTokens;
+              state.totalReasoningTokens += apiRes.tokenUsage.reasoningTokens;
 
-              rawResponses[currentItem.id] = apiRes.text;
-              reasoningTraces[currentItem.id] = apiRes.reasoning;
+              state.rawResponses[currentItem.id] = apiRes.text;
+              state.reasoningTraces[currentItem.id] = apiRes.reasoning;
 
               const parsed = this.psychometrics.parseItemResponse(apiRes.text);
-              parsedItemScores[currentItem.id] = parsed.score;
+              state.parsedItemScores[currentItem.id] = parsed.score;
               completedCount++;
 
               if (onProgress) {
@@ -395,14 +359,14 @@ Instrukcja: Oceń WSZYSTKIE 57 poniższych pozycji w skali 1-6. Podaj swoje ocen
                   lastResponse: apiRes.text,
                   lastReasoning: apiRes.reasoning,
                   isRefusal: parsed.isRefusal,
-                  parsedScoresMap: { ...parsedItemScores },
-                  rawResponses: { ...rawResponses },
-                  reasoningTraces: { ...reasoningTraces },
+                  parsedScoresMap: { ...state.parsedItemScores },
+                  rawResponses: { ...state.rawResponses },
+                  reasoningTraces: { ...state.reasoningTraces },
                   tokenUsage: {
-                    promptTokens: totalPromptTokens,
-                    completionTokens: totalCompletionTokens,
-                    reasoningTokens: totalReasoningTokens,
-                    totalTokens: totalPromptTokens + totalCompletionTokens
+                    promptTokens: state.totalPromptTokens,
+                    completionTokens: state.totalCompletionTokens,
+                    reasoningTokens: state.totalReasoningTokens,
+                    totalTokens: state.totalPromptTokens + state.totalCompletionTokens
                   }
                 });
               }
@@ -415,22 +379,70 @@ Instrukcja: Oceń WSZYSTKIE 57 poniższych pozycji w skali 1-6. Podaj swoje ocen
           }
           await Promise.all(workers);
         }
+    }
+
+    async run(onProgress) {
+      this.isRunning = true;
+      this.shouldAbort = false;
+
+      const lang = this.config.lang || 'en';
+      const isBatch = this.config.mode === 'batch';
+      const randomize = !!this.config.randomizeOrder;
+      const keepContext = !!this.config.keepContext;
+
+      let itemsToRun = this.pvqData.ITEMS.slice();
+      if (randomize) {
+        itemsToRun = shuffleArray(itemsToRun);
+      }
+
+      const totalItems = itemsToRun.length;
+
+      const state = {
+        rawResponses: {},
+        parsedItemScores: {},
+        reasoningTraces: {},
+        totalPromptTokens: 0,
+        totalCompletionTokens: 0,
+        totalReasoningTokens: 0
+      };
+
+      const runMetadata = {
+        timestamp: new Date().toISOString(),
+        config: { ...this.config, apiKey: this.config.apiKey ? "***HIDDEN***" : "" },
+        itemOrder: itemsToRun.map(it => it.id)
+      };
+
+      const systemPrompt = buildSystemPrompt(this.config.customSystemPrompt, lang);
+
+      const statusUpdateCallback = (retryMsg) => {
+        if (onProgress) {
+          onProgress({
+            type: 'rate_limit_pause',
+            statusMessage: retryMsg
+          });
+        }
+      };
+
+      if (isBatch) {
+        await this._runBatch(lang, systemPrompt, statusUpdateCallback, onProgress, state);
+      } else {
+        await this._runSequential(keepContext, itemsToRun, lang, systemPrompt, statusUpdateCallback, onProgress, state);
       }
 
       // Calculate final psychometrics
-      const psychometricResults = this.psychometrics.calculatePsychometrics(parsedItemScores, this.pvqData);
+      const psychometricResults = this.psychometrics.calculatePsychometrics(state.parsedItemScores, this.pvqData);
 
       this.isRunning = false;
 
       return {
         metadata: runMetadata,
-        rawResponses: rawResponses,
-        reasoningTraces: reasoningTraces,
+        rawResponses: state.rawResponses,
+        reasoningTraces: state.reasoningTraces,
         tokenUsage: {
-          promptTokens: totalPromptTokens,
-          completionTokens: totalCompletionTokens,
-          reasoningTokens: totalReasoningTokens,
-          totalTokens: totalPromptTokens + totalCompletionTokens
+          promptTokens: state.totalPromptTokens,
+          completionTokens: state.totalCompletionTokens,
+          reasoningTokens: state.totalReasoningTokens,
+          totalTokens: state.totalPromptTokens + state.totalCompletionTokens
         },
         psychometrics: psychometricResults
       };
