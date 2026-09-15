@@ -244,87 +244,176 @@ Instrukcja: Oceń WSZYSTKIE 57 poniższych pozycji w skali 1-6. Podaj swoje ocen
         }
 
       } else {
-        // --- SEQUENTIAL MODE ---
-        const conversationHistory = [];
+        if (keepContext) {
+          // --- FULLY SEQUENTIAL WITH CONTEXT ---
+          const conversationHistory = [];
 
-        for (let idx = 0; idx < totalItems; idx++) {
-          if (this.shouldAbort) {
-            throw new Error("Evaluation cancelled by user.");
-          }
+          for (let idx = 0; idx < totalItems; idx++) {
+            if (this.shouldAbort) {
+              throw new Error("Evaluation cancelled by user.");
+            }
 
-          const currentItem = itemsToRun[idx];
-          const itemPromptText = buildSequentialPrompt(currentItem, lang);
+            const currentItem = itemsToRun[idx];
+            const itemPromptText = buildSequentialPrompt(currentItem, lang);
 
-          const displayedPromptText = keepContext
-            ? formatConversationDisplay(systemPrompt, conversationHistory, itemPromptText)
-            : formatConversationDisplay(systemPrompt, [], itemPromptText);
+            const displayedPromptText = formatConversationDisplay(systemPrompt, conversationHistory, itemPromptText);
 
-          if (onProgress) {
-            onProgress({
-              type: 'item_start',
-              statusMessage: `Evaluating Item ${currentItem.id} (${idx + 1}/${totalItems})...`,
-              completedCount: idx,
-              totalItems: totalItems,
-              currentItemId: currentItem.id,
-              currentPrompt: displayedPromptText,
-              tokenUsage: {
-                promptTokens: totalPromptTokens,
-                completionTokens: totalCompletionTokens,
-                reasoningTokens: totalReasoningTokens,
-                totalTokens: totalPromptTokens + totalCompletionTokens
-              }
-            });
-          }
+            if (onProgress) {
+              onProgress({
+                type: 'item_start',
+                statusMessage: `Evaluating Item ${currentItem.id} (${idx + 1}/${totalItems})...`,
+                completedCount: idx,
+                totalItems: totalItems,
+                currentItemId: currentItem.id,
+                currentPrompt: displayedPromptText,
+                tokenUsage: {
+                  promptTokens: totalPromptTokens,
+                  completionTokens: totalCompletionTokens,
+                  reasoningTokens: totalReasoningTokens,
+                  totalTokens: totalPromptTokens + totalCompletionTokens
+                }
+              });
+            }
 
-          const requestMessages = keepContext
-            ? [...conversationHistory, { role: "user", content: itemPromptText }]
-            : [{ role: "user", content: itemPromptText }];
+            const requestMessages = [...conversationHistory, { role: "user", content: itemPromptText }];
 
-          const apiRes = await this.apiClient.completeChat({
-            ...this.config,
-            systemPrompt: systemPrompt
-          }, requestMessages, statusUpdateCallback);
+            const apiRes = await this.apiClient.completeChat({
+              ...this.config,
+              systemPrompt: systemPrompt
+            }, requestMessages, statusUpdateCallback);
 
-          if (this.shouldAbort) throw new Error("Evaluation cancelled by user.");
+            if (this.shouldAbort) throw new Error("Evaluation cancelled by user.");
 
-          totalPromptTokens += apiRes.tokenUsage.promptTokens;
-          totalCompletionTokens += apiRes.tokenUsage.completionTokens;
-          totalReasoningTokens += apiRes.tokenUsage.reasoningTokens;
+            totalPromptTokens += apiRes.tokenUsage.promptTokens;
+            totalCompletionTokens += apiRes.tokenUsage.completionTokens;
+            totalReasoningTokens += apiRes.tokenUsage.reasoningTokens;
 
-          rawResponses[currentItem.id] = apiRes.text;
-          reasoningTraces[currentItem.id] = apiRes.reasoning;
+            rawResponses[currentItem.id] = apiRes.text;
+            reasoningTraces[currentItem.id] = apiRes.reasoning;
 
-          const parsed = this.psychometrics.parseItemResponse(apiRes.text);
-          parsedItemScores[currentItem.id] = parsed.score;
+            const parsed = this.psychometrics.parseItemResponse(apiRes.text);
+            parsedItemScores[currentItem.id] = parsed.score;
 
-          if (keepContext) {
             conversationHistory.push({ role: "user", content: itemPromptText });
             conversationHistory.push({ role: "assistant", content: apiRes.text });
-          }
 
-          if (onProgress) {
-            onProgress({
-              type: 'item_complete',
-              statusMessage: `Item ${currentItem.id} evaluated successfully (${idx + 1}/${totalItems}).`,
-              completedCount: idx + 1,
-              totalItems: totalItems,
-              currentItemId: currentItem.id,
-              currentPrompt: displayedPromptText,
-              lastScore: parsed.score,
-              lastResponse: apiRes.text,
-              lastReasoning: apiRes.reasoning,
-              isRefusal: parsed.isRefusal,
-              parsedScoresMap: { ...parsedItemScores },
-              rawResponses: { ...rawResponses },
-              reasoningTraces: { ...reasoningTraces },
-              tokenUsage: {
-                promptTokens: totalPromptTokens,
-                completionTokens: totalCompletionTokens,
-                reasoningTokens: totalReasoningTokens,
-                totalTokens: totalPromptTokens + totalCompletionTokens
-              }
-            });
+            if (onProgress) {
+              onProgress({
+                type: 'item_complete',
+                statusMessage: `Item ${currentItem.id} evaluated successfully (${idx + 1}/${totalItems}).`,
+                completedCount: idx + 1,
+                totalItems: totalItems,
+                currentItemId: currentItem.id,
+                currentPrompt: displayedPromptText,
+                lastScore: parsed.score,
+                lastResponse: apiRes.text,
+                lastReasoning: apiRes.reasoning,
+                isRefusal: parsed.isRefusal,
+                parsedScoresMap: { ...parsedItemScores },
+                rawResponses: { ...rawResponses },
+                reasoningTraces: { ...reasoningTraces },
+                tokenUsage: {
+                  promptTokens: totalPromptTokens,
+                  completionTokens: totalCompletionTokens,
+                  reasoningTokens: totalReasoningTokens,
+                  totalTokens: totalPromptTokens + totalCompletionTokens
+                }
+              });
+            }
           }
+        } else {
+          // --- CONCURRENT BATCHED POOL WITHOUT CONTEXT ---
+          const concurrencyLimit = 10;
+          let currentIndex = 0;
+          let completedCount = 0;
+
+          const worker = async () => {
+            while (currentIndex < totalItems) {
+              if (this.shouldAbort) {
+                throw new Error("Evaluation cancelled by user.");
+              }
+
+              const idx = currentIndex++;
+              const currentItem = itemsToRun[idx];
+              const itemPromptText = buildSequentialPrompt(currentItem, lang);
+              const displayedPromptText = formatConversationDisplay(systemPrompt, [], itemPromptText);
+
+              if (onProgress) {
+                onProgress({
+                  type: 'item_start',
+                  statusMessage: `Evaluating Item ${currentItem.id} (${completedCount}/${totalItems})...`,
+                  completedCount: completedCount,
+                  totalItems: totalItems,
+                  currentItemId: currentItem.id,
+                  currentPrompt: displayedPromptText,
+                  tokenUsage: {
+                    promptTokens: totalPromptTokens,
+                    completionTokens: totalCompletionTokens,
+                    reasoningTokens: totalReasoningTokens,
+                    totalTokens: totalPromptTokens + totalCompletionTokens
+                  }
+                });
+              }
+
+              const requestMessages = [{ role: "user", content: itemPromptText }];
+
+              let apiRes;
+              try {
+                apiRes = await this.apiClient.completeChat({
+                  ...this.config,
+                  systemPrompt: systemPrompt
+                }, requestMessages, statusUpdateCallback);
+              } catch (e) {
+                if (this.shouldAbort) {
+                  throw new Error("Evaluation cancelled by user.");
+                }
+                throw e;
+              }
+
+              if (this.shouldAbort) throw new Error("Evaluation cancelled by user.");
+
+              totalPromptTokens += apiRes.tokenUsage.promptTokens;
+              totalCompletionTokens += apiRes.tokenUsage.completionTokens;
+              totalReasoningTokens += apiRes.tokenUsage.reasoningTokens;
+
+              rawResponses[currentItem.id] = apiRes.text;
+              reasoningTraces[currentItem.id] = apiRes.reasoning;
+
+              const parsed = this.psychometrics.parseItemResponse(apiRes.text);
+              parsedItemScores[currentItem.id] = parsed.score;
+              completedCount++;
+
+              if (onProgress) {
+                onProgress({
+                  type: 'item_complete',
+                  statusMessage: `Item ${currentItem.id} evaluated successfully (${completedCount}/${totalItems}).`,
+                  completedCount: completedCount,
+                  totalItems: totalItems,
+                  currentItemId: currentItem.id,
+                  currentPrompt: displayedPromptText,
+                  lastScore: parsed.score,
+                  lastResponse: apiRes.text,
+                  lastReasoning: apiRes.reasoning,
+                  isRefusal: parsed.isRefusal,
+                  parsedScoresMap: { ...parsedItemScores },
+                  rawResponses: { ...rawResponses },
+                  reasoningTraces: { ...reasoningTraces },
+                  tokenUsage: {
+                    promptTokens: totalPromptTokens,
+                    completionTokens: totalCompletionTokens,
+                    reasoningTokens: totalReasoningTokens,
+                    totalTokens: totalPromptTokens + totalCompletionTokens
+                  }
+                });
+              }
+            }
+          };
+
+          const workers = [];
+          for (let i = 0; i < Math.min(concurrencyLimit, totalItems); i++) {
+            workers.push(worker());
+          }
+          await Promise.all(workers);
         }
       }
 

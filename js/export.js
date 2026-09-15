@@ -9,6 +9,12 @@
   /**
    * Triggers a browser download for blob content.
    */
+  function getFormattedTime() {
+    const pad = (n) => n.toString().padStart(2, '0');
+    const d = new Date();
+    return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+  }
+
   function downloadBlob(content, filename, contentType) {
     const blob = new Blob([content], { type: contentType });
     const url = URL.createObjectURL(blob);
@@ -27,7 +33,7 @@
    * @param {Object} results - Full evaluation results object
    * @param {string} [filename] - Output filename
    */
-  function exportToJSON(results, filename = "axioma_pvq_rr_results.json") {
+  function exportToJSON(results, filename = "axioma_pvq_rr_results_" + getFormattedTime() + ".json") {
     if (!results) return;
     const jsonStr = JSON.stringify(results, null, 2);
     downloadBlob(jsonStr, filename, "application/json");
@@ -47,6 +53,7 @@
     lines.push(`# Timestamp\t${results.metadata?.timestamp || new Date().toISOString()}`);
     lines.push(`# Provider\t${results.metadata?.config?.provider || ""}`);
     lines.push(`# Model\t${results.metadata?.config?.model || ""}`);
+    lines.push(`# Base URL\t${results.metadata?.config?.baseUrl || ""}`);
     lines.push(`# System Prompt\t${(results.metadata?.config?.customSystemPrompt || "").replace(/[\r\n\t]+/g, " ")}`);
     lines.push(`# Language\t${results.metadata?.config?.lang || "en"}`);
     lines.push(`# Mode\t${results.metadata?.config?.mode || ""}`);
@@ -56,6 +63,7 @@
     lines.push(`# Seed\t${results.metadata?.config?.seed ?? ""}`);
     lines.push(`# Reasoning Enabled\t${results.metadata?.config?.enableReasoning ? "Yes" : "No"}`);
     lines.push(`# Reasoning Token Budget\t${results.metadata?.config?.enableReasoning ? (results.metadata?.config?.reasoningBudget || 1024) : "N/A"}`);
+    lines.push(`# Reasoning Effort\t${results.metadata?.config?.enableReasoning ? (results.metadata?.config?.reasoningEffort || "medium") : "N/A"}`);
     lines.push(`# Grand Mean (MRAT)\t${results.psychometrics.mrat}`);
     lines.push(`# Items Answered\t${results.psychometrics.totalAnswered} / 57`);
     lines.push("");
@@ -101,7 +109,7 @@
     return lines.join("\n");
   }
 
-  function exportToTSV(results, filename = "axioma_pvq_rr_results.tsv") {
+  function exportToTSV(results, filename = "axioma_pvq_rr_results_" + getFormattedTime() + ".tsv") {
     const tsvText = generateTSVContent(results);
     if (!tsvText) return;
     downloadBlob(tsvText, filename, "text/tab-separated-values");
@@ -115,7 +123,7 @@
    * Tab 4: 57 Items & Responses
    * Tab 5: Token Usage
    */
-  function exportToXLSX(results, filename = "axioma_pvq_rr_results.xlsx") {
+  function exportToXLSX(results, filename = "axioma_pvq_rr_results_" + getFormattedTime() + ".xlsx") {
     if (!results || !results.psychometrics) return;
     if (typeof window.XLSX === 'undefined') {
       alert("XLSX library not loaded. Please ensure you have internet access or CDN loaded.");
@@ -141,6 +149,7 @@
       ["Seed", results.metadata?.config?.seed ?? "None"],
       ["Reasoning Enabled", results.metadata?.config?.enableReasoning ? "Yes" : "No"],
       ["Reasoning Token Budget", results.metadata?.config?.enableReasoning ? (results.metadata?.config?.reasoningBudget || 1024) : "N/A"],
+      ["Reasoning Effort", results.metadata?.config?.enableReasoning ? (results.metadata?.config?.reasoningEffort || "medium") : "N/A"],
       ["Grand Mean Score (MRAT)", results.psychometrics.mrat],
       ["Total Items Answered", `${results.psychometrics.totalAnswered} / 57`]
     ];
@@ -240,7 +249,7 @@
    * @param {Array<Object>} sessionResults - Array of evaluation result objects from the session
    * @param {string} [filename] - Output filename
    */
-  function exportSessionToCSV(sessionResults, filename = "axioma_session_results.csv") {
+  function exportSessionToCSV(sessionResults, filename = "axioma_session_results_" + getFormattedTime() + ".csv") {
     if (!sessionResults || !Array.isArray(sessionResults) || sessionResults.length === 0) return;
 
     const items = window.PVQData ? window.PVQData.ITEMS : [];
@@ -252,6 +261,7 @@
       "Provider",
       "Model",
       "Base URL",
+      "System Prompt",
       "Language",
       "Execution Mode",
       "Keep Context History",
@@ -301,6 +311,7 @@
         cfg.provider || "",
         cfg.model || "",
         cfg.baseUrl || "",
+        cfg.customSystemPrompt || "",
         cfg.lang || "en",
         cfg.mode || "",
         cfg.keepContext ? "Yes" : "No",
@@ -351,7 +362,7 @@
    * @param {Array<Object>} sessionResults - Array of evaluation result objects from the session
    * @param {string} [filename] - Output filename
    */
-  function exportSessionToXLSX(sessionResults, filename = "axioma_session_results.xlsx") {
+  function exportSessionToXLSX(sessionResults, filename = "axioma_session_results_" + getFormattedTime() + ".xlsx") {
     if (!sessionResults || !Array.isArray(sessionResults) || sessionResults.length === 0) return;
     if (typeof window.XLSX === 'undefined') {
       alert("XLSX library not loaded. Please ensure you have internet access or CDN loaded.");
@@ -368,6 +379,7 @@
       "Provider",
       "Model",
       "Base URL",
+      "System Prompt",
       "Language",
       "Execution Mode",
       "Keep Context History",
@@ -376,6 +388,7 @@
       "Seed",
       "Reasoning Enabled",
       "Reasoning Token Budget",
+      "Reasoning Effort",
       "Prompt Tokens",
       "Completion Tokens",
       "Reasoning Tokens",
@@ -413,6 +426,7 @@
         cfg.provider || "",
         cfg.model || "",
         cfg.baseUrl || "",
+        cfg.customSystemPrompt || "",
         cfg.lang || "en",
         cfg.mode || "",
         cfg.keepContext ? "Yes" : "No",
@@ -421,6 +435,7 @@
         cfg.seed ?? "",
         cfg.enableReasoning ? "Yes" : "No",
         cfg.enableReasoning ? (cfg.reasoningBudget || 1024) : "N/A",
+        cfg.enableReasoning ? (cfg.reasoningEffort || "medium") : "N/A",
         token.promptTokens ?? 0,
         token.completionTokens ?? 0,
         token.reasoningTokens ?? 0,

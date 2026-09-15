@@ -42,7 +42,7 @@
   }
 
   const DEFAULT_SYSTEM_PROMPTS = {
-    en: "You are taking a psychological assessment. Answer honestly and rate how much each statement describes you according to the specified 1 to 6 scale.",
+    en: "Here we briefly describe some people. Please read each description and think about how much each person is or is not like you. Rate each description according to the response scale: 1 - not like me at all; 2 - not like me; 3 - a little like me; 4 - moderately like me; 5 - like me; 6 - very much like me. Answer honestly, providing a single rating from 1 to 6 for each description.",
     pl: "Poniżej krótko zostaną scharakteryzowani niektórzy ludzie. Przeczytaj każdy opis i zastanów się, na ile przedstawiony człowiek jest lub nie jest podobny do Ciebie. Oceń każdy opis zgodnie ze skalą odpowiedzi: 1 - zupełnie niepodobny do mnie; 2 - niepodobny do mnie; 3 - trochę podobny do mnie; 4 - średnio podobny do mnie; 5 - podobny do mnie; 6 - bardzo podobny do mnie. Odpowiadaj szczerze, podając jedną ocenę od 1 do 6 dla każdego opisu."
   };
 
@@ -236,9 +236,17 @@
 
     if (refinedCanvas && window.Chart) {
       if (refinedChartInstance) refinedChartInstance.destroy();
-      const refLabels = Object.values(psych.refinedValues).map(v => state.lang === 'pl' ? v.namePl : v.nameEn);
-      const rawScores = Object.values(psych.refinedValues).map(v => v.rawMean ?? 0);
-      const centeredScores = Object.values(psych.refinedValues).map(v => v.centeredMean ?? 0);
+      const refinedVals = Object.values(psych.refinedValues);
+      const refLen = refinedVals.length;
+      const refLabels = new Array(refLen);
+      const rawScores = new Array(refLen);
+      const centeredScores = new Array(refLen);
+      for (let i = 0; i < refLen; i++) {
+        const v = refinedVals[i];
+        refLabels[i] = state.lang === 'pl' ? v.namePl : v.nameEn;
+        rawScores[i] = v.rawMean ?? 0;
+        centeredScores[i] = v.centeredMean ?? 0;
+      }
 
       refinedChartInstance = new Chart(refinedCanvas.getContext('2d'), {
         type: 'radar',
@@ -284,9 +292,17 @@
 
     if (hoCanvas && window.Chart) {
       if (higherOrderChartInstance) higherOrderChartInstance.destroy();
-      const hoLabels = Object.values(psych.higherOrderValues).map(v => state.lang === 'pl' ? v.namePl : v.nameEn);
-      const hoRaw = Object.values(psych.higherOrderValues).map(v => v.rawMean ?? 0);
-      const hoCentered = Object.values(psych.higherOrderValues).map(v => v.centeredMean ?? 0);
+      const hoVals = Object.values(psych.higherOrderValues);
+      const hoLen = hoVals.length;
+      const hoLabels = new Array(hoLen);
+      const hoRaw = new Array(hoLen);
+      const hoCentered = new Array(hoLen);
+      for (let i = 0; i < hoLen; i++) {
+        const v = hoVals[i];
+        hoLabels[i] = state.lang === 'pl' ? v.namePl : v.nameEn;
+        hoRaw[i] = v.rawMean ?? 0;
+        hoCentered[i] = v.centeredMean ?? 0;
+      }
 
 
     const circleCanvas = document.getElementById('circleChartCanvas');
@@ -358,9 +374,17 @@
     if (hoEnlargedCanvas && window.Chart) {
       if (hoEnlargedChartInstance) hoEnlargedChartInstance.destroy();
 
-      const hoLabels = Object.values(psych.higherOrderValues).map(v => state.lang === 'pl' ? v.namePl : v.nameEn);
-      const hoRaw = Object.values(psych.higherOrderValues).map(v => v.rawMean ?? 0);
-      const hoCentered = Object.values(psych.higherOrderValues).map(v => v.centeredMean ?? 0);
+      const hoVals = Object.values(psych.higherOrderValues);
+      const hoLen = hoVals.length;
+      const hoLabels = new Array(hoLen);
+      const hoRaw = new Array(hoLen);
+      const hoCentered = new Array(hoLen);
+      for (let i = 0; i < hoLen; i++) {
+        const v = hoVals[i];
+        hoLabels[i] = state.lang === 'pl' ? v.namePl : v.nameEn;
+        hoRaw[i] = v.rawMean ?? 0;
+        hoCentered[i] = v.centeredMean ?? 0;
+      }
 
       hoEnlargedChartInstance = new Chart(hoEnlargedCanvas.getContext('2d'), {
         type: 'radar',
@@ -569,11 +593,11 @@
           }, el('i', { className: 'fa-solid fa-rotate-left' }), ' New Session'),
           state.sessionResults.length > 0 ? el('div', { className: 'flex space-x-2' },
             el('button', {
-              onClick: () => window.DataExporter.exportSessionToCSV(state.sessionResults, `Axioma_Session_${new Date().toISOString().slice(0, 10)}.csv`),
+              onClick: () => window.DataExporter.exportSessionToCSV(state.sessionResults, undefined),
               className: 'bg-slate-800 hover:bg-slate-700 text-emerald-400 text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-700 flex items-center gap-1.5 transition'
             }, el('i', { className: 'fa-solid fa-file-csv' }), ' CSV'),
             el('button', {
-              onClick: () => window.DataExporter.exportSessionToXLSX(state.sessionResults, `Axioma_Session_${new Date().toISOString().slice(0, 10)}.xlsx`),
+              onClick: () => window.DataExporter.exportSessionToXLSX(state.sessionResults, undefined),
               className: 'bg-slate-800 hover:bg-slate-700 text-green-400 text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-700 flex items-center gap-1.5 transition'
             }, el('i', { className: 'fa-solid fa-file-excel' }), ' XLSX')
           ) : null
