@@ -1,0 +1,5 @@
+🎯 **What:** The testing gap for `parseItemResponse` in `js/psychometrics.js` has been addressed by introducing a test suite using Node.js's built-in `assert` module. During testing, an issue with matching numbers containing fractions was found in the regexes used for matching single unambiguous digits, which caused false positive matches (e.g. `3.5` was parsed as `5`). This issue was fixed as part of the improvements.
+
+📊 **Coverage:** The tests cover null inputs, empty/undefined values, json parsing, exact string digit matches, explicit label extracts (e.g. "Score: 6"), scale-descriptor matching ("5 - Like me"), single unambiguous digit captures, AI refusal detections and unparseable values (such as fractions or multiple digits in the same text).
+
+✨ **Result:** A robust test runner script `tests/psychometrics.test.js` has been added, and the robustness of parsing fraction-containing input data has been improved in `parseItemResponse`. Test coverage is now exhaustive for `parseItemResponse`.
