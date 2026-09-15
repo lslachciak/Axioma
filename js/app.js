@@ -294,7 +294,7 @@
 
     if (hoCanvas && window.Chart) {
       if (higherOrderChartInstance) higherOrderChartInstance.destroy();
-      const hoVals = Object.values(psych.higherOrderValues);
+const hoVals = Object.values(psych.higherOrderValues);
       const hoLen = hoVals.length;
       const hoLabels = new Array(hoLen);
       const hoRaw = new Array(hoLen);
@@ -304,7 +304,6 @@
         hoLabels[i] = state.lang === 'pl' ? v.namePl : v.nameEn;
         hoRaw[i] = v.rawMean ?? 0;
         hoCentered[i] = v.centeredMean ?? 0;
-
       }
 
 
@@ -379,7 +378,7 @@
     if (hoEnlargedCanvas && window.Chart) {
       if (hoEnlargedChartInstance) hoEnlargedChartInstance.destroy();
 
-      const hoVals = Object.values(psych.higherOrderValues);
+const hoVals = Object.values(psych.higherOrderValues);
       const hoLen = hoVals.length;
       const hoLabels = new Array(hoLen);
       const hoRaw = new Array(hoLen);
@@ -389,7 +388,6 @@
         hoLabels[i] = state.lang === 'pl' ? v.namePl : v.nameEn;
         hoRaw[i] = v.rawMean ?? 0;
         hoCentered[i] = v.centeredMean ?? 0;
-
       }
 
       hoEnlargedChartInstance = new Chart(hoEnlargedCanvas.getContext('2d'), {
