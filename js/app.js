@@ -22,7 +22,7 @@
       } else if (key === 'checked') {
         element.checked = !!props[key];
       } else if (key === 'innerHTML') {
-        element.innerHTML = typeof DOMPurify !== 'undefined' ? DOMPurify.sanitize(props[key]) : props[key];
+        element.innerHTML = typeof DOMPurify !== 'undefined' ? DOMPurify.sanitize(props[key]) : String(props[key]).replace(/[&<>'"]/g, tag => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'}[tag] || tag));
       } else if (key !== 'key') {
         element.setAttribute(key, props[key]);
       }
