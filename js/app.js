@@ -8,6 +8,36 @@
   'use strict';
 
   // Helper function to create DOM elements quickly
+function obfuscateApiKey(key) {
+  if (!key) return key;
+  try {
+    const encoded = encodeURIComponent(key);
+    let shifted = '';
+    for (let i = 0; i < encoded.length; i++) {
+      shifted += String.fromCharCode(encoded.charCodeAt(i) ^ 42);
+    }
+    return 'OBF:' + btoa(shifted);
+  } catch (e) {
+    return key;
+  }
+}
+
+function deobfuscateApiKey(val) {
+  if (!val) return val;
+  if (val.startsWith('OBF:')) {
+    try {
+      const decoded = atob(val.substring(4));
+      let unshifted = '';
+      for (let i = 0; i < decoded.length; i++) {
+        unshifted += String.fromCharCode(decoded.charCodeAt(i) ^ 42);
+      }
+      return decodeURIComponent(unshifted);
+    } catch (e) {
+      return '';
+    }
+  }
+  return val;
+}
   function el(tag, props = {}, ...children) {
     const element = document.createElement(tag);
     for (const key in props) {
@@ -154,7 +184,8 @@
   function loadProviderSettings(provider) {
     try {
       const defaults = window.ApiClient?.PROVIDER_DEFAULTS?.[provider];
-      state.apiKey = localStorage.getItem(`axioma_key_${provider}`) || '';
+      const rawKey = localStorage.getItem(`axioma_key_${provider}`) || '';
+      state.apiKey = deobfuscateApiKey(rawKey);
 
       const savedModel = localStorage.getItem(`axioma_model_${provider}`);
       state.model = savedModel || '';
@@ -171,7 +202,7 @@
     try {
       const storageKey = `axioma_key_${provider}`;
       if (key && key.trim()) {
-        localStorage.setItem(storageKey, key.trim());
+        localStorage.setItem(storageKey, obfuscateApiKey(key.trim()));
       } else {
         localStorage.removeItem(storageKey);
       }
@@ -658,7 +689,7 @@
         )
       ),
       reqKey ? el('div', {},
-        el('label', { className: 'block text-xs font-medium text-slate-400 mb-1' }, 'API Key (Saved in LocalStorage)'),
+        el('label', { className: 'block text-xs font-medium text-slate-400 mb-1' }, 'API Key (Saved obfuscated in LocalStorage)'),
         el('input', {
           type: 'password',
           placeholder: 'sk-...',

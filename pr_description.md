@@ -1,3 +1,10 @@
-💡 **What:** Optimized `.map()` call chains in `js/app.js` during chart generation by replacing them with single `for` loops utilizing pre-allocated arrays.
-🎯 **Why:** To improve performance and reduce memory overhead. The original code used multiple `.map()` operations to extract data sets (labels, raw scores, centered scores) from the same base object values for various charts (`higherOrderValues`, `refinedValues`, `circleLabels`). This resulted in redundant array allocations and multiple iterations over the same data. By consolidating these extractions into a single loop, we eliminate unnecessary overhead. I intentionally avoided converting `.map()` calls within hyperscript rendering functions to avoid potential stack overflows associated with spreading large arrays and introducing IIFE anti-patterns, as requested in the code review.
-📊 **Measured Improvement:** Reverting to a single loop for generating Chart.js datasets yielded ~85% reduction in execution time for these specific data mapping blocks during benchmarking, making UI transitions containing re-renders for charts snappier.
+🔒 Fix: Obfuscate API Key in LocalStorage
+
+🎯 **What:**
+The application previously stored user API keys in plaintext within browser `localStorage`.
+
+⚠️ **Risk:**
+Storing secrets in plaintext in `localStorage` makes them highly vulnerable to XSS (Cross-Site Scripting) attacks or unauthorized access if someone inspects the browser data. If scraped, these API keys could be misused, leading to unexpected billing or data exposure for the user.
+
+🛡️ **Solution:**
+Implemented a basic obfuscation mechanism using XOR string manipulation and Base64 encoding. While not true encryption (which would require a secure backend/key management), this mitigates casual scraping and simple exposure. We updated the `loadProviderSettings` and `saveApiKeyForProvider` functions to automatically obfuscate and deobfuscate the keys as they are read/written. We also added corresponding tests in `js/tests/obfuscation.test.js` to ensure stability and correctness.
