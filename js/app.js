@@ -467,73 +467,93 @@
     }
   }
 
-  async function startEvaluation() {
+    async function startEvaluation() {
     state.isRunning = true;
-    state.results = null;
-    state.liveStreamLogs = [];
-    state.completedCount = 0;
-    state.tokenUsage = { promptTokens: 0, completionTokens: 0, reasoningTokens: 0, totalTokens: 0 };
-    state.liveItemRatings = {};
-    state.liveRawResponses = {};
-    state.liveReasoningTraces = {};
     renderApp();
 
-    const config = {
-      provider: state.provider,
-      apiKey: state.apiKey,
-      baseUrl: state.baseUrl,
-      model: state.model,
-      temperature: parseFloat(state.temperature),
-      seed: state.seed ? parseInt(state.seed, 10) : undefined,
-      lang: state.lang,
-      customSystemPrompt: state.systemPrompt,
-      mode: state.mode,
-      randomizeOrder: state.randomizeOrder,
-      keepContext: state.keepContext,
-      enableReasoning: state.enableReasoning,
-      reasoningBudget: parseInt(state.reasoningBudget, 10),
-      reasoningEffort: state.reasoningEffort
-    };
+    const iterations = parseInt(state.iterations, 10) || 1;
 
-    const pvqData = window.PVQData;
-    const psychometrics = window.Psychometrics;
-    const apiClient = window.ApiClient;
-    engineInstance = new window.ExecutionEngine.EvaluatorEngine(config, pvqData, psychometrics, apiClient);
+    for (let i = 0; i < iterations; i++) {
+      if (!state.isRunning) break;
 
-    try {
-      const runResult = await engineInstance.run((event) => {
-        state.progressStatus = event.statusMessage;
-        if (event.completedCount !== undefined) state.completedCount = event.completedCount;
-        if (event.tokenUsage) state.tokenUsage = event.tokenUsage;
-        if (event.currentPrompt) state.activeItemPrompt = event.currentPrompt;
-        if (event.lastResponse) state.activeItemResponse = event.lastResponse;
-        if (event.lastReasoning) state.activeReasoningTrace = event.lastReasoning;
+      state.results = null;
+      state.liveStreamLogs = [];
+      state.completedCount = 0;
+      state.tokenUsage = { promptTokens: 0, completionTokens: 0, reasoningTokens: 0, totalTokens: 0 };
+      state.liveItemRatings = {};
+      state.liveRawResponses = {};
+      state.liveReasoningTraces = {};
 
-        if (event.parsedScoresMap) state.liveItemRatings = event.parsedScoresMap;
-        if (event.rawResponses) state.liveRawResponses = event.rawResponses;
-        if (event.reasoningTraces) state.liveReasoningTraces = event.reasoningTraces;
+      const config = {
+        provider: state.provider,
+        apiKey: state.apiKey,
+        baseUrl: state.baseUrl,
+        model: state.model,
+        temperature: parseFloat(state.temperature),
+        seed: state.seed ? parseInt(state.seed, 10) : undefined,
+        lang: state.lang,
+        customSystemPrompt: state.systemPrompt,
+        mode: state.mode,
+        randomizeOrder: state.randomizeOrder,
+        keepContext: state.keepContext,
+        enableReasoning: state.enableReasoning,
+        reasoningBudget: parseInt(state.reasoningBudget, 10),
+        reasoningEffort: state.reasoningEffort,
+        iterations: iterations
+      };
 
-        if (event.type === 'item_complete' || event.type === 'batch_complete') {
-          state.liveStreamLogs.push(`[${new Date().toLocaleTimeString()}] ${event.statusMessage}`);
-        }
-        renderApp();
-      });
+      const pvqData = window.PVQData;
+      const psychometrics = window.Psychometrics;
+      const apiClient = window.ApiClient;
+      engineInstance = new window.ExecutionEngine.EvaluatorEngine(config, pvqData, psychometrics, apiClient);
 
-      state.results = runResult;
-      state.sessionResults.push(runResult);
-      state.progressStatus = 'Evaluation completed successfully!';
-    } catch (err) {
-      state.progressStatus = `Error: ${err.message}`;
-      state.liveStreamLogs.push(`[ERROR] ${err.message}`);
-    } finally {
-      state.isRunning = false;
+      state.progressStatus = `Starting evaluation (Iteration ${i + 1} of ${iterations})...`;
       renderApp();
+
+      try {
+        const runResult = await engineInstance.run((event) => {
+          state.progressStatus = `Iteration ${i + 1}/${iterations}: ${event.statusMessage}`;
+          if (event.completedCount !== undefined) state.completedCount = event.completedCount;
+          if (event.tokenUsage) state.tokenUsage = event.tokenUsage;
+          if (event.currentPrompt) state.activeItemPrompt = event.currentPrompt;
+          if (event.lastResponse) state.activeItemResponse = event.lastResponse;
+          if (event.lastReasoning) state.activeReasoningTrace = event.lastReasoning;
+
+          if (event.parsedScoresMap) state.liveItemRatings = event.parsedScoresMap;
+          if (event.rawResponses) state.liveRawResponses = event.rawResponses;
+          if (event.reasoningTraces) state.liveReasoningTraces = event.reasoningTraces;
+
+          if (event.type === 'item_complete' || event.type === 'batch_complete') {
+            state.liveStreamLogs.push(`[${new Date().toLocaleTimeString()}] Iteration ${i + 1}/${iterations}: ${event.statusMessage}`);
+          }
+          renderApp();
+        });
+
+        if (state.isRunning) {
+          state.results = runResult;
+          state.sessionResults.push(runResult);
+          state.progressStatus = `Iteration ${i + 1} completed successfully!`;
+          renderApp();
+        }
+      } catch (err) {
+        state.progressStatus = `Error in iteration ${i + 1}: ${err.message}`;
+        state.liveStreamLogs.push(`[ERROR] ${err.message}`);
+        renderApp();
+        break; // Stop further iterations on error
+      }
     }
+
+    state.isRunning = false;
+    if (state.progressStatus && !state.progressStatus.startsWith('Error')) {
+      state.progressStatus = `Evaluation finished successfully (${iterations} iteration${iterations > 1 ? 's' : ''}).`;
+    }
+    renderApp();
   }
 
   function stopEvaluation() {
     if (engineInstance) {
       engineInstance.stop();
+      state.isRunning = false;
       state.progressStatus = 'Stopping evaluation...';
       renderApp();
     }
@@ -772,6 +792,16 @@
             className: 'rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-sky-500 h-4 w-4'
           })
         )
+      ),
+      el('div', { className: 'border-t border-slate-800 pt-3' },
+        el('label', { className: 'block text-xs font-medium text-slate-400 mb-1' }, 'Iterations (Repeats)'),
+        el('input', {
+          type: 'number',
+          min: '1',
+          value: state.iterations,
+          onInput: (e) => { state.iterations = e.target.value; savePersistedOption('iterations', state.iterations); },
+          className: 'w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-sky-500 code-font'
+        })
       ),
       el('div', { className: 'border-t border-slate-800 pt-3' },
         el('label', { className: 'block text-xs font-medium text-slate-400 mb-1' }, 'System Prompt'),
