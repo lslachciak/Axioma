@@ -86,7 +86,7 @@ function deobfuscateApiKey(val) {
     model: '',
     fetchedModelsList: [],
     isFetchingModels: false,
-    temperature: 0.7,
+    temperature: '',
     seed: '',
     lang: 'en',
     systemPrompt: DEFAULT_SYSTEM_PROMPTS.en,
@@ -140,7 +140,7 @@ function deobfuscateApiKey(val) {
       if (savedLang) state.lang = savedLang;
 
       const savedTemp = localStorage.getItem('axioma_temperature');
-      if (savedTemp) state.temperature = parseFloat(savedTemp);
+      if (savedTemp !== null) state.temperature = savedTemp === '' ? '' : parseFloat(savedTemp);
 
       const savedSeed = localStorage.getItem('axioma_seed');
       if (savedSeed !== null) state.seed = savedSeed;
@@ -524,7 +524,7 @@ function deobfuscateApiKey(val) {
         apiKey: state.apiKey,
         baseUrl: state.baseUrl,
         model: state.model,
-        temperature: parseFloat(state.temperature),
+        temperature: state.temperature === '' ? '' : parseFloat(state.temperature),
         seed: state.seed ? parseInt(state.seed, 10) : undefined,
         lang: state.lang,
         customSystemPrompt: state.systemPrompt,
@@ -733,16 +733,38 @@ function deobfuscateApiKey(val) {
         })
       ),
       el('div', { className: 'grid grid-cols-2 gap-3' },
-        el('div', {},
-          el('label', { className: 'block text-xs font-medium text-slate-400 mb-1' }, `Temperature (${state.temperature})`),
+el('div', {},
+          el('div', { className: 'flex justify-between items-center mb-1' },
+            el('label', { className: 'block text-xs font-medium text-slate-400' }, `Temperature (${state.temperature === '' ? 'Default' : state.temperature})`),
+            el('label', { className: 'flex items-center text-xs text-slate-400 cursor-pointer' },
+              el('input', {
+                type: 'checkbox',
+                className: 'mr-1',
+                checked: state.temperature !== '',
+                onChange: (e) => {
+                  state.temperature = e.target.checked ? 0.7 : '';
+                  savePersistedOption('temperature', state.temperature);
+                  renderApp();
+                }
+              }),
+              'Custom'
+            )
+          ),
           el('input', {
             type: 'range',
             min: '0',
-            max: '1.5',
+            max: '2',
             step: '0.05',
-            value: state.temperature,
-            onInput: (e) => { state.temperature = e.target.value; savePersistedOption('temperature', state.temperature); renderApp(); },
-            className: 'w-full accent-sky-500'
+            value: state.temperature === '' ? 0.7 : state.temperature,
+            disabled: state.temperature === '',
+            onInput: (e) => {
+              if (state.temperature !== '') {
+                state.temperature = parseFloat(e.target.value);
+                savePersistedOption('temperature', state.temperature);
+                renderApp();
+              }
+            },
+            className: `w-full accent-sky-500 ${state.temperature === '' ? 'opacity-50 cursor-not-allowed' : ''}`
           })
         ),
         el('div', {},
