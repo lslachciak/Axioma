@@ -287,7 +287,7 @@
     }
 
     const generationConfig = {};
-    if (typeof config.temperature === 'number' && !isNaN(config.temperature)) {
+    if (config.temperature !== undefined && config.temperature !== '' && typeof config.temperature === 'number' && !isNaN(config.temperature)) {
       generationConfig.temperature = config.temperature;
     }
 
@@ -381,7 +381,7 @@
 
     payload.messages.push(...messages);
 
-    if (typeof config.temperature === 'number' && !isNaN(config.temperature)) {
+    if (config.temperature !== undefined && config.temperature !== '' && typeof config.temperature === 'number' && !isNaN(config.temperature)) {
       payload.temperature = config.temperature;
     }
 
@@ -501,7 +501,7 @@
       payload.system = systemText;
     }
 
-    if (typeof config.temperature === 'number' && !isNaN(config.temperature)) {
+    if (config.temperature !== undefined && config.temperature !== '' && typeof config.temperature === 'number' && !isNaN(config.temperature)) {
       payload.temperature = config.temperature;
     }
 
