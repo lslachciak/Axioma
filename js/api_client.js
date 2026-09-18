@@ -192,7 +192,13 @@
       const cleanBase = (baseUrl || PROVIDER_DEFAULTS[provider]?.baseUrl || "https://api.openai.com/v1").replace(/\/+$/, "");
       const endpoint = `${cleanBase}/models`;
       const headers = {};
-      if (apiKey) headers["Authorization"] = `Bearer ${apiKey.trim()}`;
+      if (provider === 'anthropic') {
+        if (apiKey) headers["x-api-key"] = apiKey.trim();
+        headers["anthropic-version"] = "2023-06-01";
+        headers["anthropic-dangerous-direct-browser-access"] = "true";
+      } else {
+        if (apiKey) headers["Authorization"] = `Bearer ${apiKey.trim()}`;
+      }
 
       const res = await fetch(endpoint, { headers });
       if (res.ok) {
@@ -486,7 +492,7 @@
       : (config.maxTokens || 2048);
 
     const payload = {
-      model: config.model || PROVIDER_DEFAULTS.anthropic.defaultModel,
+      model: config.model || PROVIDER_DEFAULTS.anthropic.defaultModel || "claude-3-5-sonnet-20241022",
       max_tokens: maxTokens,
       messages: anthropicMessages
     };
