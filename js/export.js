@@ -99,7 +99,12 @@
     lines.push("--- ITEM-BY-ITEM RESPONSES ---");
     lines.push("Item ID\tRefined Code\tScore (1-6)\tReasoning Trace\tRaw Response Text");
     for (let i = 1; i <= 57; i++) {
-      const score = results.psychometrics.itemRatings[i] ?? "N/A";
+      let score = results.psychometrics.itemRatings[i];
+      if (score === null || score === undefined) {
+        score = (results.rawResponses?.[i] || "N/A").trim();
+        if (score === "") score = "N/A";
+        score = typeof score === 'string' ? score.replace(/[\r\n\t]+/g, " ") : score;
+      }
       const reasoning = (results.reasoningTraces?.[i] || "").replace(/[\r\n\t]+/g, " ");
       const rawText = (results.rawResponses?.[i] || "").replace(/[\r\n\t]+/g, " ");
       const itemMeta = window.PVQData ? window.PVQData.ITEMS[i - 1] : { valueKey: "" };
@@ -198,7 +203,12 @@
       ["Item ID", "Refined Code", "Description (EN)", "Description (PL)", "Parsed Score (1-6)", "Chain-of-Thought Trace", "Raw LLM Response Text"]
     ];
     for (let i = 1; i <= 57; i++) {
-      const score = results.psychometrics.itemRatings[i] ?? "N/A";
+      let score = results.psychometrics.itemRatings[i];
+      if (score === null || score === undefined) {
+        score = (results.rawResponses?.[i] || "N/A").trim();
+        if (score === "") score = "N/A";
+        score = typeof score === 'string' ? score.replace(/[\r\n\t]+/g, " ") : score;
+      }
       const reasoning = results.reasoningTraces?.[i] || "";
       const rawText = results.rawResponses?.[i] || "";
       const itemMeta = window.PVQData ? window.PVQData.ITEMS[i - 1] : { valueKey: "", en: "", pl: "" };
@@ -346,7 +356,13 @@
 
       // 57 Items
       for (let i = 1; i <= 57; i++) {
-        row.push(psych.itemRatings?.[i] ?? "N/A");
+        let score = psych.itemRatings?.[i];
+        if (score === null || score === undefined) {
+          score = (results.rawResponses?.[i] || "N/A").trim();
+        if (score === "") score = "N/A";
+        score = typeof score === 'string' ? score.replace(/[\r\n\t]+/g, " ") : score;
+        }
+        row.push(score);
       }
 
       rows.push(row.map(escapeCSVCell).join(","));
@@ -459,7 +475,13 @@
       }
 
       for (let i = 1; i <= 57; i++) {
-        row.push(psych.itemRatings?.[i] ?? "N/A");
+        let score = psych.itemRatings?.[i];
+        if (score === null || score === undefined) {
+          score = (results.rawResponses?.[i] || "N/A").trim();
+        if (score === "") score = "N/A";
+        score = typeof score === 'string' ? score.replace(/[\r\n\t]+/g, " ") : score;
+        }
+        row.push(score);
       }
 
       summaryRows.push(row);
