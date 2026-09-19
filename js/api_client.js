@@ -291,7 +291,7 @@
       generationConfig.temperature = config.temperature;
     }
 
-    if (config.enableReasoning) {
+    if (config.enableReasoning === true) {
       const budget = Number(config.reasoningBudget);
       generationConfig.thinkingConfig = {
         thinkingBudget: (!isNaN(budget) && budget !== 0) ? budget : 1024
@@ -389,7 +389,7 @@
       payload.seed = config.seed;
     }
 
-    if (config.enableReasoning) {
+    if (config.enableReasoning === true) {
       if (config.reasoningBudget && Number(config.reasoningBudget) > 0) {
         payload.max_completion_tokens = Number(config.reasoningBudget);
       }
@@ -485,9 +485,9 @@
       }
     }
 
-    const budgetTokens = (config.enableReasoning && config.reasoningBudget) ? Number(config.reasoningBudget) : 1024;
+    const budgetTokens = (config.enableReasoning === true && config.reasoningBudget) ? Number(config.reasoningBudget) : 1024;
     // Anthropic API strictly requires max_tokens > budget_tokens when thinking is enabled
-    const maxTokens = config.enableReasoning
+    const maxTokens = config.enableReasoning === true
       ? Math.max(budgetTokens + 2048, 4096)
       : (config.maxTokens || 2048);
 
@@ -505,7 +505,7 @@
       payload.temperature = config.temperature;
     }
 
-    if (config.enableReasoning) {
+    if (config.enableReasoning === true) {
       payload.thinking = {
         type: "enabled",
         budget_tokens: budgetTokens

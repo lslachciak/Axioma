@@ -61,9 +61,9 @@
     lines.push(`# Randomize Order (--randomize)\t${results.metadata?.config?.randomizeOrder ? "Yes (Enabled)" : "No (Disabled)"}`);
     lines.push(`# Temperature\t${results.metadata?.config?.temperature ?? ""}`);
     lines.push(`# Seed\t${results.metadata?.config?.seed ?? ""}`);
-    lines.push(`# Reasoning Enabled\t${results.metadata?.config?.enableReasoning ? "Yes" : "No"}`);
-    lines.push(`# Reasoning Token Budget\t${results.metadata?.config?.enableReasoning ? (results.metadata?.config?.reasoningBudget || 1024) : "N/A"}`);
-    lines.push(`# Reasoning Effort\t${results.metadata?.config?.enableReasoning ? (results.metadata?.config?.reasoningEffort || "medium") : "N/A"}`);
+    lines.push(`# Reasoning Enabled\t${results.metadata?.config?.enableReasoning === '' ? 'Default' : (results.metadata?.config?.enableReasoning === true ? 'Yes' : 'No')}`);
+    lines.push(`# Reasoning Token Budget\t${results.metadata?.config?.enableReasoning === true ? (results.metadata?.config?.reasoningBudget || 1024) : "N/A"}`);
+    lines.push(`# Reasoning Effort\t${results.metadata?.config?.enableReasoning === true ? (results.metadata?.config?.reasoningEffort || "medium") : "N/A"}`);
     lines.push(`# Grand Mean (MRAT)\t${results.psychometrics.mrat}`);
     lines.push(`# Items Answered\t${results.psychometrics.totalAnswered} / 57`);
     lines.push("");
@@ -147,9 +147,9 @@
       ["Randomize Order (--randomize)", results.metadata?.config?.randomizeOrder ? "Yes (Enabled)" : "No (Disabled)"],
       ["Temperature", results.metadata?.config?.temperature ?? ""],
       ["Seed", results.metadata?.config?.seed ?? "None"],
-      ["Reasoning Enabled", results.metadata?.config?.enableReasoning ? "Yes" : "No"],
-      ["Reasoning Token Budget", results.metadata?.config?.enableReasoning ? (results.metadata?.config?.reasoningBudget || 1024) : "N/A"],
-      ["Reasoning Effort", results.metadata?.config?.enableReasoning ? (results.metadata?.config?.reasoningEffort || "medium") : "N/A"],
+      ["Reasoning Enabled", results.metadata?.config?.enableReasoning === '' ? 'Default' : (results.metadata?.config?.enableReasoning === true ? 'Yes' : 'No')],
+      ["Reasoning Token Budget", results.metadata?.config?.enableReasoning === true ? (results.metadata?.config?.reasoningBudget || 1024) : "N/A"],
+      ["Reasoning Effort", results.metadata?.config?.enableReasoning === true ? (results.metadata?.config?.reasoningEffort || "medium") : "N/A"],
       ["Grand Mean Score (MRAT)", results.psychometrics.mrat],
       ["Total Items Answered", `${results.psychometrics.totalAnswered} / 57`]
     ];
@@ -319,9 +319,9 @@
         cfg.randomizeOrder ? "Yes" : "No",
         cfg.temperature ?? "",
         cfg.seed ?? "",
-        cfg.enableReasoning ? "Yes" : "No",
-        cfg.enableReasoning ? (cfg.reasoningBudget || 1024) : "N/A",
-        cfg.enableReasoning ? (cfg.reasoningEffort || "medium") : "N/A",
+        cfg.enableReasoning === '' ? 'Default' : (cfg.enableReasoning === true ? 'Yes' : 'No'),
+        cfg.enableReasoning === true ? (cfg.reasoningBudget || 1024) : "N/A",
+        cfg.enableReasoning === true ? (cfg.reasoningEffort || "medium") : "N/A",
         token.promptTokens ?? 0,
         token.completionTokens ?? 0,
         token.reasoningTokens ?? 0,
@@ -435,9 +435,9 @@
         cfg.randomizeOrder ? "Yes" : "No",
         cfg.temperature ?? "",
         cfg.seed ?? "",
-        cfg.enableReasoning ? "Yes" : "No",
-        cfg.enableReasoning ? (cfg.reasoningBudget || 1024) : "N/A",
-        cfg.enableReasoning ? (cfg.reasoningEffort || "medium") : "N/A",
+        cfg.enableReasoning === '' ? 'Default' : (cfg.enableReasoning === true ? 'Yes' : 'No'),
+        cfg.enableReasoning === true ? (cfg.reasoningBudget || 1024) : "N/A",
+        cfg.enableReasoning === true ? (cfg.reasoningEffort || "medium") : "N/A",
         token.promptTokens ?? 0,
         token.completionTokens ?? 0,
         token.reasoningTokens ?? 0,

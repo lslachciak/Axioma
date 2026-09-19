@@ -93,7 +93,7 @@ function deobfuscateApiKey(val) {
     mode: 'batch', // 'batch' | 'sequential'
     randomizeOrder: false,
     keepContext: false,
-    enableReasoning: false,
+    enableReasoning: '',
     reasoningBudget: 1024,
     reasoningEffort: 'medium',
 
@@ -159,7 +159,7 @@ function deobfuscateApiKey(val) {
       if (savedKeepContext !== null) state.keepContext = savedKeepContext === 'true';
 
       const savedEnableReasoning = localStorage.getItem('axioma_enable_reasoning');
-      if (savedEnableReasoning !== null) state.enableReasoning = savedEnableReasoning === 'true';
+      if (savedEnableReasoning !== null) state.enableReasoning = savedEnableReasoning === '' ? '' : savedEnableReasoning === 'true';
 
       const savedReasoningBudget = localStorage.getItem('axioma_reasoning_budget');
       if (savedReasoningBudget) state.reasoningBudget = parseInt(savedReasoningBudget, 10);
@@ -783,14 +783,32 @@ el('div', {},
           el('span', { className: 'text-xs font-medium text-slate-300 flex items-center gap-1.5' },
             el('i', { className: 'fa-solid fa-brain text-purple-400' }), ' Reasoning / Thinking'
           ),
+          el('label', { className: 'flex items-center text-xs text-slate-400 cursor-pointer' },
+            el('input', {
+              type: 'checkbox',
+              className: 'mr-1',
+              checked: state.enableReasoning !== '',
+              onChange: (e) => {
+                state.enableReasoning = e.target.checked ? false : '';
+                savePersistedOption('enable_reasoning', state.enableReasoning);
+                renderApp();
+              }
+            }),
+            'Custom'
+          )
+        ),
+        state.enableReasoning !== '' ? el('div', { className: 'flex justify-between items-center mb-2 pl-2' },
+          el('span', { className: 'text-xs font-medium text-slate-400' },
+            'Enable Reasoning / Thinking'
+          ),
           el('input', {
             type: 'checkbox',
-            checked: state.enableReasoning,
+            checked: state.enableReasoning === true,
             onChange: (e) => { state.enableReasoning = e.target.checked; savePersistedOption('enable_reasoning', state.enableReasoning); renderApp(); },
             className: 'rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-sky-500 h-4 w-4'
           })
-        ),
-        state.enableReasoning ? el('div', { className: 'grid grid-cols-2 gap-2' },
+        ) : null,
+        state.enableReasoning === true ? el('div', { className: 'grid grid-cols-2 gap-2' },
           el('div', {},
             el('label', { className: 'block text-xs font-medium text-slate-400 mb-1' }, 'Reasoning Token Budget'),
             el('input', {
