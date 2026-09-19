@@ -102,9 +102,7 @@
     for (let i = 1; i <= 57; i++) {
       let score = results.psychometrics.itemRatings[i];
       if (score === null || score === undefined) {
-        score = (results.rawResponses?.[i] || "N/A").trim();
-        if (score === "") score = "N/A";
-        score = typeof score === 'string' ? score.replace(/[\r\n\t]+/g, " ") : score;
+        score = "N/A";
       }
       const reasoning = (results.reasoningTraces?.[i] || "").replace(/[\r\n\t]+/g, " ");
       const rawText = (results.rawResponses?.[i] || "").replace(/[\r\n\t]+/g, " ");
@@ -207,9 +205,7 @@
     for (let i = 1; i <= 57; i++) {
       let score = results.psychometrics.itemRatings[i];
       if (score === null || score === undefined) {
-        score = (results.rawResponses?.[i] || "N/A").trim();
-        if (score === "") score = "N/A";
-        score = typeof score === 'string' ? score.replace(/[\r\n\t]+/g, " ") : score;
+        score = "N/A";
       }
       const reasoning = results.reasoningTraces?.[i] || "";
       const rawText = results.rawResponses?.[i] || "";
@@ -305,9 +301,9 @@
       }
     }
 
-    // Add 57 Item Scores
+    // Add 57 Item Scores, Reasoning, and Raw Text
     for (let i = 1; i <= 57; i++) {
-      headers.push(`Item_${i}_Score`);
+      headers.push(`Item_${i}_Score`, `Item_${i}_Reasoning`, `Item_${i}_Raw`);
     }
 
     const rows = [headers.map(escapeCSVCell).join(",")];
@@ -361,11 +357,11 @@
       for (let i = 1; i <= 57; i++) {
         let score = psych.itemRatings?.[i];
         if (score === null || score === undefined) {
-          score = (results.rawResponses?.[i] || "N/A").trim();
-        if (score === "") score = "N/A";
-        score = typeof score === 'string' ? score.replace(/[\r\n\t]+/g, " ") : score;
+          score = "N/A";
         }
-        row.push(score);
+        const reasoning = results.reasoningTraces?.[i] || "";
+        const rawText = results.rawResponses?.[i] || "";
+        row.push(score, reasoning, rawText);
       }
 
       rows.push(row.map(escapeCSVCell).join(","));
@@ -430,7 +426,7 @@
     }
 
     for (let i = 1; i <= 57; i++) {
-      headers.push(`Item ${i} Score`);
+      headers.push(`Item ${i} Score`, `Item ${i} Reasoning`, `Item ${i} Raw`);
     }
 
     const summaryRows = [headers];
@@ -481,11 +477,11 @@
       for (let i = 1; i <= 57; i++) {
         let score = psych.itemRatings?.[i];
         if (score === null || score === undefined) {
-          score = (results.rawResponses?.[i] || "N/A").trim();
-        if (score === "") score = "N/A";
-        score = typeof score === 'string' ? score.replace(/[\r\n\t]+/g, " ") : score;
+          score = "N/A";
         }
-        row.push(score);
+        const reasoning = results.reasoningTraces?.[i] || "";
+        const rawText = results.rawResponses?.[i] || "";
+        row.push(score, reasoning, rawText);
       }
 
       summaryRows.push(row);

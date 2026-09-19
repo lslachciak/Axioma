@@ -173,7 +173,7 @@ Instrukcja: Oceń WSZYSTKIE 57 poniższych pozycji w skali 1-6. Podaj swoje ocen
           for (let i = 1; i <= 57; i++) {
             const parsedInfo = batchParsed[i] || { score: null, rawText: "", isRefusal: false };
             state.parsedItemScores[i] = parsedInfo.score;
-            state.rawResponses[i] = parsedInfo.rawText || apiRes.text;
+            state.rawResponses[i] = apiRes.text;
             state.reasoningTraces[i] = apiRes.reasoning;
           }
 
