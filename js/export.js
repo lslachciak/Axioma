@@ -57,6 +57,7 @@
     lines.push(`# System Prompt\t${(results.metadata?.config?.customSystemPrompt || "").replace(/[\r\n\t]+/g, " ")}`);
     lines.push(`# Language\t${results.metadata?.config?.lang || "en"}`);
     lines.push(`# Mode\t${results.metadata?.config?.mode || ""}`);
+    lines.push(`# Iterations\t${results.metadata?.config?.iterations || 1}`);
     lines.push(`# Keep Chat Context History\t${results.metadata?.config?.keepContext ? "Yes (Enabled)" : "No (Disabled)"}`);
     lines.push(`# Randomize Order (--randomize)\t${results.metadata?.config?.randomizeOrder ? "Yes (Enabled)" : "No (Disabled)"}`);
     lines.push(`# Temperature\t${results.metadata?.config?.temperature ?? ""}`);
@@ -143,6 +144,7 @@
       ["Base URL", results.metadata?.config?.baseUrl || ""],
       ["Language", results.metadata?.config?.lang || "en"],
       ["Execution Mode", results.metadata?.config?.mode || ""],
+      ["Iterations", results.metadata?.config?.iterations || 1],
       ["Keep Chat Context History", results.metadata?.config?.keepContext ? "Yes (Enabled)" : "No (Disabled)"],
       ["Randomize Order (--randomize)", results.metadata?.config?.randomizeOrder ? "Yes (Enabled)" : "No (Disabled)"],
       ["Temperature", results.metadata?.config?.temperature ?? ""],
@@ -264,6 +266,7 @@
       "System Prompt",
       "Language",
       "Execution Mode",
+      "Iterations",
       "Keep Context History",
       "Randomize Order",
       "Temperature",
@@ -383,6 +386,7 @@
       "System Prompt",
       "Language",
       "Execution Mode",
+      "Iterations",
       "Keep Context History",
       "Randomize Order",
       "Temperature",
