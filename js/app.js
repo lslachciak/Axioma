@@ -91,6 +91,7 @@ function deobfuscateApiKey(val) {
     lang: 'en',
     systemPrompt: DEFAULT_SYSTEM_PROMPTS.en,
     mode: 'batch', // 'batch' | 'sequential'
+    iterations: 1,
     randomizeOrder: false,
     keepContext: false,
     enableReasoning: '',
@@ -163,6 +164,9 @@ function deobfuscateApiKey(val) {
 
       const savedReasoningBudget = localStorage.getItem('axioma_reasoning_budget');
       if (savedReasoningBudget) state.reasoningBudget = parseInt(savedReasoningBudget, 10);
+
+      const savedIterations = localStorage.getItem('axioma_iterations');
+      if (savedIterations !== null) state.iterations = parseInt(savedIterations, 10) || 1;
 
       const savedReasoningEffort = localStorage.getItem('axioma_reasoning_effort');
       if (savedReasoningEffort) state.reasoningEffort = savedReasoningEffort;
