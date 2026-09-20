@@ -499,5 +499,125 @@
   exports.exportToXLSX = exportToXLSX;
   exports.exportSessionToCSV = exportSessionToCSV;
   exports.exportSessionToXLSX = exportSessionToXLSX;
+  exports.importSessionFromFile = importSessionFromFile;
+
+  /**
+   * Imports a session from a CSV or XLSX file.
+   *
+   * @param {File} file - The file object from input[type="file"]
+   * @param {Function} callback - Callback function(sessionResults)
+   */
+  function importSessionFromFile(file, callback) {
+    if (typeof window.XLSX === 'undefined') {
+      alert("XLSX library not loaded.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const XLSX = window.XLSX;
+        const wb = XLSX.read(data, { type: 'array' });
+
+        const sheetName = wb.SheetNames[0];
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { header: 1 });
+
+        if (rows.length < 2) {
+          alert("Invalid or empty file.");
+          return;
+        }
+
+        const headers = rows[0].map(h => h ? String(h).trim() : '');
+        const sessionResults = [];
+
+        for (let i = 1; i < rows.length; i++) {
+          const row = rows[i];
+          if (!row || row.length === 0 || (!row[0] && !row[1])) continue;
+
+          const getValue = (colName) => {
+            let idx = headers.findIndex(h => h === colName);
+            if (idx !== -1) return row[idx];
+
+            // Try matching without underscores or parenthesis
+            const normalizedTarget = colName.replace(/[_\(\)]/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
+            idx = headers.findIndex(h => h.replace(/[_\(\)]/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase() === normalizedTarget);
+
+            if (idx !== -1) return row[idx];
+            return null;
+          };
+
+          const rawReasoningEnabled = getValue("Reasoning Enabled");
+          let enableReasoning = '';
+          if (rawReasoningEnabled === 'Yes') enableReasoning = true;
+          else if (rawReasoningEnabled === 'No') enableReasoning = false;
+
+          let temperatureStr = getValue("Temperature");
+          let temperature = temperatureStr === "" || temperatureStr === undefined || temperatureStr === null ? "" : parseFloat(temperatureStr);
+
+          const cfg = {
+            provider: getValue("Provider") || "",
+            model: getValue("Model") || "",
+            baseUrl: getValue("Base URL") || "",
+            customSystemPrompt: getValue("System Prompt") || "",
+            lang: getValue("Language") || "en",
+            mode: getValue("Execution Mode") || "batch",
+            iterations: parseInt(getValue("Iterations")) || 1,
+            keepContext: getValue("Keep Context History") === "Yes",
+            randomizeOrder: getValue("Randomize Order") === "Yes",
+            temperature: temperature,
+            seed: getValue("Seed") || "",
+            enableReasoning: enableReasoning,
+            reasoningBudget: parseInt(getValue("Reasoning Token Budget")) || parseInt(getValue("Reasoning Budget")) || 1024,
+            reasoningEffort: getValue("Reasoning Effort") || "medium"
+          };
+
+          const token = {
+            promptTokens: parseInt(getValue("Prompt Tokens")) || 0,
+            completionTokens: parseInt(getValue("Completion Tokens")) || 0,
+            reasoningTokens: parseInt(getValue("Reasoning Tokens")) || 0,
+            totalTokens: parseInt(getValue("Total Tokens")) || 0
+          };
+
+          const itemRatings = {};
+          const reasoningTraces = {};
+          const rawResponses = {};
+
+          for (let j = 1; j <= 57; j++) {
+            const score = getValue(`Item ${j} Score`);
+            itemRatings[j] = (score === "N/A" || score === null || score === undefined || score === "") ? null : parseInt(score);
+            reasoningTraces[j] = getValue(`Item ${j} Reasoning`) || "";
+            rawResponses[j] = getValue(`Item ${j} Raw`) || "";
+          }
+
+          const meta = {
+            timestamp: getValue("Timestamp") || new Date().toISOString(),
+            config: cfg
+          };
+
+          let psych = {};
+          if (window.Psychometrics && window.PVQData) {
+            psych = window.Psychometrics.calculatePsychometrics(itemRatings, window.PVQData);
+          }
+
+          sessionResults.push({
+            metadata: meta,
+            tokenUsage: token,
+            itemRatings: itemRatings,
+            psychometrics: psych,
+            reasoningTraces: reasoningTraces,
+            rawResponses: rawResponses
+          });
+        }
+
+        callback(sessionResults);
+      } catch (err) {
+        console.error("Failed to parse file", err);
+        alert("Failed to parse file. Make sure it is a valid session export CSV or XLSX.");
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
 
 })(typeof exports !== 'undefined' ? exports : (window.DataExporter = {}));

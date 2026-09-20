@@ -635,7 +635,12 @@ function deobfuscateApiKey(val) {
             el('option', { value: 'en' }, 'English (EN)'),
             el('option', { value: 'pl' }, 'Polski (PL)')
           ),
-          el('button', {
+          el('input', { type: 'file', id: 'sessionFileInput', accept: '.csv, .xlsx', className: 'hidden', onChange: (e) => { const file = e.target.files[0]; if(file) { if(state.sessionResults.length > 0 && !window.confirm('Importing will overwrite the current session. Continue?')) { e.target.value = ''; return; } window.DataExporter.importSessionFromFile(file, (results) => { if(results && results.length > 0) { state.sessionResults = results; state.results = results[0]; state.tokenUsage = state.results.tokenUsage; state.progressStatus = 'Loaded session from file'; } e.target.value = ''; renderApp(); }); } } }),
+            el('button', {
+              onClick: () => document.getElementById('sessionFileInput').click(),
+              className: 'bg-slate-800 hover:bg-slate-700 text-indigo-400 text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-700 flex items-center gap-1.5 transition'
+            }, el('i', { className: 'fa-solid fa-file-import' }), ' Import'),
+            el('button', {
             onClick: () => {
               const confirmed = window.confirm("Are you sure you want to start a new session? All current session evaluation data will be lost.");
               if (confirmed) {
@@ -923,6 +928,22 @@ el('div', {},
             })
           )
         ),
+
+        state.sessionResults.length > 1 ? el('div', { className: 'mt-4 flex items-center space-x-2' },
+          el('span', { className: 'text-xs text-slate-400' }, 'View Iteration:'),
+          el('select', {
+            className: 'bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-sm text-slate-200 focus:outline-none focus:border-sky-500',
+            value: state.sessionResults.indexOf(state.results),
+            onChange: (e) => {
+              const idx = parseInt(e.target.value);
+              if (idx >= 0 && idx < state.sessionResults.length) {
+                state.results = state.sessionResults[idx];
+                state.tokenUsage = state.results.tokenUsage;
+                renderApp();
+              }
+            }
+          }, ...state.sessionResults.map((r, i) => el('option', { value: i }, `Run ${i + 1} (${new Date(r.metadata.timestamp).toLocaleTimeString()})`)))
+        ) : null,
         el('div', { className: 'grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-950/50 p-3 rounded-xl border border-slate-800/80' },
           el('div', {}, el('p', { className: 'text-[10px] uppercase font-bold text-slate-500' }, 'Input Tokens'), el('p', { className: 'text-sm font-bold code-font text-sky-400' }, state.tokenUsage.promptTokens.toLocaleString())),
           el('div', {}, el('p', { className: 'text-[10px] uppercase font-bold text-slate-500' }, 'Output Tokens'), el('p', { className: 'text-sm font-bold code-font text-indigo-400' }, state.tokenUsage.completionTokens.toLocaleString())),
