@@ -134,8 +134,14 @@
       return;
     }
 
+
     const XLSX = window.XLSX;
     const wb = XLSX.utils.book_new();
+
+    const alphas = window.Psychometrics && window.Psychometrics.calculateCronbachAlphaForSession
+      ? window.Psychometrics.calculateCronbachAlphaForSession(sessionResults, window.PVQData)
+      : {};
+
 
     // Tab 1: Overview & Config
     const overviewData = [
@@ -396,8 +402,14 @@
       return;
     }
 
+
     const XLSX = window.XLSX;
     const wb = XLSX.utils.book_new();
+
+    const alphas = window.Psychometrics && window.Psychometrics.calculateCronbachAlphaForSession
+      ? window.Psychometrics.calculateCronbachAlphaForSession(sessionResults, window.PVQData)
+      : {};
+
 
     // Summary Sheet: 1 row per run
     const headers = [
