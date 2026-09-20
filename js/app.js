@@ -263,7 +263,12 @@ function deobfuscateApiKey(val) {
   function renderCharts() {
     if (state.activeTab !== 'results' || !state.results || !state.results.psychometrics) return;
 
+
     const psych = state.results.psychometrics;
+    const alphas = window.Psychometrics && window.Psychometrics.calculateCronbachAlphaForSession
+        ? window.Psychometrics.calculateCronbachAlphaForSession(state.sessionResults, window.PVQData)
+        : {};
+
     const refinedCanvas = document.getElementById('refinedChartCanvas');
     const hoCanvas = document.getElementById('higherOrderChartCanvas');
 
@@ -317,7 +322,23 @@ function deobfuscateApiKey(val) {
           },
           plugins: {
             legend: { display: false },
-            tooltip: { bodyFont: { size: 10 }, titleFont: { size: 10 } }
+            tooltip: {
+              bodyFont: { size: 10 },
+              titleFont: { size: 10 },
+              callbacks: {
+                label: function(context) {
+                  let label = context.dataset.label || '';
+                  if (label) label += ': ';
+                  if (context.parsed.r !== null) label += context.parsed.r.toFixed(3);
+                  const dataIndex = context.dataIndex;
+                  const codes = Object.keys(psych.refinedValues);
+                  if (codes[dataIndex] && alphas[codes[dataIndex]] !== undefined && alphas[codes[dataIndex]] !== null) {
+                    label += ` (α: ${alphas[codes[dataIndex]]})`;
+                  }
+                  return label;
+                }
+              }
+            }
           }
         }
       });
@@ -399,7 +420,20 @@ function deobfuscateApiKey(val) {
             },
             tooltip: {
               bodyFont: { size: 14 },
-              titleFont: { size: 14 }
+              titleFont: { size: 14 },
+              callbacks: {
+                label: function(context) {
+                  let label = context.dataset.label || '';
+                  if (label) label += ': ';
+                  if (context.parsed.r !== null) label += context.parsed.r.toFixed(3);
+                  const dataIndex = context.dataIndex;
+                  const codes = Object.keys(psych.higherOrderValues);
+                  if (codes[dataIndex] && alphas[codes[dataIndex]] !== undefined && alphas[codes[dataIndex]] !== null) {
+                    label += ` (α: ${alphas[codes[dataIndex]]})`;
+                  }
+                  return label;
+                }
+              }
             }
           }
         }
@@ -959,7 +993,12 @@ el('div', {},
       );
     }
 
+
     const psych = state.results.psychometrics;
+    const alphas = window.Psychometrics && window.Psychometrics.calculateCronbachAlphaForSession
+        ? window.Psychometrics.calculateCronbachAlphaForSession(state.sessionResults, window.PVQData)
+        : {};
+
 
     return el('div', { className: 'space-y-8' },
       el('div', { className: 'grid grid-cols-1 md:grid-cols-3 gap-4' },

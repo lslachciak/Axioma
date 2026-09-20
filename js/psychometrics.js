@@ -234,6 +234,91 @@
 
   exports.parseItemResponse = parseItemResponse;
   exports.parseBatchResponse = parseBatchResponse;
+
+  /**
+   * Calculates Cronbach's Alpha for a given set of iterations and item mappings.
+   * @param {Array} sessionResults - Array of psychometric results from multiple iterations
+   * @param {Object} pvqData - PVQ Data module
+   * @returns {Object} Map of { code: alphaValue }
+   */
+  function calculateCronbachAlphaForSession(sessionResults, pvqData) {
+    const N = sessionResults.length;
+    const alphas = {};
+
+    if (!pvqData || N < 2) {
+      return alphas; // Alpha cannot be computed with less than 2 iterations
+    }
+
+    const calcAlpha = (items) => {
+      const K = items.length;
+      if (K < 2) return null;
+
+      let itemVariancesSum = 0;
+      for (let j = 0; j < K; j++) {
+        const itemScores = [];
+        for (let i = 0; i < N; i++) {
+          const val = sessionResults[i]?.psychometrics?.itemRatings?.[items[j]];
+          if (typeof val === 'number') {
+            itemScores.push(val);
+          }
+        }
+        if (itemScores.length < 2) return null;
+
+        const mean = itemScores.reduce((a, b) => a + b, 0) / itemScores.length;
+        const variance = itemScores.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / (itemScores.length - 1);
+        itemVariancesSum += variance;
+      }
+
+      const totalScores = [];
+      for (let i = 0; i < N; i++) {
+        let total = 0;
+        let valid = true;
+        for (let j = 0; j < K; j++) {
+          const val = sessionResults[i]?.psychometrics?.itemRatings?.[items[j]];
+          if (typeof val !== 'number') {
+            valid = false;
+            break;
+          }
+          total += val;
+        }
+        if (valid) {
+          totalScores.push(total);
+        }
+      }
+
+      if (totalScores.length < 2) return null;
+      const meanTotal = totalScores.reduce((a, b) => a + b, 0) / totalScores.length;
+      const varianceTotal = totalScores.reduce((a, b) => a + Math.pow(b - meanTotal, 2), 0) / (totalScores.length - 1);
+
+      if (varianceTotal === 0) return null;
+
+      const alpha = (K / (K - 1)) * (1 - (itemVariancesSum / varianceTotal));
+      return parseFloat(alpha.toFixed(3));
+    };
+
+    // Calculate for Refined Values
+    const refined = pvqData.REFINED_VALUES || {};
+    for (const code in refined) {
+      alphas[code] = calcAlpha(refined[code].items);
+    }
+
+    // Calculate for Higher-Order Values
+    const higherOrder = pvqData.HIGHER_ORDER_VALUES || {};
+    for (const code in higherOrder) {
+      const refinedKeys = higherOrder[code].refinedKeys || [];
+      const hoItems = [];
+      for (const rKey of refinedKeys) {
+        if (refined[rKey] && refined[rKey].items) {
+          hoItems.push(...refined[rKey].items);
+        }
+      }
+      alphas[code] = calcAlpha(hoItems);
+    }
+
+    return alphas;
+  }
+
   exports.calculatePsychometrics = calculatePsychometrics;
+  exports.calculateCronbachAlphaForSession = calculateCronbachAlphaForSession;
 
 })(typeof exports !== 'undefined' ? exports : (window.Psychometrics = {}));

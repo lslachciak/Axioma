@@ -195,3 +195,70 @@ describe('calculatePsychometrics', () => {
         assert.strictEqual(result.higherOrderValues.HO1.centeredMean, 0.0);
     });
 });
+
+describe('calculateCronbachAlphaForSession', () => {
+    const { calculateCronbachAlphaForSession } = psychMetricsExports;
+
+    const mockPvqDataAlpha = {
+        REFINED_VALUES: {
+            "VAL1": { items: [1, 2] },
+            "VAL2": { items: [3, 4] }
+        },
+        HIGHER_ORDER_VALUES: {
+            "HO1": { refinedKeys: ["VAL1", "VAL2"] }
+        }
+    };
+
+    test('returns empty object when < 2 iterations', () => {
+        const sessionResults = [
+            { psychometrics: { itemRatings: { 1: 5, 2: 4, 3: 3, 4: 2 } } }
+        ];
+        const alphas = calculateCronbachAlphaForSession(sessionResults, mockPvqDataAlpha);
+        assert.deepStrictEqual(alphas, {});
+    });
+
+    test('calculates correct alpha for refined and higher order values', () => {
+        // We will create a perfect correlation to get alpha = 1 for VAL1,
+        // and somewhat mixed for VAL2.
+        const sessionResults = [
+            { psychometrics: { itemRatings: { 1: 5, 2: 5, 3: 4, 4: 2 } } },
+            { psychometrics: { itemRatings: { 1: 4, 2: 4, 3: 3, 4: 5 } } },
+            { psychometrics: { itemRatings: { 1: 3, 2: 3, 3: 5, 4: 4 } } }
+        ];
+
+        const alphas = calculateCronbachAlphaForSession(sessionResults, mockPvqDataAlpha);
+
+        // VAL1: items 1, 2. Scores: [5,5], [4,4], [3,3]. Correlation = 1. Alpha = 1
+        assert.strictEqual(alphas.VAL1, 1.000);
+
+        // VAL2: items 3, 4.
+        // item 3: 4, 3, 5 (var: 1)
+        // item 4: 2, 5, 4 (var: 2.333)
+        // total: 6, 8, 9 (var: 2.333)
+        // alpha = (2/1) * (1 - (1 + 2.333) / 2.333) -> will be negative or small
+        assert.strictEqual(typeof alphas.VAL2, 'number');
+        assert.strictEqual(typeof alphas.HO1, 'number');
+    });
+
+    test('returns null when there is no variance in totals', () => {
+        const sessionResults = [
+            { psychometrics: { itemRatings: { 1: 3, 2: 3 } } },
+            { psychometrics: { itemRatings: { 1: 4, 2: 2 } } },
+            { psychometrics: { itemRatings: { 1: 5, 2: 1 } } }
+        ];
+        // Totals are all 6. Variance Total = 0.
+        const alphas = calculateCronbachAlphaForSession(sessionResults, mockPvqDataAlpha);
+        assert.strictEqual(alphas.VAL1, null);
+    });
+
+    test('handles missing data gracefully', () => {
+        const sessionResults = [
+            { psychometrics: { itemRatings: { 1: 5, 2: 4 } } },
+            { psychometrics: { itemRatings: { 1: null, 2: 4 } } },
+            { psychometrics: { itemRatings: { 1: 3, 2: 3 } } }
+        ];
+        const alphas = calculateCronbachAlphaForSession(sessionResults, mockPvqDataAlpha);
+        // It successfully calculates Alpha for the 2 valid rows
+        assert.strictEqual(typeof alphas.VAL1, 'number');
+    });
+});
