@@ -142,6 +142,99 @@
       cleanText = cleanText.substring(0, unclosedMatch.index).trim();
     }
 
+    // Fallback heuristics for un-tagged thinking (e.g., Gemini 3.5 Flash)
+    if (!reasoning && cleanText) {
+      const splitKeywords = [
+        "**thinking process:**",
+        "### **thinking process:**",
+        "**thought process:**",
+        "### **thought process:**",
+        "**thoughts:**",
+        "### **thoughts:**",
+        "**thinking:**",
+        "### **thinking:**",
+        "**reasoning:**",
+        "### **reasoning:**",
+        "**thinking process",
+        "### **thinking process",
+        "here is my thinking process"
+      ];
+
+      const lowerText = cleanText.toLowerCase();
+      let bestSplitIndex = -1;
+      let usedKeyword = "";
+
+      for (const kw of splitKeywords) {
+        const idx = lowerText.indexOf(kw);
+        // Ensure it appears near the beginning (e.g., within first 200 chars)
+        if (idx !== -1 && idx < 200 && (bestSplitIndex === -1 || idx < bestSplitIndex)) {
+          bestSplitIndex = idx;
+          usedKeyword = kw;
+        }
+      }
+
+      if (bestSplitIndex !== -1) {
+        // Adjust bestSplitIndex if the keyword has punctuation/formatting after it
+        let startOfReasoning = bestSplitIndex + usedKeyword.length;
+        while (startOfReasoning < cleanText.length && (cleanText[startOfReasoning] === ':' || cleanText[startOfReasoning] === '*' || cleanText[startOfReasoning] === ' ' || cleanText[startOfReasoning] === '\n')) {
+            startOfReasoning++;
+        }
+
+        const afterThinkingStart = cleanText.substring(startOfReasoning);
+        const endMarkers = [
+          "\n---\n",
+          "\n***\n",
+          "\n**final answer:**",
+          "\n### **final answer:**",
+          "\n**final count:**",
+          "\n### **final count:**",
+          "\n**the count:**",
+          "\n### **the count:**",
+          "\n**response:**",
+          "\n### **response:**",
+          "\n**answer:**",
+          "\n### **answer:**",
+          "\n**conclusion:**"
+        ];
+
+        let endThinkingIdx = -1;
+        let usedEndMarker = "";
+        const lowerAfter = afterThinkingStart.toLowerCase();
+
+        for (const endMarker of endMarkers) {
+          const idx = lowerAfter.indexOf(endMarker);
+          if (idx !== -1 && (endThinkingIdx === -1 || idx < endThinkingIdx)) {
+            endThinkingIdx = idx;
+            usedEndMarker = endMarker;
+          }
+        }
+
+        if (endThinkingIdx !== -1) {
+          // If the reason starts with something like "as I count from 1 to 5:", it's probably better to include the keyword if it was a narrative intro
+          if (usedKeyword === "here is my thinking process") {
+              reasoning = cleanText.substring(bestSplitIndex, startOfReasoning + endThinkingIdx).trim();
+          } else {
+              reasoning = afterThinkingStart.substring(0, endThinkingIdx).trim();
+          }
+
+          // Remove the prefix before the thinking process as well
+          let prefix = cleanText.substring(0, bestSplitIndex).trim();
+          if (usedKeyword === "here is my thinking process") {
+             // prefix is usually empty or irrelevant here
+             prefix = "";
+          }
+
+          let suffix = afterThinkingStart.substring(endThinkingIdx);
+          // Only remove horizontal rules, keep actual answer headings
+          if (usedEndMarker === "\n---\n" || usedEndMarker === "\n***\n") {
+             suffix = suffix.replace(/^[\s\S]*?(?:---|\*\*\*)(?:\n)?/, "");
+          }
+
+          cleanText = (prefix ? prefix + "\n\n" : "") + suffix.trim();
+        }
+      }
+    }
+
     return {
       text: cleanText.trim(),
       reasoning: reasoning.trim()
@@ -398,9 +491,9 @@
       }
       if (config.provider === 'gemini' || (config.baseUrl && config.baseUrl.includes("generativelanguage.googleapis.com"))) {
         const budget = Number(config.reasoningBudget) || 1024;
-        payload.thinking_config = { thinking_budget: budget };
+        payload.thinkingConfig = { thinkingBudget: budget };
         payload.extra_body = {
-          thinking_config: { thinking_budget: budget }
+          thinkingConfig: { thinkingBudget: budget }
         };
       }
     }
