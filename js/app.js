@@ -635,12 +635,7 @@ function deobfuscateApiKey(val) {
             el('option', { value: 'en' }, 'English (EN)'),
             el('option', { value: 'pl' }, 'Polski (PL)')
           ),
-          el('input', { type: 'file', id: 'sessionFileInput', accept: '.csv, .xlsx', className: 'hidden', onChange: (e) => { const file = e.target.files[0]; if(file) { if(state.sessionResults.length > 0 && !window.confirm('Importing will overwrite the current session. Continue?')) { e.target.value = ''; return; } window.DataExporter.importSessionFromFile(file, (results) => { if(results && results.length > 0) { state.sessionResults = results; state.results = results[0]; state.tokenUsage = state.results.tokenUsage; state.progressStatus = 'Loaded session from file'; } e.target.value = ''; renderApp(); }); } } }),
-            el('button', {
-              onClick: () => document.getElementById('sessionFileInput').click(),
-              className: 'bg-slate-800 hover:bg-slate-700 text-indigo-400 text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-700 flex items-center gap-1.5 transition'
-            }, el('i', { className: 'fa-solid fa-file-import' }), ' Import'),
-            el('button', {
+          el('button', {
             onClick: () => {
               const confirmed = window.confirm("Are you sure you want to start a new session? All current session evaluation data will be lost.");
               if (confirmed) {
@@ -653,16 +648,17 @@ function deobfuscateApiKey(val) {
             },
             className: 'bg-slate-800 hover:bg-rose-900/40 text-rose-400 hover:text-rose-300 text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-700 hover:border-rose-500/50 flex items-center gap-1.5 transition'
           }, el('i', { className: 'fa-solid fa-rotate-left' }), ' New Session'),
-          state.sessionResults.length > 0 ? el('div', { className: 'flex space-x-2' },
+          el('div', { className: 'flex space-x-2 p-1 bg-slate-900 rounded-lg border border-slate-700' },
+            el('input', { type: 'file', id: 'sessionFileInput', accept: '.csv, .xlsx', className: 'hidden', onChange: (e) => { const file = e.target.files[0]; if(file) { if(state.sessionResults.length > 0 && !window.confirm('Importing will overwrite the current session. Continue?')) { e.target.value = ''; return; } window.DataExporter.importSessionFromFile(file, (results) => { if(results && results.length > 0) { state.sessionResults = results; state.results = results[0]; state.tokenUsage = state.results.tokenUsage; state.progressStatus = 'Loaded session from file'; } e.target.value = ''; renderApp(); }); } } }),
             el('button', {
-              onClick: () => window.DataExporter.exportSessionToCSV(state.sessionResults, undefined),
-              className: 'bg-slate-800 hover:bg-slate-700 text-emerald-400 text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-700 flex items-center gap-1.5 transition'
-            }, el('i', { className: 'fa-solid fa-file-csv' }), ' CSV'),
+              onClick: () => document.getElementById('sessionFileInput').click(),
+              className: 'bg-slate-800 hover:bg-slate-700 text-indigo-400 text-xs font-semibold px-3 py-1 rounded-md flex items-center gap-1.5 transition'
+            }, el('i', { className: 'fa-solid fa-file-import' }), ' Load'),
             el('button', {
-              onClick: () => window.DataExporter.exportSessionToXLSX(state.sessionResults, undefined),
-              className: 'bg-slate-800 hover:bg-slate-700 text-green-400 text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-700 flex items-center gap-1.5 transition'
-            }, el('i', { className: 'fa-solid fa-file-excel' }), ' XLSX')
-          ) : null
+              onClick: () => state.sessionResults.length > 0 ? window.DataExporter.exportSessionToXLSX(state.sessionResults, undefined) : alert('No session data to save.'),
+              className: `text-xs font-semibold px-3 py-1 rounded-md flex items-center gap-1.5 transition ${state.sessionResults.length > 0 ? 'bg-slate-800 hover:bg-slate-700 text-green-400' : 'bg-slate-800/50 text-slate-500 cursor-not-allowed'}`
+            }, el('i', { className: 'fa-solid fa-file-export' }), ' Save')
+          )
         )
       )
     );
