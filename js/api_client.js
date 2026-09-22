@@ -208,7 +208,7 @@
         res = await fetch(endpoint, { headers });
       } catch (e) {
         if ((e.name === 'TypeError' && (e.message.toLowerCase().includes('fetch') || e.message.toLowerCase().includes('networkerror'))) || e.message.toLowerCase().includes('network error')) {
-          throw new Error(`Network Error: Could not connect to API (${e.message}). If using a remote server like Ollama, ensure CORS is enabled (e.g., OLLAMA_ORIGINS="*").`);
+          throw new Error(`Network Error: Could not connect to API (${e.message}). If using a remote server like Ollama, ensure CORS is enabled (e.g., OLLAMA_ORIGINS="*") and it is listening on all interfaces (OLLAMA_HOST="0.0.0.0"). If hosted on a cloud provider like Alibaba Cloud, verify security group rules allow traffic on the correct port.`);
         }
         throw e;
       }
@@ -433,7 +433,7 @@
       });
     } catch (e) {
       if ((e.name === 'TypeError' && (e.message.toLowerCase().includes('fetch') || e.message.toLowerCase().includes('networkerror'))) || e.message.toLowerCase().includes('network error')) {
-        throw new Error(`Network Error (${e.message}). If using a remote Ollama server, ensure CORS is enabled (OLLAMA_ORIGINS="*").`);
+        throw new Error(`Network Error (${e.message}). If using a remote Ollama server, ensure CORS is enabled (OLLAMA_ORIGINS="*") and listening on all interfaces (OLLAMA_HOST="0.0.0.0"). If on a cloud instance like Alibaba Cloud, verify that the firewall and security group rules allow inbound traffic on the used port (e.g., 11434).`);
       }
       throw e;
     }
@@ -548,7 +548,7 @@
       });
     } catch (e) {
       if ((e.name === 'TypeError' && (e.message.toLowerCase().includes('fetch') || e.message.toLowerCase().includes('networkerror'))) || e.message.toLowerCase().includes('network error')) {
-        throw new Error(`Network Error (${e.message}). If using a remote Ollama server, ensure CORS is enabled (OLLAMA_ORIGINS="*").`);
+        throw new Error(`Network Error (${e.message}). If using a remote Ollama server, ensure CORS is enabled (OLLAMA_ORIGINS="*") and listening on all interfaces (OLLAMA_HOST="0.0.0.0"). If on a cloud instance like Alibaba Cloud, verify that the firewall and security group rules allow inbound traffic on the used port (e.g., 11434).`);
       }
       throw e;
     }
