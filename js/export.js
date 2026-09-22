@@ -134,8 +134,14 @@
       return;
     }
 
+
     const XLSX = window.XLSX;
     const wb = XLSX.utils.book_new();
+
+    const alphas = window.Psychometrics && window.Psychometrics.calculateCronbachAlphaForSession
+      ? window.Psychometrics.calculateCronbachAlphaForSession(sessionResults, window.PVQData)
+      : {};
+
 
     // Tab 1: Overview & Config
     const overviewData = [
@@ -260,7 +266,11 @@
   function exportSessionToCSV(sessionResults, filename = "axioma_session_results_" + getFormattedTime() + ".csv") {
     if (!sessionResults || !Array.isArray(sessionResults) || sessionResults.length === 0) return;
 
+
     const items = window.PVQData ? window.PVQData.ITEMS : [];
+
+
+
 
     // Header row
     const headers = [
@@ -289,15 +299,22 @@
     ];
 
     // Add 4 Higher-Order Values (Raw & Centered)
+
+    // Add alphas for the session
+    const alphas = window.Psychometrics && window.Psychometrics.calculateCronbachAlphaForSession
+      ? window.Psychometrics.calculateCronbachAlphaForSession(sessionResults, window.PVQData)
+      : {};
+
     const hoKeys = ["Transcendence", "Conservation", "Enhancement", "Openness"];
+
     for (const key of hoKeys) {
-      headers.push(`${key}_Raw`, `${key}_Centered`);
+      headers.push(`${key}_Raw`, `${key}_Centered`, `${key}_Alpha`);
     }
 
     // Add 19 Refined Basic Values (Raw & Centered)
     if (sessionResults[0]?.psychometrics?.refinedValues) {
       for (const code in sessionResults[0].psychometrics.refinedValues) {
-        headers.push(`${code}_Raw`, `${code}_Centered`);
+        headers.push(`${code}_Raw`, `${code}_Centered`, `${code}_Alpha`);
       }
     }
 
@@ -342,14 +359,14 @@
       // 4 Higher-Order Values
       for (const key of hoKeys) {
         const ho = psych.higherOrderValues?.[key];
-        row.push(ho?.rawMean ?? "N/A", ho?.centeredMean ?? "N/A");
+        row.push(ho?.rawMean ?? "N/A", ho?.centeredMean ?? "N/A", alphas[key] ?? "N/A");
       }
 
       // 19 Refined Basic Values
       if (psych.refinedValues) {
         for (const code in psych.refinedValues) {
           const rv = psych.refinedValues[code];
-          row.push(rv?.rawMean ?? "N/A", rv?.centeredMean ?? "N/A");
+          row.push(rv?.rawMean ?? "N/A", rv?.centeredMean ?? "N/A", alphas[code] ?? "N/A");
         }
       }
 
@@ -385,8 +402,14 @@
       return;
     }
 
+
     const XLSX = window.XLSX;
     const wb = XLSX.utils.book_new();
+
+    const alphas = window.Psychometrics && window.Psychometrics.calculateCronbachAlphaForSession
+      ? window.Psychometrics.calculateCronbachAlphaForSession(sessionResults, window.PVQData)
+      : {};
+
 
     // Summary Sheet: 1 row per run
     const headers = [
@@ -416,12 +439,12 @@
 
     const hoKeys = ["Transcendence", "Conservation", "Enhancement", "Openness"];
     for (const key of hoKeys) {
-      headers.push(`${key} (Raw)`, `${key} (Centered)`);
+      headers.push(`${key} (Raw)`, `${key} (Centered)`, `${key} (Alpha)`);
     }
 
     if (sessionResults[0]?.psychometrics?.refinedValues) {
       for (const code in sessionResults[0].psychometrics.refinedValues) {
-        headers.push(`${code} (Raw)`, `${code} (Centered)`);
+        headers.push(`${code} (Raw)`, `${code} (Centered)`, `${code} (Alpha)`);
       }
     }
 
@@ -464,13 +487,13 @@
 
       for (const key of hoKeys) {
         const ho = psych.higherOrderValues?.[key];
-        row.push(ho?.rawMean ?? "N/A", ho?.centeredMean ?? "N/A");
+        row.push(ho?.rawMean ?? "N/A", ho?.centeredMean ?? "N/A", alphas[key] ?? "N/A");
       }
 
       if (psych.refinedValues) {
         for (const code in psych.refinedValues) {
           const rv = psych.refinedValues[code];
-          row.push(rv?.rawMean ?? "N/A", rv?.centeredMean ?? "N/A");
+          row.push(rv?.rawMean ?? "N/A", rv?.centeredMean ?? "N/A", alphas[code] ?? "N/A");
         }
       }
 
