@@ -937,7 +937,7 @@ el('div', {},
           )
         ),
 
-        state.sessionResults.length > 1 ? el('div', { className: 'mt-4 flex items-center space-x-2' },
+        state.sessionResults.length > 0 ? el('div', { className: 'mt-4 flex items-center space-x-2' },
           el('span', { className: 'text-xs text-slate-400' }, 'View Iteration:'),
           el('select', {
             className: 'bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-sm text-slate-200 focus:outline-none focus:border-sky-500',
