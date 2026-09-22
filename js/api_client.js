@@ -184,7 +184,7 @@
         }
       } catch (e) {
         console.warn("Could not fetch Ollama models from /api/tags", e);
-        if (e.name === 'TypeError' && e.message.toLowerCase().includes('fetch')) {
+        if ((e.name === 'TypeError' && (e.message.toLowerCase().includes('fetch') || e.message.toLowerCase().includes('networkerror'))) || e.message.toLowerCase().includes('network error')) {
           throw new Error(`Network Error: Could not connect to Ollama API at ${ollamaBase} (${e.message}). If using a remote Ollama server (e.g., Ali Cloud), ensure CORS is enabled by setting OLLAMA_ORIGINS="*" and OLLAMA_HOST="0.0.0.0" on the server.`);
         }
       }
@@ -207,7 +207,7 @@
       try {
         res = await fetch(endpoint, { headers });
       } catch (e) {
-        if (e.name === 'TypeError' && e.message.toLowerCase().includes('fetch')) {
+        if ((e.name === 'TypeError' && (e.message.toLowerCase().includes('fetch') || e.message.toLowerCase().includes('networkerror'))) || e.message.toLowerCase().includes('network error')) {
           throw new Error(`Network Error: Could not connect to API (${e.message}). If using a remote server like Ollama, ensure CORS is enabled (e.g., OLLAMA_ORIGINS="*").`);
         }
         throw e;
@@ -321,7 +321,7 @@
         body: JSON.stringify(payload)
       });
     } catch (e) {
-      if (e.name === 'TypeError' && e.message.toLowerCase().includes('fetch')) {
+      if ((e.name === 'TypeError' && (e.message.toLowerCase().includes('fetch') || e.message.toLowerCase().includes('networkerror'))) || e.message.toLowerCase().includes('network error')) {
         throw new Error(`Network Error (${e.message}). Ensure you have internet connection and the API endpoint is accessible.`);
       }
       throw e;
@@ -432,7 +432,7 @@
         body: JSON.stringify(payload)
       });
     } catch (e) {
-      if (e.name === 'TypeError' && e.message.toLowerCase().includes('fetch')) {
+      if ((e.name === 'TypeError' && (e.message.toLowerCase().includes('fetch') || e.message.toLowerCase().includes('networkerror'))) || e.message.toLowerCase().includes('network error')) {
         throw new Error(`Network Error (${e.message}). If using a remote Ollama server, ensure CORS is enabled (OLLAMA_ORIGINS="*").`);
       }
       throw e;
@@ -547,7 +547,7 @@
         body: JSON.stringify(payload)
       });
     } catch (e) {
-      if (e.name === 'TypeError' && e.message.toLowerCase().includes('fetch')) {
+      if ((e.name === 'TypeError' && (e.message.toLowerCase().includes('fetch') || e.message.toLowerCase().includes('networkerror'))) || e.message.toLowerCase().includes('network error')) {
         throw new Error(`Network Error (${e.message}). If using a remote Ollama server, ensure CORS is enabled (OLLAMA_ORIGINS="*").`);
       }
       throw e;
