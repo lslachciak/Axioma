@@ -654,10 +654,22 @@ function deobfuscateApiKey(val) {
               onClick: () => document.getElementById('sessionFileInput').click(),
               className: 'bg-slate-800 hover:bg-slate-700 text-indigo-400 text-xs font-semibold px-3 py-1 rounded-md flex items-center gap-1.5 transition'
             }, el('i', { className: 'fa-solid fa-file-import' }), ' Load'),
-            el('button', {
-              onClick: () => state.sessionResults.length > 0 ? window.DataExporter.exportSessionToXLSX(state.sessionResults, undefined) : alert('No session data to save.'),
-              className: `text-xs font-semibold px-3 py-1 rounded-md flex items-center gap-1.5 transition ${state.sessionResults.length > 0 ? 'bg-slate-800 hover:bg-slate-700 text-green-400' : 'bg-slate-800/50 text-slate-500 cursor-not-allowed'}`
-            }, el('i', { className: 'fa-solid fa-file-export' }), ' Save')
+            el('div', { className: 'relative group inline-block' },
+              el('button', {
+                onClick: () => state.sessionResults.length > 0 ? window.DataExporter.exportSessionToXLSX(state.sessionResults, undefined) : alert('No session data to save.'),
+                className: `text-xs font-semibold px-3 py-1 rounded-md flex items-center gap-1.5 transition ${state.sessionResults.length > 0 ? 'bg-slate-800 hover:bg-slate-700 text-green-400' : 'bg-slate-800/50 text-slate-500 cursor-not-allowed'}`
+              }, el('i', { className: 'fa-solid fa-file-export' }), ' Save'),
+              state.sessionResults.length > 0 ? el('div', { className: 'absolute hidden group-hover:block right-0 mt-1 w-32 bg-slate-800 border border-slate-700 rounded-md shadow-lg z-50' },
+                el('button', {
+                  onClick: () => window.DataExporter.exportSessionToXLSX(state.sessionResults, undefined),
+                  className: 'block w-full text-left px-4 py-2 text-xs text-slate-200 hover:bg-slate-700 hover:text-green-400'
+                }, el('i', { className: 'fa-solid fa-file-excel mr-2' }), 'As XLSX'),
+                el('button', {
+                  onClick: () => window.DataExporter.exportSessionToCSV(state.sessionResults, undefined),
+                  className: 'block w-full text-left px-4 py-2 text-xs text-slate-200 hover:bg-slate-700 hover:text-green-400'
+                }, el('i', { className: 'fa-solid fa-file-csv mr-2' }), 'As CSV')
+              ) : null
+            )
           )
         )
       )
