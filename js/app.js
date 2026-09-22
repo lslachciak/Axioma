@@ -639,7 +639,8 @@ function deobfuscateApiKey(val) {
             el('option', { value: 'en' }, 'English (EN)'),
             el('option', { value: 'pl' }, 'Polski (PL)')
           ),
-          el('button', {
+          el('div', { className: 'flex space-x-2 p-1 bg-slate-900 rounded-lg border border-slate-700' },
+            el('button', {
             onClick: () => {
               const confirmed = window.confirm("Are you sure you want to start a new session? All current session evaluation data will be lost.");
               if (confirmed) {
@@ -650,18 +651,30 @@ function deobfuscateApiKey(val) {
                 renderApp();
               }
             },
-            className: 'bg-slate-800 hover:bg-rose-900/40 text-rose-400 hover:text-rose-300 text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-700 hover:border-rose-500/50 flex items-center gap-1.5 transition'
+            className: 'bg-slate-800 hover:bg-rose-900/40 text-rose-400 hover:text-rose-300 text-xs font-semibold px-3 py-1 rounded-md flex items-center gap-1.5 transition'
           }, el('i', { className: 'fa-solid fa-rotate-left' }), ' New Session'),
-          state.sessionResults.length > 0 ? el('div', { className: 'flex space-x-2' },
+            el('input', { type: 'file', id: 'sessionFileInput', accept: '.csv, .xlsx', className: 'hidden', onChange: (e) => { const file = e.target.files[0]; if(file) { if(state.sessionResults.length > 0 && !window.confirm('Importing will overwrite the current session. Continue?')) { e.target.value = ''; return; } window.DataExporter.importSessionFromFile(file, (results) => { if(results && results.length > 0) { state.sessionResults = results; state.results = results[0]; state.tokenUsage = state.results.tokenUsage; state.progressStatus = 'Loaded session from file'; } e.target.value = ''; renderApp(); }); } } }),
             el('button', {
-              onClick: () => window.DataExporter.exportSessionToCSV(state.sessionResults, undefined),
-              className: 'bg-slate-800 hover:bg-slate-700 text-emerald-400 text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-700 flex items-center gap-1.5 transition'
-            }, el('i', { className: 'fa-solid fa-file-csv' }), ' CSV'),
-            el('button', {
-              onClick: () => window.DataExporter.exportSessionToXLSX(state.sessionResults, undefined),
-              className: 'bg-slate-800 hover:bg-slate-700 text-green-400 text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-700 flex items-center gap-1.5 transition'
-            }, el('i', { className: 'fa-solid fa-file-excel' }), ' XLSX')
-          ) : null
+              onClick: () => document.getElementById('sessionFileInput').click(),
+              className: 'bg-slate-800 hover:bg-slate-700 text-indigo-400 text-xs font-semibold px-3 py-1 rounded-md flex items-center gap-1.5 transition'
+            }, el('i', { className: 'fa-solid fa-file-import' }), ' Load'),
+            el('div', { className: 'relative group inline-block' },
+              el('button', {
+                onClick: () => state.sessionResults.length > 0 ? window.DataExporter.exportSessionToXLSX(state.sessionResults, undefined) : alert('No session data to save.'),
+                className: `text-xs font-semibold px-3 py-1 rounded-md flex items-center gap-1.5 transition ${state.sessionResults.length > 0 ? 'bg-slate-800 hover:bg-slate-700 text-green-400' : 'bg-slate-800/50 text-slate-500 cursor-not-allowed'}`
+              }, el('i', { className: 'fa-solid fa-file-export' }), ' Save'),
+              state.sessionResults.length > 0 ? el('div', { className: 'absolute hidden group-hover:block right-0 mt-1 w-32 bg-slate-800 border border-slate-700 rounded-md shadow-lg z-50' },
+                el('button', {
+                  onClick: () => window.DataExporter.exportSessionToXLSX(state.sessionResults, undefined),
+                  className: 'block w-full text-left px-4 py-2 text-xs text-slate-200 hover:bg-slate-700 hover:text-green-400'
+                }, el('i', { className: 'fa-solid fa-file-excel mr-2' }), 'As XLSX'),
+                el('button', {
+                  onClick: () => window.DataExporter.exportSessionToCSV(state.sessionResults, undefined),
+                  className: 'block w-full text-left px-4 py-2 text-xs text-slate-200 hover:bg-slate-700 hover:text-green-400'
+                }, el('i', { className: 'fa-solid fa-file-csv mr-2' }), 'As CSV')
+              ) : null
+            )
+          )
         )
       )
     );
@@ -927,6 +940,22 @@ el('div', {},
             })
           )
         ),
+
+        state.sessionResults.length > 0 ? el('div', { className: 'mt-4 flex items-center space-x-2' },
+          el('span', { className: 'text-xs text-slate-400' }, 'View Iteration:'),
+          el('select', {
+            className: 'bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-sm text-slate-200 focus:outline-none focus:border-sky-500',
+            value: state.sessionResults.indexOf(state.results),
+            onChange: (e) => {
+              const idx = parseInt(e.target.value);
+              if (idx >= 0 && idx < state.sessionResults.length) {
+                state.results = state.sessionResults[idx];
+                state.tokenUsage = state.results.tokenUsage;
+                renderApp();
+              }
+            }
+          }, ...state.sessionResults.map((r, i) => el('option', { value: i }, `Run ${i + 1} (${new Date(r.metadata.timestamp).toLocaleString()})`)))
+        ) : null,
         el('div', { className: 'grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-950/50 p-3 rounded-xl border border-slate-800/80' },
           el('div', {}, el('p', { className: 'text-[10px] uppercase font-bold text-slate-500' }, 'Input Tokens'), el('p', { className: 'text-sm font-bold code-font text-sky-400' }, state.tokenUsage.promptTokens.toLocaleString())),
           el('div', {}, el('p', { className: 'text-[10px] uppercase font-bold text-slate-500' }, 'Output Tokens'), el('p', { className: 'text-sm font-bold code-font text-indigo-400' }, state.tokenUsage.completionTokens.toLocaleString())),
