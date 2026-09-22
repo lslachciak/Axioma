@@ -950,7 +950,7 @@ el('div', {},
                 renderApp();
               }
             }
-          }, ...state.sessionResults.map((r, i) => el('option', { value: i }, `Run ${i + 1} (${new Date(r.metadata.timestamp).toLocaleTimeString()})`)))
+          }, ...state.sessionResults.map((r, i) => el('option', { value: i }, `Run ${i + 1} (${new Date(r.metadata.timestamp).toLocaleString()})`)))
         ) : null,
         el('div', { className: 'grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-950/50 p-3 rounded-xl border border-slate-800/80' },
           el('div', {}, el('p', { className: 'text-[10px] uppercase font-bold text-slate-500' }, 'Input Tokens'), el('p', { className: 'text-sm font-bold code-font text-sky-400' }, state.tokenUsage.promptTokens.toLocaleString())),
