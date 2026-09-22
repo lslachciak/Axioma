@@ -171,9 +171,9 @@
     }
 
     // 2. Ollama Native /api/tags endpoint fallback
-    if (provider === 'ollama' || (baseUrl && baseUrl.includes("11434"))) {
+    if (provider === 'ollama' || provider === 'ollama_cloud' || (baseUrl && baseUrl.includes("11434"))) {
+      const ollamaBase = (baseUrl || PROVIDER_DEFAULTS[provider]?.baseUrl || "http://localhost:11434/v1").replace(/\/v1\/?$/, "").replace(/\/+$/, "");
       try {
-        const ollamaBase = (baseUrl || "http://localhost:11434/v1").replace(/\/v1\/?$/, "").replace(/\/+$/, "");
         const endpoint = `${ollamaBase}/api/tags`;
         const res = await fetch(endpoint);
         if (res.ok) {
@@ -184,6 +184,9 @@
         }
       } catch (e) {
         console.warn("Could not fetch Ollama models from /api/tags", e);
+        if (e.name === 'TypeError' && e.message.toLowerCase().includes('fetch')) {
+          throw new Error(`Network Error: Could not connect to Ollama API at ${ollamaBase} (${e.message}). If using a remote Ollama server (e.g., Ali Cloud), ensure CORS is enabled by setting OLLAMA_ORIGINS="*" and OLLAMA_HOST="0.0.0.0" on the server.`);
+        }
       }
     }
 
@@ -200,7 +203,15 @@
         if (apiKey) headers["Authorization"] = `Bearer ${apiKey.trim()}`;
       }
 
-      const res = await fetch(endpoint, { headers });
+      let res;
+      try {
+        res = await fetch(endpoint, { headers });
+      } catch (e) {
+        if (e.name === 'TypeError' && e.message.toLowerCase().includes('fetch')) {
+          throw new Error(`Network Error: Could not connect to API (${e.message}). If using a remote server like Ollama, ensure CORS is enabled (e.g., OLLAMA_ORIGINS="*").`);
+        }
+        throw e;
+      }
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data.data)) {
@@ -302,11 +313,19 @@
       payload.generationConfig = generationConfig;
     }
 
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
+    let response;
+    try {
+      response = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+    } catch (e) {
+      if (e.name === 'TypeError' && e.message.toLowerCase().includes('fetch')) {
+        throw new Error(`Network Error (${e.message}). Ensure you have internet connection and the API endpoint is accessible.`);
+      }
+      throw e;
+    }
 
     if (!response.ok) {
       let errorText = "";
@@ -405,11 +424,19 @@
       }
     }
 
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: headers,
-      body: JSON.stringify(payload)
-    });
+    let response;
+    try {
+      response = await fetch(endpoint, {
+        method: "POST",
+        headers: headers,
+        body: JSON.stringify(payload)
+      });
+    } catch (e) {
+      if (e.name === 'TypeError' && e.message.toLowerCase().includes('fetch')) {
+        throw new Error(`Network Error (${e.message}). If using a remote Ollama server, ensure CORS is enabled (OLLAMA_ORIGINS="*").`);
+      }
+      throw e;
+    }
 
     if (!response.ok) {
       let errorText = "";
@@ -512,11 +539,19 @@
       };
     }
 
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: headers,
-      body: JSON.stringify(payload)
-    });
+    let response;
+    try {
+      response = await fetch(endpoint, {
+        method: "POST",
+        headers: headers,
+        body: JSON.stringify(payload)
+      });
+    } catch (e) {
+      if (e.name === 'TypeError' && e.message.toLowerCase().includes('fetch')) {
+        throw new Error(`Network Error (${e.message}). If using a remote Ollama server, ensure CORS is enabled (OLLAMA_ORIGINS="*").`);
+      }
+      throw e;
+    }
 
     if (!response.ok) {
       let errorText = "";
