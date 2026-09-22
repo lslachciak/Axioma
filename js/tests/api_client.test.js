@@ -62,3 +62,18 @@ test('parseRetryDelayMs - should return negative delay if negative header value 
   const delay = parseRetryDelayMs('An unknown error occurred.', headers);
   assert.strictEqual(delay, -5000);
 });
+
+test('delay - should resolve after the specified time', async (t) => {
+  const { delay } = require('../api_client.js');
+
+  const startTime = Date.now();
+  const delayMs = 100;
+
+  await delay(delayMs);
+
+  const elapsedTime = Date.now() - startTime;
+
+  // Set a reasonable tolerance window because setTimeout isn't perfectly exact
+  assert.ok(elapsedTime >= delayMs - 10, `Elapsed time ${elapsedTime}ms should be at least ~${delayMs}ms`);
+  assert.ok(elapsedTime < delayMs + 100, `Elapsed time ${elapsedTime}ms should not significantly exceed ${delayMs}ms`);
+});

@@ -571,6 +571,5 @@
   exports.fetchAvailableModels = fetchAvailableModels;
   exports.completeChat = completeChat;
   exports.parseRetryDelayMs = parseRetryDelayMs;
-
-  exports.parseRetryDelayMs = parseRetryDelayMs;
+  exports.delay = delay;
 })(typeof exports !== 'undefined' ? exports : (window.ApiClient = {}));
