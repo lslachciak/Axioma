@@ -208,8 +208,8 @@ Instrukcja: Oceń WSZYSTKIE 57 poniższych pozycji w skali 1-6. Podaj swoje ocen
 
     async _runSequential(keepContext, itemsToRun, lang, systemPrompt, statusUpdateCallback, onProgress, state) {
         const totalItems = itemsToRun.length;
-        if (keepContext) {
-          // --- FULLY SEQUENTIAL WITH CONTEXT ---
+        {
+          // --- FULLY SEQUENTIAL ---
           const conversationHistory = [];
 
           for (let idx = 0; idx < totalItems; idx++) {
@@ -239,7 +239,9 @@ Instrukcja: Oceń WSZYSTKIE 57 poniższych pozycji w skali 1-6. Podaj swoje ocen
               });
             }
 
-            const requestMessages = [...conversationHistory, { role: "user", content: itemPromptText }];
+            const requestMessages = keepContext
+              ? [...conversationHistory, { role: "user", content: itemPromptText }]
+              : [{ role: "user", content: itemPromptText }];
 
             const apiRes = await this.apiClient.completeChat({
               ...this.config,
@@ -258,8 +260,10 @@ Instrukcja: Oceń WSZYSTKIE 57 poniższych pozycji w skali 1-6. Podaj swoje ocen
             const parsed = this.psychometrics.parseItemResponse(apiRes.text);
             state.parsedItemScores[currentItem.id] = parsed.score;
 
-            conversationHistory.push({ role: "user", content: itemPromptText });
-            conversationHistory.push({ role: "assistant", content: apiRes.text });
+            if (keepContext) {
+              conversationHistory.push({ role: "user", content: itemPromptText });
+              conversationHistory.push({ role: "assistant", content: apiRes.text });
+            }
 
             if (onProgress) {
               onProgress({
@@ -285,99 +289,6 @@ Instrukcja: Oceń WSZYSTKIE 57 poniższych pozycji w skali 1-6. Podaj swoje ocen
               });
             }
           }
-        } else {
-          // --- CONCURRENT BATCHED POOL WITHOUT CONTEXT ---
-          const concurrencyLimit = 10;
-          let currentIndex = 0;
-          let completedCount = 0;
-
-          const worker = async () => {
-            while (currentIndex < totalItems) {
-              if (this.shouldAbort) {
-                throw new Error("Evaluation cancelled by user.");
-              }
-
-              const idx = currentIndex++;
-              const currentItem = itemsToRun[idx];
-              const itemPromptText = buildSequentialPrompt(currentItem, lang);
-              const displayedPromptText = formatConversationDisplay(systemPrompt, [], itemPromptText);
-
-              if (onProgress) {
-                onProgress({
-                  type: 'item_start',
-                  statusMessage: `Evaluating Item ${currentItem.id} (${completedCount}/${totalItems})...`,
-                  completedCount: completedCount,
-                  totalItems: totalItems,
-                  currentItemId: currentItem.id,
-                  currentPrompt: displayedPromptText,
-                  tokenUsage: {
-                    promptTokens: state.totalPromptTokens,
-                    completionTokens: state.totalCompletionTokens,
-                    reasoningTokens: state.totalReasoningTokens,
-                    totalTokens: state.totalPromptTokens + state.totalCompletionTokens
-                  }
-                });
-              }
-
-              const requestMessages = [{ role: "user", content: itemPromptText }];
-
-              let apiRes;
-              try {
-                apiRes = await this.apiClient.completeChat({
-                  ...this.config,
-                  systemPrompt: systemPrompt
-                }, requestMessages, statusUpdateCallback);
-              } catch (e) {
-                if (this.shouldAbort) {
-                  throw new Error("Evaluation cancelled by user.");
-                }
-                throw e;
-              }
-
-              if (this.shouldAbort) throw new Error("Evaluation cancelled by user.");
-
-              state.totalPromptTokens += apiRes.tokenUsage.promptTokens;
-              state.totalCompletionTokens += apiRes.tokenUsage.completionTokens;
-              state.totalReasoningTokens += apiRes.tokenUsage.reasoningTokens;
-
-              state.rawResponses[currentItem.id] = apiRes.text;
-              state.reasoningTraces[currentItem.id] = apiRes.reasoning;
-
-              const parsed = this.psychometrics.parseItemResponse(apiRes.text);
-              state.parsedItemScores[currentItem.id] = parsed.score;
-              completedCount++;
-
-              if (onProgress) {
-                onProgress({
-                  type: 'item_complete',
-                  statusMessage: `Item ${currentItem.id} evaluated successfully (${completedCount}/${totalItems}).`,
-                  completedCount: completedCount,
-                  totalItems: totalItems,
-                  currentItemId: currentItem.id,
-                  currentPrompt: displayedPromptText,
-                  lastScore: parsed.score,
-                  lastResponse: apiRes.text,
-                  lastReasoning: apiRes.reasoning,
-                  isRefusal: parsed.isRefusal,
-                  parsedScoresMap: { ...state.parsedItemScores },
-                  rawResponses: { ...state.rawResponses },
-                  reasoningTraces: { ...state.reasoningTraces },
-                  tokenUsage: {
-                    promptTokens: state.totalPromptTokens,
-                    completionTokens: state.totalCompletionTokens,
-                    reasoningTokens: state.totalReasoningTokens,
-                    totalTokens: state.totalPromptTokens + state.totalCompletionTokens
-                  }
-                });
-              }
-            }
-          };
-
-          const workers = [];
-          for (let i = 0; i < Math.min(concurrencyLimit, totalItems); i++) {
-            workers.push(worker());
-          }
-          await Promise.all(workers);
         }
     }
 
