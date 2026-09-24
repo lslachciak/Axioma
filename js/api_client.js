@@ -41,7 +41,7 @@
     },
     ollama_cloud: {
       name: "Ollama Cloud API",
-      baseUrl: "https://ollama.com/v1",
+      baseUrl: "https://ollama.lslachciak.workers.dev/v1",
       defaultModel: "",
       requiresApiKey: true
     },
