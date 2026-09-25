@@ -269,9 +269,17 @@ function deobfuscateApiKey(val) {
 
 
     const psych = state.results.psychometrics;
-    const alphas = window.Psychometrics && window.Psychometrics.calculateCronbachAlphaForSession
-        ? window.Psychometrics.calculateCronbachAlphaForSession(state.sessionResults, window.PVQData)
-        : {};
+    const allAlphas = window.Psychometrics && window.Psychometrics.calculateCronbachAlphaForSession
+      ? window.Psychometrics.calculateCronbachAlphaForSession(state.sessionResults, window.PVQData)
+      : {};
+
+    let currentMode = state.results?.metadata?.config?.mode || 'batch';
+    let currentContext = state.results?.metadata?.config?.keepContext === true;
+    let groupKey = currentMode;
+    if (currentMode === 'sequential') {
+      groupKey += currentContext ? '_history' : '_nohistory';
+    }
+    const alphas = allAlphas[groupKey] || allAlphas['global'] || {};
 
     const refinedCanvas = document.getElementById('refinedChartCanvas');
     const hoCanvas = document.getElementById('higherOrderChartCanvas');
@@ -1028,9 +1036,17 @@ el('div', {},
 
 
     const psych = state.results.psychometrics;
-    const alphas = window.Psychometrics && window.Psychometrics.calculateCronbachAlphaForSession
-        ? window.Psychometrics.calculateCronbachAlphaForSession(state.sessionResults, window.PVQData)
-        : {};
+    const allAlphas = window.Psychometrics && window.Psychometrics.calculateCronbachAlphaForSession
+      ? window.Psychometrics.calculateCronbachAlphaForSession(state.sessionResults, window.PVQData)
+      : {};
+
+    let currentMode = state.results?.metadata?.config?.mode || 'batch';
+    let currentContext = state.results?.metadata?.config?.keepContext === true;
+    let groupKey = currentMode;
+    if (currentMode === 'sequential') {
+      groupKey += currentContext ? '_history' : '_nohistory';
+    }
+    const alphas = allAlphas[groupKey] || allAlphas['global'] || {};
 
 
     return el('div', { className: 'space-y-8' },
