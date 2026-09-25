@@ -116,7 +116,7 @@
     let reasoning = structuredReasoning ? String(structuredReasoning).trim() : "";
     let cleanText = rawText ? String(rawText) : "";
 
-    const tagRegex = /<(think|thought|thinking|reasoning)>([\s\S]*?)<\/\1>/gi;
+    const tagRegex = /<(think|thought|thinking|reasoning)(?:[^>]*)>([\s\S]*?)<\/\1>/gi;
     let match;
     const tagTraces = [];
 
@@ -133,7 +133,7 @@
     }
 
     // Check for unclosed reasoning tags (e.g. truncated responses or streaming)
-    const unclosedMatch = cleanText.match(/<(think|thought|thinking|reasoning)>([\s\S]*)$/i);
+    const unclosedMatch = cleanText.match(/<(think|thought|thinking|reasoning)(?:[^>]*)>([\s\S]*)$/i);
     if (unclosedMatch) {
       const unclosedContent = unclosedMatch[2].trim();
       if (unclosedContent) {
