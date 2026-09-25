@@ -138,9 +138,11 @@
     const XLSX = window.XLSX;
     const wb = XLSX.utils.book_new();
 
-    const alphas = window.Psychometrics && window.Psychometrics.calculateCronbachAlphaForSession
+    const allAlphas = window.Psychometrics && window.Psychometrics.calculateCronbachAlphaForSession
       ? window.Psychometrics.calculateCronbachAlphaForSession(sessionResults, window.PVQData)
       : {};
+    // Note: the export might need to loop through results, so we can't just pick one globally here.
+    // Let's modify this later to dynamically pick alphas per row inside the loop.
 
 
     // Tab 1: Overview & Config
@@ -301,9 +303,11 @@
     // Add 4 Higher-Order Values (Raw & Centered)
 
     // Add alphas for the session
-    const alphas = window.Psychometrics && window.Psychometrics.calculateCronbachAlphaForSession
+    const allAlphas = window.Psychometrics && window.Psychometrics.calculateCronbachAlphaForSession
       ? window.Psychometrics.calculateCronbachAlphaForSession(sessionResults, window.PVQData)
       : {};
+    // Note: the export might need to loop through results, so we can't just pick one globally here.
+    // Let's modify this later to dynamically pick alphas per row inside the loop.
 
     const hoKeys = ["Transcendence", "Conservation", "Enhancement", "Openness"];
 
@@ -359,14 +363,28 @@
       // 4 Higher-Order Values
       for (const key of hoKeys) {
         const ho = psych.higherOrderValues?.[key];
-        row.push(ho?.rawMean ?? "N/A", ho?.centeredMean ?? "N/A", alphas[key] ?? "N/A");
+        row.push(ho?.rawMean ?? "N/A", ho?.centeredMean ?? "N/A", (()=>{
+          let rMode = res.metadata?.config?.mode || 'batch';
+          let rCtx = res.metadata?.config?.keepContext === true;
+          let gk = rMode;
+          if (rMode === 'sequential') gk += rCtx ? '_history' : '_nohistory';
+          let aGroup = allAlphas[gk] || allAlphas['global'] || {};
+          return aGroup[key] ?? "N/A";
+        })());
       }
 
       // 19 Refined Basic Values
       if (psych.refinedValues) {
         for (const code in psych.refinedValues) {
           const rv = psych.refinedValues[code];
-          row.push(rv?.rawMean ?? "N/A", rv?.centeredMean ?? "N/A", alphas[code] ?? "N/A");
+          row.push(rv?.rawMean ?? "N/A", rv?.centeredMean ?? "N/A", (()=>{
+          let rMode = res.metadata?.config?.mode || 'batch';
+          let rCtx = res.metadata?.config?.keepContext === true;
+          let gk = rMode;
+          if (rMode === 'sequential') gk += rCtx ? '_history' : '_nohistory';
+          let aGroup = allAlphas[gk] || allAlphas['global'] || {};
+          return aGroup[code] ?? "N/A";
+        })());
         }
       }
 
@@ -406,9 +424,11 @@
     const XLSX = window.XLSX;
     const wb = XLSX.utils.book_new();
 
-    const alphas = window.Psychometrics && window.Psychometrics.calculateCronbachAlphaForSession
+    const allAlphas = window.Psychometrics && window.Psychometrics.calculateCronbachAlphaForSession
       ? window.Psychometrics.calculateCronbachAlphaForSession(sessionResults, window.PVQData)
       : {};
+    // Note: the export might need to loop through results, so we can't just pick one globally here.
+    // Let's modify this later to dynamically pick alphas per row inside the loop.
 
 
     // Summary Sheet: 1 row per run
@@ -487,13 +507,27 @@
 
       for (const key of hoKeys) {
         const ho = psych.higherOrderValues?.[key];
-        row.push(ho?.rawMean ?? "N/A", ho?.centeredMean ?? "N/A", alphas[key] ?? "N/A");
+        row.push(ho?.rawMean ?? "N/A", ho?.centeredMean ?? "N/A", (()=>{
+          let rMode = res.metadata?.config?.mode || 'batch';
+          let rCtx = res.metadata?.config?.keepContext === true;
+          let gk = rMode;
+          if (rMode === 'sequential') gk += rCtx ? '_history' : '_nohistory';
+          let aGroup = allAlphas[gk] || allAlphas['global'] || {};
+          return aGroup[key] ?? "N/A";
+        })());
       }
 
       if (psych.refinedValues) {
         for (const code in psych.refinedValues) {
           const rv = psych.refinedValues[code];
-          row.push(rv?.rawMean ?? "N/A", rv?.centeredMean ?? "N/A", alphas[code] ?? "N/A");
+          row.push(rv?.rawMean ?? "N/A", rv?.centeredMean ?? "N/A", (()=>{
+          let rMode = res.metadata?.config?.mode || 'batch';
+          let rCtx = res.metadata?.config?.keepContext === true;
+          let gk = rMode;
+          if (rMode === 'sequential') gk += rCtx ? '_history' : '_nohistory';
+          let aGroup = allAlphas[gk] || allAlphas['global'] || {};
+          return aGroup[code] ?? "N/A";
+        })());
         }
       }
 
