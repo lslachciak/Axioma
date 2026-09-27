@@ -364,8 +364,8 @@
       for (const key of hoKeys) {
         const ho = psych.higherOrderValues?.[key];
         row.push(ho?.rawMean ?? "N/A", ho?.centeredMean ?? "N/A", (()=>{
-          let rMode = res.metadata?.config?.mode || 'batch';
-          let rCtx = res.metadata?.config?.keepContext === true;
+          let rMode = results.metadata?.config?.mode || 'batch';
+          let rCtx = results.metadata?.config?.keepContext === true;
           let gk = rMode;
           if (rMode === 'sequential') gk += rCtx ? '_history' : '_nohistory';
           let aGroup = allAlphas[gk] || allAlphas['global'] || {};
@@ -378,8 +378,8 @@
         for (const code in psych.refinedValues) {
           const rv = psych.refinedValues[code];
           row.push(rv?.rawMean ?? "N/A", rv?.centeredMean ?? "N/A", (()=>{
-          let rMode = res.metadata?.config?.mode || 'batch';
-          let rCtx = res.metadata?.config?.keepContext === true;
+          let rMode = results.metadata?.config?.mode || 'batch';
+          let rCtx = results.metadata?.config?.keepContext === true;
           let gk = rMode;
           if (rMode === 'sequential') gk += rCtx ? '_history' : '_nohistory';
           let aGroup = allAlphas[gk] || allAlphas['global'] || {};
@@ -508,8 +508,8 @@
       for (const key of hoKeys) {
         const ho = psych.higherOrderValues?.[key];
         row.push(ho?.rawMean ?? "N/A", ho?.centeredMean ?? "N/A", (()=>{
-          let rMode = res.metadata?.config?.mode || 'batch';
-          let rCtx = res.metadata?.config?.keepContext === true;
+          let rMode = results.metadata?.config?.mode || 'batch';
+          let rCtx = results.metadata?.config?.keepContext === true;
           let gk = rMode;
           if (rMode === 'sequential') gk += rCtx ? '_history' : '_nohistory';
           let aGroup = allAlphas[gk] || allAlphas['global'] || {};
@@ -521,8 +521,8 @@
         for (const code in psych.refinedValues) {
           const rv = psych.refinedValues[code];
           row.push(rv?.rawMean ?? "N/A", rv?.centeredMean ?? "N/A", (()=>{
-          let rMode = res.metadata?.config?.mode || 'batch';
-          let rCtx = res.metadata?.config?.keepContext === true;
+          let rMode = results.metadata?.config?.mode || 'batch';
+          let rCtx = results.metadata?.config?.keepContext === true;
           let gk = rMode;
           if (rMode === 'sequential') gk += rCtx ? '_history' : '_nohistory';
           let aGroup = allAlphas[gk] || allAlphas['global'] || {};
