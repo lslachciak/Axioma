@@ -237,7 +237,7 @@ describe('calculateCronbachAlphaForSession', () => {
         // total: 6, 8, 9 (var: 2.333)
         // alpha = (2/1) * (1 - (1 + 2.333) / 2.333) -> will be negative or small
         assert.strictEqual(typeof alphas.VAL2, 'number');
-        assert.strictEqual(typeof alphas.HO1, 'number');
+        assert.strictEqual(alphas.HO1, undefined);
     });
 
     test('returns null when there is no variance in totals', () => {
@@ -260,5 +260,29 @@ describe('calculateCronbachAlphaForSession', () => {
         const alphas = calculateCronbachAlphaForSession(sessionResults, mockPvqDataAlpha);
         // It successfully calculates Alpha for the 2 valid rows
         assert.strictEqual(typeof alphas.VAL1, 'number');
+    });
+
+    test('uses only complete iterations and matching configurations', () => {
+        const sessionResults = [
+            { metadata: { config: { mode: 'sequential', keepContext: false, model: 'a' } }, psychometrics: { itemRatings: { 1: 5, 2: 5 } } },
+            { metadata: { config: { model: 'a', keepContext: false, mode: 'sequential' } }, psychometrics: { itemRatings: { 1: 3, 2: 3 } } },
+            { metadata: { config: { mode: 'sequential', keepContext: true, model: 'a' } }, psychometrics: { itemRatings: { 1: 6, 2: 1 } } },
+            { metadata: { config: { mode: 'sequential', keepContext: false, model: 'b' } }, psychometrics: { itemRatings: { 1: 1, 2: 6 } } },
+            { metadata: { config: { mode: 'sequential', keepContext: false, model: 'a' } }, psychometrics: { itemRatings: { 1: 4, 2: null } } }
+        ];
+
+        const config = { model: 'a', mode: 'sequential', keepContext: false };
+        const alphas = calculateCronbachAlphaForSession(sessionResults, mockPvqDataAlpha, config);
+        assert.strictEqual(alphas.VAL1, 1);
+        assert.strictEqual(alphas.VAL2, null);
+    });
+
+    test('returns null when fewer than two complete iterations exist', () => {
+        const sessionResults = [
+            { psychometrics: { itemRatings: { 1: 5, 2: null } } },
+            { psychometrics: { itemRatings: { 1: null, 2: 4 } } }
+        ];
+        const alphas = calculateCronbachAlphaForSession(sessionResults, mockPvqDataAlpha);
+        assert.strictEqual(alphas.VAL1, null);
     });
 });

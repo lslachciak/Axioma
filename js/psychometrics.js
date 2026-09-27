@@ -237,56 +237,54 @@
 
   /**
    * Calculates Cronbach's Alpha for a given set of iterations and item mappings.
-   * @param {Array} sessionResults - Array of psychometric results from multiple iterations
+   * @param {Array} sessionResults - Array of results from multiple iterations
    * @param {Object} pvqData - PVQ Data module
-   * @returns {Object} Map of { code: alphaValue }
+   * @param {Object} [config] - Configuration to calculate alpha for
+   * @returns {Object} Map of refined value code to alpha
    */
-  function calculateCronbachAlphaForSession(sessionResults, pvqData) {
-    const N = sessionResults.length;
+  function calculateCronbachAlphaForSession(sessionResults, pvqData, config) {
     const alphas = {};
 
-    if (!pvqData || N < 2) {
+    if (!pvqData || !Array.isArray(sessionResults)) {
       return alphas; // Alpha cannot be computed with less than 2 iterations
     }
+
+    const canonicalize = (value) => {
+      if (Array.isArray(value)) return value.map(canonicalize);
+      if (value && typeof value === 'object') {
+        return Object.keys(value).sort().reduce((result, key) => {
+          result[key] = canonicalize(value[key]);
+          return result;
+        }, {});
+      }
+      return value;
+    };
+    const targetConfig = config || sessionResults[0]?.metadata?.config || {};
+    const targetConfigKey = JSON.stringify(canonicalize(targetConfig));
+    const matchingResults = sessionResults.filter(result => {
+      const resultConfig = result?.metadata?.config || {};
+      return JSON.stringify(canonicalize(resultConfig)) === targetConfigKey;
+    });
+    if (matchingResults.length < 2) return alphas;
 
     const calcAlpha = (items) => {
       const K = items.length;
       if (K < 2) return null;
 
+      const completeRows = matchingResults
+        .map(result => items.map(item => result?.psychometrics?.itemRatings?.[item]))
+        .filter(row => row.every(value => typeof value === 'number' && Number.isFinite(value) && value >= 1 && value <= 6));
+      if (completeRows.length < 2) return null;
+
       let itemVariancesSum = 0;
       for (let j = 0; j < K; j++) {
-        const itemScores = [];
-        for (let i = 0; i < N; i++) {
-          const val = sessionResults[i]?.psychometrics?.itemRatings?.[items[j]];
-          if (typeof val === 'number') {
-            itemScores.push(val);
-          }
-        }
-        if (itemScores.length < 2) return null;
-
+        const itemScores = completeRows.map(row => row[j]);
         const mean = itemScores.reduce((a, b) => a + b, 0) / itemScores.length;
         const variance = itemScores.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / (itemScores.length - 1);
         itemVariancesSum += variance;
       }
 
-      const totalScores = [];
-      for (let i = 0; i < N; i++) {
-        let total = 0;
-        let valid = true;
-        for (let j = 0; j < K; j++) {
-          const val = sessionResults[i]?.psychometrics?.itemRatings?.[items[j]];
-          if (typeof val !== 'number') {
-            valid = false;
-            break;
-          }
-          total += val;
-        }
-        if (valid) {
-          totalScores.push(total);
-        }
-      }
-
-      if (totalScores.length < 2) return null;
+      const totalScores = completeRows.map(row => row.reduce((total, value) => total + value, 0));
       const meanTotal = totalScores.reduce((a, b) => a + b, 0) / totalScores.length;
       const varianceTotal = totalScores.reduce((a, b) => a + Math.pow(b - meanTotal, 2), 0) / (totalScores.length - 1);
 
@@ -300,19 +298,6 @@
     const refined = pvqData.REFINED_VALUES || {};
     for (const code in refined) {
       alphas[code] = calcAlpha(refined[code].items);
-    }
-
-    // Calculate for Higher-Order Values
-    const higherOrder = pvqData.HIGHER_ORDER_VALUES || {};
-    for (const code in higherOrder) {
-      const refinedKeys = higherOrder[code].refinedKeys || [];
-      const hoItems = [];
-      for (const rKey of refinedKeys) {
-        if (refined[rKey] && refined[rKey].items) {
-          hoItems.push(...refined[rKey].items);
-        }
-      }
-      alphas[code] = calcAlpha(hoItems);
     }
 
     return alphas;
