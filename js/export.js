@@ -138,8 +138,8 @@
     const XLSX = window.XLSX;
     const wb = XLSX.utils.book_new();
 
-    const allAlphas = window.Psychometrics && window.Psychometrics.calculateCronbachAlphaForSession
-      ? window.Psychometrics.calculateCronbachAlphaForSession(sessionResults, window.PVQData)
+    const allIccs = window.Psychometrics && window.Psychometrics.calculateICCForSession
+      ? window.Psychometrics.calculateICCForSession(sessionResults, window.PVQData)
       : {};
     // Note: the export might need to loop through results, so we can't just pick one globally here.
     // Let's modify this later to dynamically pick alphas per row inside the loop.
@@ -303,8 +303,8 @@
     // Add 4 Higher-Order Values (Raw & Centered)
 
     // Add alphas for the session
-    const allAlphas = window.Psychometrics && window.Psychometrics.calculateCronbachAlphaForSession
-      ? window.Psychometrics.calculateCronbachAlphaForSession(sessionResults, window.PVQData)
+    const allIccs = window.Psychometrics && window.Psychometrics.calculateICCForSession
+      ? window.Psychometrics.calculateICCForSession(sessionResults, window.PVQData)
       : {};
     // Note: the export might need to loop through results, so we can't just pick one globally here.
     // Let's modify this later to dynamically pick alphas per row inside the loop.
@@ -368,8 +368,8 @@
           let rCtx = res.metadata?.config?.keepContext === true;
           let gk = rMode;
           if (rMode === 'sequential') gk += rCtx ? '_history' : '_nohistory';
-          let aGroup = allAlphas[gk] || allAlphas['global'] || {};
-          return aGroup[key] ?? "N/A";
+          let iccGroup = allIccs[gk] || allIccs['global'] || {};
+          return iccGroup[key] ?? "N/A";
         })());
       }
 
@@ -382,8 +382,8 @@
           let rCtx = res.metadata?.config?.keepContext === true;
           let gk = rMode;
           if (rMode === 'sequential') gk += rCtx ? '_history' : '_nohistory';
-          let aGroup = allAlphas[gk] || allAlphas['global'] || {};
-          return aGroup[code] ?? "N/A";
+          let iccGroup = allIccs[gk] || allIccs['global'] || {};
+          return iccGroup[code] ?? "N/A";
         })());
         }
       }
@@ -424,8 +424,8 @@
     const XLSX = window.XLSX;
     const wb = XLSX.utils.book_new();
 
-    const allAlphas = window.Psychometrics && window.Psychometrics.calculateCronbachAlphaForSession
-      ? window.Psychometrics.calculateCronbachAlphaForSession(sessionResults, window.PVQData)
+    const allIccs = window.Psychometrics && window.Psychometrics.calculateICCForSession
+      ? window.Psychometrics.calculateICCForSession(sessionResults, window.PVQData)
       : {};
     // Note: the export might need to loop through results, so we can't just pick one globally here.
     // Let's modify this later to dynamically pick alphas per row inside the loop.
@@ -459,12 +459,12 @@
 
     const hoKeys = ["Transcendence", "Conservation", "Enhancement", "Openness"];
     for (const key of hoKeys) {
-      headers.push(`${key} (Raw)`, `${key} (Centered)`, `${key} (Alpha)`);
+      headers.push(`${key} (Raw)`, `${key} (Centered)`, `${key} (ICC)`);
     }
 
     if (sessionResults[0]?.psychometrics?.refinedValues) {
       for (const code in sessionResults[0].psychometrics.refinedValues) {
-        headers.push(`${code} (Raw)`, `${code} (Centered)`, `${code} (Alpha)`);
+        headers.push(`${code} (Raw)`, `${code} (Centered)`, `${code} (ICC)`);
       }
     }
 
@@ -512,8 +512,8 @@
           let rCtx = res.metadata?.config?.keepContext === true;
           let gk = rMode;
           if (rMode === 'sequential') gk += rCtx ? '_history' : '_nohistory';
-          let aGroup = allAlphas[gk] || allAlphas['global'] || {};
-          return aGroup[key] ?? "N/A";
+          let iccGroup = allIccs[gk] || allIccs['global'] || {};
+          return iccGroup[key] ?? "N/A";
         })());
       }
 
@@ -525,8 +525,8 @@
           let rCtx = res.metadata?.config?.keepContext === true;
           let gk = rMode;
           if (rMode === 'sequential') gk += rCtx ? '_history' : '_nohistory';
-          let aGroup = allAlphas[gk] || allAlphas['global'] || {};
-          return aGroup[code] ?? "N/A";
+          let iccGroup = allIccs[gk] || allIccs['global'] || {};
+          return iccGroup[code] ?? "N/A";
         })());
         }
       }

@@ -236,89 +236,141 @@
   exports.parseBatchResponse = parseBatchResponse;
 
   /**
-   * Calculates Cronbach's Alpha for a given set of iterations and item mappings.
+   * Calculates ICC(3,1) for a given set of iterations and item mappings.
    * @param {Array} sessionResults - Array of psychometric results from multiple iterations
    * @param {Object} pvqData - PVQ Data module
-   * @returns {Object} Map of { code: alphaValue }
+   * @returns {Object} Map of { code: iccValue } grouped by execution mode
    */
-  function calculateCronbachAlphaForSession(sessionResults, pvqData) {
+  function calculateICCForSession(sessionResults, pvqData) {
     const N = sessionResults.length;
-    const alphas = {};
+    const allIccs = {};
 
     if (!pvqData || N < 2) {
-      return alphas; // Alpha cannot be computed with less than 2 iterations
+      return allIccs;
     }
 
-    const calcAlpha = (items) => {
-      const K = items.length;
-      if (K < 2) return null;
+    // Group results by execution mode to calculate separate ICCs
+    const groups = { global: sessionResults };
+    for (const res of sessionResults) {
+      const mode = res.metadata?.config?.mode || 'batch';
+      const keepContext = res.metadata?.config?.keepContext === true;
+      let groupKey = mode;
+      if (mode === 'sequential') {
+        groupKey += keepContext ? '_history' : '_nohistory';
+      }
+      if (!groups[groupKey]) groups[groupKey] = [];
+      groups[groupKey].push(res);
+    }
 
-      let itemVariancesSum = 0;
-      for (let j = 0; j < K; j++) {
-        const itemScores = [];
-        for (let i = 0; i < N; i++) {
-          const val = sessionResults[i]?.psychometrics?.itemRatings?.[items[j]];
-          if (typeof val === 'number') {
-            itemScores.push(val);
+    for (const groupKey in groups) {
+      const groupRes = groups[groupKey];
+      allIccs[groupKey] = {};
+
+      const calcICC = (items) => {
+        const k = items.length; // items (targets)
+        const n = groupRes.length; // iterations (raters)
+
+        if (k < 2 || n < 2) return null;
+
+        const Y = [];
+        for (let i = 0; i < k; i++) {
+          Y[i] = [];
+        }
+
+        let validIterations = 0;
+        for (let j = 0; j < n; j++) {
+          let valid = true;
+          for (let i = 0; i < k; i++) {
+            const val = groupRes[j]?.psychometrics?.itemRatings?.[items[i]];
+            if (typeof val !== 'number') {
+              valid = false;
+              break;
+            }
+          }
+          if (valid) {
+            for (let i = 0; i < k; i++) {
+              Y[i].push(groupRes[j].psychometrics.itemRatings[items[i]]);
+            }
+            validIterations++;
           }
         }
-        if (itemScores.length < 2) return null;
 
-        const mean = itemScores.reduce((a, b) => a + b, 0) / itemScores.length;
-        const variance = itemScores.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / (itemScores.length - 1);
-        itemVariancesSum += variance;
-      }
+        if (validIterations < 2) return null;
 
-      const totalScores = [];
-      for (let i = 0; i < N; i++) {
-        let total = 0;
-        let valid = true;
-        for (let j = 0; j < K; j++) {
-          const val = sessionResults[i]?.psychometrics?.itemRatings?.[items[j]];
-          if (typeof val !== 'number') {
-            valid = false;
-            break;
+        const targets = k;
+        const raters = validIterations;
+
+        let grandTotal = 0;
+        const targetMeans = new Array(targets).fill(0);
+        const raterMeans = new Array(raters).fill(0);
+
+        for (let i = 0; i < targets; i++) {
+          for (let j = 0; j < raters; j++) {
+            grandTotal += Y[i][j];
+            targetMeans[i] += Y[i][j] / raters;
+            raterMeans[j] += Y[i][j] / targets;
           }
-          total += val;
         }
-        if (valid) {
-          totalScores.push(total);
+        const meanTotal = grandTotal / (targets * raters);
+
+        let SSTargets = 0;
+        for (let i = 0; i < targets; i++) {
+          SSTargets += Math.pow(targetMeans[i] - meanTotal, 2);
         }
+        SSTargets *= raters;
+
+        let SSRaters = 0;
+        for (let j = 0; j < raters; j++) {
+          SSRaters += Math.pow(raterMeans[j] - meanTotal, 2);
+        }
+        SSRaters *= targets;
+
+        let SSTotal = 0;
+        for (let i = 0; i < targets; i++) {
+          for (let j = 0; j < raters; j++) {
+            SSTotal += Math.pow(Y[i][j] - meanTotal, 2);
+          }
+        }
+
+        const SSError = SSTotal - SSTargets - SSRaters;
+
+        const dfTargets = targets - 1;
+        const dfRaters = raters - 1;
+        const dfError = dfTargets * dfRaters;
+
+        const MSTargets = SSTargets / dfTargets;
+        const MSError = dfError > 0 ? SSError / dfError : 0;
+
+        // Using ICC(3,1) two-way mixed, single measure consistency
+        let denom = MSTargets + (raters - 1) * MSError;
+        if (denom === 0) return null;
+
+        let icc = (MSTargets - MSError) / denom;
+        return parseFloat(icc.toFixed(3));
+      };
+
+      const refined = pvqData.REFINED_VALUES || {};
+      for (const code in refined) {
+        allIccs[groupKey][code] = calcICC(refined[code].items);
       }
 
-      if (totalScores.length < 2) return null;
-      const meanTotal = totalScores.reduce((a, b) => a + b, 0) / totalScores.length;
-      const varianceTotal = totalScores.reduce((a, b) => a + Math.pow(b - meanTotal, 2), 0) / (totalScores.length - 1);
-
-      if (varianceTotal === 0) return null;
-
-      const alpha = (K / (K - 1)) * (1 - (itemVariancesSum / varianceTotal));
-      return parseFloat(alpha.toFixed(3));
-    };
-
-    // Calculate for Refined Values
-    const refined = pvqData.REFINED_VALUES || {};
-    for (const code in refined) {
-      alphas[code] = calcAlpha(refined[code].items);
-    }
-
-    // Calculate for Higher-Order Values
-    const higherOrder = pvqData.HIGHER_ORDER_VALUES || {};
-    for (const code in higherOrder) {
-      const refinedKeys = higherOrder[code].refinedKeys || [];
-      const hoItems = [];
-      for (const rKey of refinedKeys) {
-        if (refined[rKey] && refined[rKey].items) {
-          hoItems.push(...refined[rKey].items);
+      const higherOrder = pvqData.HIGHER_ORDER_VALUES || {};
+      for (const code in higherOrder) {
+        const refinedKeys = higherOrder[code].refinedKeys || [];
+        const hoItems = [];
+        for (const rKey of refinedKeys) {
+          if (refined[rKey] && refined[rKey].items) {
+            hoItems.push(...refined[rKey].items);
+          }
         }
+        allIccs[groupKey][code] = calcICC(hoItems);
       }
-      alphas[code] = calcAlpha(hoItems);
     }
 
-    return alphas;
+    return allIccs;
   }
 
   exports.calculatePsychometrics = calculatePsychometrics;
-  exports.calculateCronbachAlphaForSession = calculateCronbachAlphaForSession;
+  exports.calculateICCForSession = calculateICCForSession;
 
 })(typeof exports !== 'undefined' ? exports : (window.Psychometrics = {}));

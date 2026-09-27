@@ -269,8 +269,8 @@ function deobfuscateApiKey(val) {
 
 
     const psych = state.results.psychometrics;
-    const allAlphas = window.Psychometrics && window.Psychometrics.calculateCronbachAlphaForSession
-      ? window.Psychometrics.calculateCronbachAlphaForSession(state.sessionResults, window.PVQData)
+    const allIccs = window.Psychometrics && window.Psychometrics.calculateICCForSession
+      ? window.Psychometrics.calculateICCForSession(state.sessionResults, window.PVQData)
       : {};
 
     let currentMode = state.results?.metadata?.config?.mode || 'batch';
@@ -279,7 +279,7 @@ function deobfuscateApiKey(val) {
     if (currentMode === 'sequential') {
       groupKey += currentContext ? '_history' : '_nohistory';
     }
-    const alphas = allAlphas[groupKey] || allAlphas['global'] || {};
+    const iccs = allIccs[groupKey] || allIccs['global'] || {};
 
     const refinedCanvas = document.getElementById('refinedChartCanvas');
     const hoCanvas = document.getElementById('higherOrderChartCanvas');
@@ -344,8 +344,8 @@ function deobfuscateApiKey(val) {
                   if (context.parsed.r !== null) label += context.parsed.r.toFixed(3);
                   const dataIndex = context.dataIndex;
                   const codes = Object.keys(psych.refinedValues);
-                  if (codes[dataIndex] && alphas[codes[dataIndex]] !== undefined && alphas[codes[dataIndex]] !== null) {
-                    label += ` (α: ${alphas[codes[dataIndex]]})`;
+                  if (codes[dataIndex] && iccs[codes[dataIndex]] !== undefined && iccs[codes[dataIndex]] !== null) {
+                    label += ` (ICC: ${iccs[codes[dataIndex]]})`;
                   }
                   return label;
                 }
@@ -440,8 +440,8 @@ function deobfuscateApiKey(val) {
                   if (context.parsed.r !== null) label += context.parsed.r.toFixed(3);
                   const dataIndex = context.dataIndex;
                   const codes = Object.keys(psych.higherOrderValues);
-                  if (codes[dataIndex] && alphas[codes[dataIndex]] !== undefined && alphas[codes[dataIndex]] !== null) {
-                    label += ` (α: ${alphas[codes[dataIndex]]})`;
+                  if (codes[dataIndex] && iccs[codes[dataIndex]] !== undefined && iccs[codes[dataIndex]] !== null) {
+                    label += ` (ICC: ${iccs[codes[dataIndex]]})`;
                   }
                   return label;
                 }
@@ -1036,8 +1036,8 @@ el('div', {},
 
 
     const psych = state.results.psychometrics;
-    const allAlphas = window.Psychometrics && window.Psychometrics.calculateCronbachAlphaForSession
-      ? window.Psychometrics.calculateCronbachAlphaForSession(state.sessionResults, window.PVQData)
+    const allIccs = window.Psychometrics && window.Psychometrics.calculateICCForSession
+      ? window.Psychometrics.calculateICCForSession(state.sessionResults, window.PVQData)
       : {};
 
     let currentMode = state.results?.metadata?.config?.mode || 'batch';
@@ -1046,7 +1046,7 @@ el('div', {},
     if (currentMode === 'sequential') {
       groupKey += currentContext ? '_history' : '_nohistory';
     }
-    const alphas = allAlphas[groupKey] || allAlphas['global'] || {};
+    const iccs = allIccs[groupKey] || allIccs['global'] || {};
 
 
     return el('div', { className: 'space-y-8' },
