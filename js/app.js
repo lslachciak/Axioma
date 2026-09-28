@@ -269,13 +269,7 @@ function deobfuscateApiKey(val) {
 
 
     const psych = state.results.psychometrics;
-    const alphas = window.Psychometrics && window.Psychometrics.calculateCronbachAlphaForSession
-      ? window.Psychometrics.calculateCronbachAlphaForSession(
-        state.sessionResults,
-        window.PVQData,
-        state.results.metadata?.config
-      )
-      : {};
+
 
     const refinedCanvas = document.getElementById('refinedChartCanvas');
     const hoCanvas = document.getElementById('higherOrderChartCanvas');
@@ -340,9 +334,7 @@ function deobfuscateApiKey(val) {
                   if (context.parsed.r !== null) label += context.parsed.r.toFixed(3);
                   const dataIndex = context.dataIndex;
                   const codes = Object.keys(psych.refinedValues);
-                  if (codes[dataIndex] && alphas[codes[dataIndex]] !== undefined && alphas[codes[dataIndex]] !== null) {
-                    label += ` (α: ${alphas[codes[dataIndex]]})`;
-                  }
+
                   return label;
                 }
               }
@@ -436,9 +428,7 @@ function deobfuscateApiKey(val) {
                   if (context.parsed.r !== null) label += context.parsed.r.toFixed(3);
                   const dataIndex = context.dataIndex;
                   const codes = Object.keys(psych.higherOrderValues);
-                  if (codes[dataIndex] && alphas[codes[dataIndex]] !== undefined && alphas[codes[dataIndex]] !== null) {
-                    label += ` (α: ${alphas[codes[dataIndex]]})`;
-                  }
+
                   return label;
                 }
               }
@@ -1034,13 +1024,7 @@ el('div', {},
 
 
     const psych = state.results.psychometrics;
-    const alphas = window.Psychometrics && window.Psychometrics.calculateCronbachAlphaForSession
-      ? window.Psychometrics.calculateCronbachAlphaForSession(
-        state.sessionResults,
-        window.PVQData,
-        state.results.metadata?.config
-      )
-      : {};
+
 
 
     return el('div', { className: 'space-y-8' },

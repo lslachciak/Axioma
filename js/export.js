@@ -304,7 +304,7 @@
     // Add 19 Refined Basic Values (Raw & Centered)
     if (sessionResults[0]?.psychometrics?.refinedValues) {
       for (const code in sessionResults[0].psychometrics.refinedValues) {
-        headers.push(`${code}_Raw`, `${code}_Centered`, `${code}_Alpha`);
+        headers.push(`${code}_Raw`, `${code}_Centered`);
       }
     }
 
@@ -320,9 +320,7 @@
       const cfg = meta.config || {};
       const psych = results.psychometrics || {};
       const token = results.tokenUsage || {};
-      const alphas = window.Psychometrics && window.Psychometrics.calculateCronbachAlphaForSession
-        ? window.Psychometrics.calculateCronbachAlphaForSession(sessionResults, window.PVQData, cfg)
-        : {};
+
 
       const row = [
         idx + 1,
@@ -359,7 +357,7 @@
       if (psych.refinedValues) {
         for (const code in psych.refinedValues) {
           const rv = psych.refinedValues[code];
-          row.push(rv?.rawMean ?? "N/A", rv?.centeredMean ?? "N/A", alphas[code] ?? "N/A");
+          row.push(rv?.rawMean ?? "N/A", rv?.centeredMean ?? "N/A");
         }
       }
 
@@ -432,7 +430,7 @@
 
     if (sessionResults[0]?.psychometrics?.refinedValues) {
       for (const code in sessionResults[0].psychometrics.refinedValues) {
-        headers.push(`${code} (Raw)`, `${code} (Centered)`, `${code} (Alpha)`);
+        headers.push(`${code} (Raw)`, `${code} (Centered)`);
       }
     }
 
@@ -447,9 +445,7 @@
       const cfg = meta.config || {};
       const psych = results.psychometrics || {};
       const token = results.tokenUsage || {};
-      const alphas = window.Psychometrics && window.Psychometrics.calculateCronbachAlphaForSession
-        ? window.Psychometrics.calculateCronbachAlphaForSession(sessionResults, window.PVQData, cfg)
-        : {};
+
 
       const row = [
         idx + 1,
@@ -484,7 +480,7 @@
       if (psych.refinedValues) {
         for (const code in psych.refinedValues) {
           const rv = psych.refinedValues[code];
-          row.push(rv?.rawMean ?? "N/A", rv?.centeredMean ?? "N/A", alphas[code] ?? "N/A");
+          row.push(rv?.rawMean ?? "N/A", rv?.centeredMean ?? "N/A");
         }
       }
 
