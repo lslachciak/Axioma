@@ -12,11 +12,11 @@ function obfuscateApiKey(key) {
   if (!key) return key;
   try {
     const encoded = encodeURIComponent(key);
-    let shifted = '';
+    const shifted = new Array(encoded.length);
     for (let i = 0; i < encoded.length; i++) {
-      shifted += String.fromCharCode(encoded.charCodeAt(i) ^ 42);
+      shifted[i] = String.fromCharCode(encoded.charCodeAt(i) ^ 42);
     }
-    return 'OBF:' + btoa(shifted);
+    return 'OBF:' + btoa(shifted.join(''));
   } catch (e) {
     return key;
   }
@@ -27,11 +27,11 @@ function deobfuscateApiKey(val) {
   if (val.startsWith('OBF:')) {
     try {
       const decoded = atob(val.substring(4));
-      let unshifted = '';
+      const unshifted = new Array(decoded.length);
       for (let i = 0; i < decoded.length; i++) {
-        unshifted += String.fromCharCode(decoded.charCodeAt(i) ^ 42);
+        unshifted[i] = String.fromCharCode(decoded.charCodeAt(i) ^ 42);
       }
-      return decodeURIComponent(unshifted);
+      return decodeURIComponent(unshifted.join(''));
     } catch (e) {
       return '';
     }
