@@ -77,3 +77,60 @@ test('delay - should resolve after the specified time', async (t) => {
   assert.ok(elapsedTime >= delayMs - 10, `Elapsed time ${elapsedTime}ms should be at least ~${delayMs}ms`);
   assert.ok(elapsedTime < delayMs + 100, `Elapsed time ${elapsedTime}ms should not significantly exceed ${delayMs}ms`);
 });
+
+test('extractReasoning - should return structuredReasoning and original text if no tags are present', (t) => {
+  const { extractReasoning } = require('../api_client.js');
+  const result = extractReasoning('some raw text', 'this is structured reasoning');
+  assert.deepStrictEqual(result, { text: 'some raw text', reasoning: 'this is structured reasoning' });
+});
+
+test('extractReasoning - should extract reasoning from <think> tags', (t) => {
+  const { extractReasoning } = require('../api_client.js');
+  const result = extractReasoning('<think>I need to do X</think> And then Y');
+  assert.deepStrictEqual(result, { text: 'And then Y', reasoning: 'I need to do X' });
+});
+
+test('extractReasoning - should handle multiline reasoning in <think> tags', (t) => {
+  const { extractReasoning } = require('../api_client.js');
+  const result = extractReasoning('<think>\nLine 1\nLine 2\n</think>\nFinal answer');
+  assert.deepStrictEqual(result, { text: 'Final answer', reasoning: 'Line 1\nLine 2' });
+});
+
+test('extractReasoning - should extract reasoning from <thought> tags', (t) => {
+  const { extractReasoning } = require('../api_client.js');
+  const result = extractReasoning('<thought>I need to do X</thought> And then Y');
+  assert.deepStrictEqual(result, { text: 'And then Y', reasoning: 'I need to do X' });
+});
+
+test('extractReasoning - should combine structuredReasoning and extracted tags', (t) => {
+  const { extractReasoning } = require('../api_client.js');
+  const result = extractReasoning('<think>tag reasoning</think> some text', 'structured');
+  assert.deepStrictEqual(result, { text: 'some text', reasoning: 'structured\n\ntag reasoning' });
+});
+
+test('extractReasoning - should handle multiple tag traces', (t) => {
+  const { extractReasoning } = require('../api_client.js');
+  const result = extractReasoning('<think>part 1</think> middle <think>part 2</think> end');
+  assert.deepStrictEqual(result, { text: 'middle  end', reasoning: 'part 1\n\npart 2' });
+});
+
+test('extractReasoning - should handle unclosed reasoning tags', (t) => {
+  const { extractReasoning } = require('../api_client.js');
+  const result = extractReasoning('Some text before <think>unclosed thought process...');
+  assert.deepStrictEqual(result, { text: 'Some text before', reasoning: 'unclosed thought process...' });
+});
+
+test('extractReasoning - should handle empty or missing inputs gracefully', (t) => {
+  const { extractReasoning } = require('../api_client.js');
+  const result1 = extractReasoning(null, null);
+  assert.deepStrictEqual(result1, { text: '', reasoning: '' });
+
+  const result2 = extractReasoning(undefined, undefined);
+  assert.deepStrictEqual(result2, { text: '', reasoning: '' });
+});
+
+test('extractReasoning - should ignore empty tags', (t) => {
+  const { extractReasoning } = require('../api_client.js');
+  const result = extractReasoning('<think></think> <thought>   </thought> Final answer');
+  assert.deepStrictEqual(result, { text: 'Final answer', reasoning: '' });
+});
