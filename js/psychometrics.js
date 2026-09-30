@@ -271,22 +271,53 @@
       const K = items.length;
       if (K < 2) return null;
 
-      const completeRows = matchingResults
-        .map(result => items.map(item => result?.psychometrics?.itemRatings?.[item]))
-        .filter(row => row.every(value => typeof value === 'number' && Number.isFinite(value) && value >= 1 && value <= 6));
-      if (completeRows.length < 2) return null;
+      const N_matches = matchingResults.length;
+      let validRowCount = 0;
+      const itemSums = new Float64Array(K);
+      const itemSqSums = new Float64Array(K);
+      let totalSum = 0;
+      let totalSqSum = 0;
+
+      for (let i = 0; i < N_matches; i++) {
+        const itemRatings = matchingResults[i]?.psychometrics?.itemRatings;
+        if (!itemRatings) continue;
+
+        let isComplete = true;
+        let rowSum = 0;
+        const rowVals = new Float64Array(K);
+
+        for (let j = 0; j < K; j++) {
+          const value = itemRatings[items[j]];
+          if (typeof value !== 'number' || !Number.isFinite(value) || value < 1 || value > 6) {
+            isComplete = false;
+            break;
+          }
+          rowVals[j] = value;
+          rowSum += value;
+        }
+
+        if (isComplete) {
+          validRowCount++;
+          totalSum += rowSum;
+          totalSqSum += rowSum * rowSum;
+          for (let j = 0; j < K; j++) {
+            const val = rowVals[j];
+            itemSums[j] += val;
+            itemSqSums[j] += val * val;
+          }
+        }
+      }
+
+      if (validRowCount < 2) return null;
+      const N = validRowCount;
 
       let itemVariancesSum = 0;
       for (let j = 0; j < K; j++) {
-        const itemScores = completeRows.map(row => row[j]);
-        const mean = itemScores.reduce((a, b) => a + b, 0) / itemScores.length;
-        const variance = itemScores.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / (itemScores.length - 1);
+        const variance = (itemSqSums[j] - (itemSums[j] * itemSums[j]) / N) / (N - 1);
         itemVariancesSum += variance;
       }
 
-      const totalScores = completeRows.map(row => row.reduce((total, value) => total + value, 0));
-      const meanTotal = totalScores.reduce((a, b) => a + b, 0) / totalScores.length;
-      const varianceTotal = totalScores.reduce((a, b) => a + Math.pow(b - meanTotal, 2), 0) / (totalScores.length - 1);
+      const varianceTotal = (totalSqSum - (totalSum * totalSum) / N) / (N - 1);
 
       if (varianceTotal === 0) return null;
 
