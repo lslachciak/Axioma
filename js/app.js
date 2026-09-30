@@ -52,7 +52,8 @@ function deobfuscateApiKey(val) {
       } else if (key === 'checked') {
         element.checked = !!props[key];
       } else if (key === 'innerHTML') {
-        element.innerHTML = typeof DOMPurify !== 'undefined' ? DOMPurify.sanitize(props[key]) : String(props[key]).replace(/[&<>'"]/g, tag => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'}[tag] || tag));
+        if (typeof DOMPurify === 'undefined') { throw new Error('DOMPurify is required for XSS protection when using innerHTML'); }
+        element.innerHTML = DOMPurify.sanitize(props[key]);
       } else if (key !== 'key') {
         element.setAttribute(key, props[key]);
       }
