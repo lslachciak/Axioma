@@ -9,17 +9,7 @@
 
   // Helper function to create DOM elements quickly
 function obfuscateApiKey(key) {
-  if (!key) return key;
-  try {
-    const encoded = encodeURIComponent(key);
-    let shifted = '';
-    for (let i = 0; i < encoded.length; i++) {
-      shifted += String.fromCharCode(encoded.charCodeAt(i) ^ 42);
-    }
-    return 'OBF:' + btoa(shifted);
-  } catch (e) {
-    return key;
-  }
+  return key;
 }
 
 function deobfuscateApiKey(val) {

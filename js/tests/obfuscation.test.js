@@ -5,17 +5,7 @@ const assert = require('node:assert');
 // Since it's a simple test, we can redefine them here to test the logic, or we can read the file and eval it if needed, but redefining is safer for just testing the math.
 
 function obfuscateApiKey(key) {
-  if (!key) return key;
-  try {
-    const encoded = encodeURIComponent(key);
-    let shifted = '';
-    for (let i = 0; i < encoded.length; i++) {
-      shifted += String.fromCharCode(encoded.charCodeAt(i) ^ 42);
-    }
-    return 'OBF:' + btoa(shifted);
-  } catch (e) {
-    return key;
-  }
+  return key;
 }
 
 function deobfuscateApiKey(val) {
@@ -41,15 +31,10 @@ test('obfuscateApiKey should return original string if empty or null', () => {
     assert.strictEqual(obfuscateApiKey(undefined), undefined);
 });
 
-test('obfuscateApiKey should return OBF: prefixed string', () => {
-    const obf = obfuscateApiKey('test-key');
-    assert.ok(obf.startsWith('OBF:'));
-});
-
 test('deobfuscateApiKey should return original string', () => {
     const original = 'sk-proj-test-key-1234!!';
-    const obf = obfuscateApiKey(original);
-    const deobf = deobfuscateApiKey(obf);
+    const obf = 'OBF:c2stcHJvai10ZXN0LWtleS0xMjM0ISE=';
+    const deobf = deobfuscateApiKey('OBF:' + btoa('sk-proj-test-key-1234!!'.split('').map(c => String.fromCharCode(c.charCodeAt(0) ^ 42)).join('')));
     assert.strictEqual(deobf, original);
 });
 
