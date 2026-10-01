@@ -427,7 +427,7 @@ function deobfuscateApiKey(val) {
                   if (label) label += ': ';
                   if (context.parsed.r !== null) label += context.parsed.r.toFixed(3);
                   const dataIndex = context.dataIndex;
-                  const codes = Object.keys(psych.higherOrderValues);
+                  const codes = Object.keys(psych.refinedValues);
 
                   return label;
                 }
