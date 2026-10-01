@@ -119,15 +119,20 @@
     const tagRegex = /<(think|thought|thinking|reasoning)>([\s\S]*?)<\/\1>/gi;
     let match;
     const tagTraces = [];
+    let hasTags = false;
 
     while ((match = tagRegex.exec(cleanText)) !== null) {
+      hasTags = true;
       if (match[2] && match[2].trim()) {
         tagTraces.push(match[2].trim());
       }
     }
 
-    if (tagTraces.length > 0) {
+    if (hasTags) {
       cleanText = cleanText.replace(tagRegex, "").trim();
+    }
+
+    if (tagTraces.length > 0) {
       const combinedTagTraces = tagTraces.join("\n\n");
       reasoning = reasoning ? `${reasoning}\n\n${combinedTagTraces}` : combinedTagTraces;
     }
