@@ -288,6 +288,13 @@ function deobfuscateApiKey(val) {
       if (!canvas || !window.Chart) return null;
       if (chartInstance) chartInstance.destroy();
 
+      const hexToRgba = (hex, alpha) => {
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+      };
+
       const nextChart = new Chart(canvas.getContext('2d'), {
         type: 'radar',
         data: {
@@ -296,7 +303,7 @@ function deobfuscateApiKey(val) {
             {
               label: state.lang === 'pl' ? 'Średnia surowa' : 'Raw Mean',
               data: rawValues,
-              backgroundColor: `${rawColor}${backgroundAlpha}`,
+              backgroundColor: hexToRgba(rawColor, backgroundAlpha),
               borderColor: rawColor,
               pointBackgroundColor: rawColor,
               borderWidth
@@ -304,7 +311,7 @@ function deobfuscateApiKey(val) {
             {
               label: state.lang === 'pl' ? 'Wynik wycentrowany' : 'Centered Score',
               data: centeredValues,
-              backgroundColor: `${centeredColor}${backgroundAlpha}`,
+              backgroundColor: hexToRgba(centeredColor, backgroundAlpha),
               borderColor: centeredColor,
               pointBackgroundColor: centeredColor,
               borderWidth
