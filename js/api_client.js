@@ -300,7 +300,9 @@
     if (config.enableReasoning === true) {
       const budget = Number(config.reasoningBudget);
       generationConfig.thinkingConfig = {
-        thinkingBudget: (!isNaN(budget) && budget !== 0) ? budget : 1024
+        thinkingBudget: (!isNaN(budget) && budget !== 0) ? budget : 1024,
+        thinkingLevel: config.reasoningEffort || 'medium',
+        includeThoughts: true
       };
     }
 
@@ -337,8 +339,8 @@
     let structuredReasoning = "";
 
     for (const part of parts) {
-      if (part.thought) {
-        structuredReasoning += part.thought + "\n";
+      if (part.thought && part.text) {
+        structuredReasoning += part.text + "\n";
       } else if (part.text) {
         text += part.text;
       }
@@ -404,9 +406,13 @@
       }
       if (config.provider === 'gemini' || (config.baseUrl && config.baseUrl.includes("generativelanguage.googleapis.com"))) {
         const budget = Number(config.reasoningBudget) || 1024;
-        payload.thinking_config = { thinking_budget: budget };
+        payload.thinking_config = { 
+          thinking_budget: budget,
+          thinking_level: config.reasoningEffort || 'medium',
+          include_thoughts: true
+        };
         payload.extra_body = {
-          thinking_config: { thinking_budget: budget }
+          thinking_config: payload.thinking_config
         };
       }
     }
