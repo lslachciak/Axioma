@@ -224,7 +224,7 @@
   /**
    * Main completion caller with rate limit retry logic.
    */
-  async function completeChat(config, messages, onStatusUpdate) {
+  async function completeChat(config, messages, onStatusUpdate, checkAbort) {
     const provider = config.provider || 'openai';
     const maxRetries = config.maxRetries ?? 5;
 
@@ -249,6 +249,7 @@
           console.warn(`Rate limit (429) hit. Waiting ${totalSeconds}s before retry ${attempt + 1}/${maxRetries}...`);
 
           for (let sec = totalSeconds; sec > 0; sec--) {
+            if (checkAbort && checkAbort()) throw new Error("Evaluation cancelled by user.");
             const countdownMsg = `Rate limit (429) hit. Waiting ${sec}s before retry ${attempt + 1}/${maxRetries}...`;
             if (onStatusUpdate) onStatusUpdate(countdownMsg);
             await delay(1000);
@@ -425,9 +426,7 @@
         errorText = await response.text();
       }
 
-      if (config.provider === 'gemini' || (config.baseUrl && config.baseUrl.includes("generativelanguage.googleapis.com"))) {
-        return callGeminiNativeAPI(config, messages);
-      }
+
 
       const err = new Error(`API Error [${response.status}]: ${errorText}`);
       err.status = response.status;
@@ -507,7 +506,9 @@
     }
 
     if (config.temperature !== undefined && config.temperature !== '' && typeof config.temperature === 'number' && !isNaN(config.temperature)) {
-      payload.temperature = config.temperature;
+      if (config.enableReasoning !== true) {
+        payload.temperature = config.temperature;
+      }
     }
 
     if (config.enableReasoning === true) {

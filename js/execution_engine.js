@@ -160,7 +160,7 @@ Instrukcja: Oceń WSZYSTKIE 57 poniższych pozycji w skali 1-6. Podaj swoje ocen
           const apiRes = await this.apiClient.completeChat({
             ...this.config,
             systemPrompt: systemPrompt
-          }, messages, statusUpdateCallback);
+          }, messages, statusUpdateCallback, () => this.shouldAbort);
 
           if (this.shouldAbort) throw new Error("Evaluation cancelled by user.");
 
@@ -173,8 +173,8 @@ Instrukcja: Oceń WSZYSTKIE 57 poniższych pozycji w skali 1-6. Podaj swoje ocen
           for (let i = 1; i <= 57; i++) {
             const parsedInfo = batchParsed[i] || { score: null, rawText: "", isRefusal: false };
             state.parsedItemScores[i] = parsedInfo.score;
-            state.rawResponses[i] = apiRes.text;
-            state.reasoningTraces[i] = apiRes.reasoning;
+            state.rawResponses[i] = parsedInfo.rawText || "";
+            state.reasoningTraces[i] = i === 1 ? apiRes.reasoning : "";
           }
 
           if (onProgress) {
@@ -246,7 +246,7 @@ Instrukcja: Oceń WSZYSTKIE 57 poniższych pozycji w skali 1-6. Podaj swoje ocen
             const apiRes = await this.apiClient.completeChat({
               ...this.config,
               systemPrompt: systemPrompt
-            }, requestMessages, statusUpdateCallback);
+            }, requestMessages, statusUpdateCallback, () => this.shouldAbort);
 
             if (this.shouldAbort) throw new Error("Evaluation cancelled by user.");
 

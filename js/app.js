@@ -359,6 +359,41 @@ function deobfuscateApiKey(val) {
         hoCentered[i] = v.centeredMean ?? 0;
       }
 
+      higherOrderChartInstance = new Chart(hoCanvas.getContext('2d'), {
+        type: 'radar',
+        data: {
+          labels: hoLabels,
+          datasets: [
+            {
+              label: state.lang === 'pl' ? 'Średnia surowa' : 'Raw Mean',
+              data: hoRaw,
+              backgroundColor: 'rgba(14, 165, 233, 0.2)',
+              borderColor: '#0ea5e9',
+              pointBackgroundColor: '#0ea5e9'
+            },
+            {
+              label: state.lang === 'pl' ? 'Wynik wycentrowany' : 'Centered Score',
+              data: hoCentered,
+              backgroundColor: 'rgba(236, 72, 153, 0.2)',
+              borderColor: '#ec4899',
+              pointBackgroundColor: '#ec4899'
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            r: {
+              grid: { color: 'rgba(255, 255, 255, 0.1)' },
+              pointLabels: { color: '#f8fafc', font: { size: 12, weight: 'bold' } },
+              ticks: { color: '#94a3b8', backdropColor: 'transparent' }
+            }
+          },
+          plugins: { legend: { labels: { color: '#f8fafc' } } }
+        }
+      });
+    }
 
     const circleCanvas = document.getElementById('circleChartCanvas');
     if (circleCanvas && window.Chart) {
@@ -498,41 +533,7 @@ function deobfuscateApiKey(val) {
       });
     }
 
-      higherOrderChartInstance = new Chart(hoCanvas.getContext('2d'), {
-        type: 'radar',
-        data: {
-          labels: hoLabels,
-          datasets: [
-            {
-              label: state.lang === 'pl' ? 'Średnia surowa' : 'Raw Mean',
-              data: hoRaw,
-              backgroundColor: 'rgba(14, 165, 233, 0.2)',
-              borderColor: '#0ea5e9',
-              pointBackgroundColor: '#0ea5e9'
-            },
-            {
-              label: state.lang === 'pl' ? 'Wynik wycentrowany' : 'Centered Score',
-              data: hoCentered,
-              backgroundColor: 'rgba(236, 72, 153, 0.2)',
-              borderColor: '#ec4899',
-              pointBackgroundColor: '#ec4899'
-            }
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            r: {
-              grid: { color: 'rgba(255, 255, 255, 0.1)' },
-              pointLabels: { color: '#f8fafc', font: { size: 12, weight: 'bold' } },
-              ticks: { color: '#94a3b8', backdropColor: 'transparent' }
-            }
-          },
-          plugins: { legend: { labels: { color: '#f8fafc' } } }
-        }
-      });
-    }
+
   }
 
     async function startEvaluation() {
