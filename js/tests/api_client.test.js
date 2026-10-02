@@ -134,3 +134,102 @@ test('extractReasoning - should ignore empty tags', (t) => {
   const result = extractReasoning('<think></think> <thought>   </thought> Final answer');
   assert.deepStrictEqual(result, { text: 'Final answer', reasoning: '' });
 });
+
+
+test('completeChat - Anthropic omits temperature when reasoning is enabled', async (t) => {
+  const { completeChat } = require('../api_client.js');
+  let fetchArgs = null;
+  global.fetch = async (url, options) => {
+    fetchArgs = { url, options };
+    return {
+      ok: true,
+      json: async () => ({
+        content: [{ type: 'text', text: 'Anthropic response' }],
+        usage: { input_tokens: 10, output_tokens: 10 }
+      })
+    };
+  };
+
+  const config = {
+    provider: 'anthropic',
+    model: 'claude-test',
+    temperature: 0.7,
+    enableReasoning: true,
+    reasoningBudget: 1024,
+    apiKey: 'test'
+  };
+
+  await completeChat(config, [{ role: 'user', content: 'test' }]);
+  
+  const payload = JSON.parse(fetchArgs.options.body);
+  assert.strictEqual(payload.temperature, undefined, 'Temperature should be omitted when reasoning is enabled');
+  assert.ok(payload.thinking, 'Thinking config should be present');
+
+  global.fetch = undefined;
+});
+
+test('completeChat - Anthropic includes temperature when reasoning is disabled', async (t) => {
+  const { completeChat } = require('../api_client.js');
+  let fetchArgs = null;
+  global.fetch = async (url, options) => {
+    fetchArgs = { url, options };
+    return {
+      ok: true,
+      json: async () => ({
+        content: [{ type: 'text', text: 'Anthropic response' }],
+        usage: { input_tokens: 10, output_tokens: 10 }
+      })
+    };
+  };
+
+  const config = {
+    provider: 'anthropic',
+    model: 'claude-test',
+    temperature: 0.7,
+    enableReasoning: false,
+    apiKey: 'test'
+  };
+
+  await completeChat(config, [{ role: 'user', content: 'test' }]);
+  
+  const payload = JSON.parse(fetchArgs.options.body);
+  assert.strictEqual(payload.temperature, 0.7, 'Temperature should be included when reasoning is disabled');
+  assert.strictEqual(payload.thinking, undefined, 'Thinking config should be omitted');
+
+  global.fetch = undefined;
+});
+
+test('completeChat - OpenAI compatible API does not hardcode Gemini fallback', async (t) => {
+  const { completeChat } = require('../api_client.js');
+  let fetchCalls = 0;
+  global.fetch = async (url, options) => {
+    fetchCalls++;
+    // Simulate a failure on the custom proxy
+    return {
+      ok: false,
+      status: 404,
+      json: async () => ({ error: { message: "Not found on proxy" } }),
+      headers: new Map()
+    };
+  };
+
+  const config = {
+    provider: 'gemini',
+    baseUrl: 'https://my-custom-proxy.com/v1/chat/completions',
+    model: 'gemini-1.5-pro',
+    apiKey: 'test',
+    maxRetries: 0 // avoid sleep loop
+  };
+
+  try {
+    await completeChat(config, [{ role: 'user', content: 'test' }]);
+    assert.fail('Should have thrown an error');
+  } catch (err) {
+    assert.match(err.message, /Not found on proxy/);
+  }
+  
+  // fetch should only be called once, no fallback to generativelanguage.googleapis.com
+  assert.strictEqual(fetchCalls, 1);
+
+  global.fetch = undefined;
+});

@@ -77,3 +77,60 @@ test('sequential mode waits for each request when context is disabled', async ()
   assert.strictEqual(requestMessages.length, items.length);
   assert.ok(requestMessages.every(messages => messages.length === 1));
 });
+
+test('batch mode stores parsed raw text and single reasoning trace', async () => {
+  const apiClient = {
+    completeChat: async (config, messages, statusUpdateCallback, checkAbort) => {
+      return {
+        text: 'Item 1: 5\nItem 2: 4\nItem 3: 3',
+        reasoning: 'Here is the reasoning for the entire batch',
+        tokenUsage: { promptTokens: 10, completionTokens: 10, reasoningTokens: 5 }
+      };
+    }
+  };
+  
+  const psychometrics = {
+    parseBatchResponse: (text) => {
+      return {
+        1: { score: 5, rawText: 'Item 1: 5', isRefusal: false },
+        2: { score: 4, rawText: 'Item 2: 4', isRefusal: false },
+        3: { score: 3, rawText: 'Item 3: 3', isRefusal: false }
+      };
+    }
+  };
+  
+  const pvqData = {
+    ITEMS: [
+      { id: 1, en: 'First item', pl: 'Pierwsza pozycja' },
+      { id: 2, en: 'Second item', pl: 'Druga pozycja' },
+      { id: 3, en: 'Third item', pl: 'Trzecia pozycja' }
+    ]
+  };
+  
+  const { EvaluatorEngine } = require('../execution_engine.js');
+  const engine = new EvaluatorEngine({ mode: 'batch' }, pvqData, psychometrics, apiClient);
+  const state = {
+    rawResponses: {},
+    parsedItemScores: {},
+    reasoningTraces: {},
+    totalPromptTokens: 0,
+    totalCompletionTokens: 0,
+    totalReasoningTokens: 0
+  };
+
+  await engine._runBatch('en', 'System prompt', null, null, state);
+
+  // Check that rawText is correctly mapped instead of duplicating full batch text
+  assert.strictEqual(state.rawResponses[1], 'Item 1: 5');
+  assert.strictEqual(state.rawResponses[2], 'Item 2: 4');
+  
+  // Check that reasoning trace is only on the first item
+  assert.strictEqual(state.reasoningTraces[1], 'Here is the reasoning for the entire batch');
+  assert.strictEqual(state.reasoningTraces[2], '');
+  assert.strictEqual(state.reasoningTraces[3], '');
+  
+  // Check token counts
+  assert.strictEqual(state.totalPromptTokens, 10);
+  assert.strictEqual(state.totalCompletionTokens, 10);
+  assert.strictEqual(state.totalReasoningTokens, 5);
+});
