@@ -1,4 +1,4 @@
-/**
+﻿/**
  * PVQ-RR (Portrait Values Questionnaire - Revised 57 Items) Data & Mappings
  * Shalom H. Schwartz (2012 / 2016)
  * Supports English ('en') and Polish ('pl')
@@ -380,25 +380,25 @@
   ];
 
   const REFINED_VALUES = {
-    SDT: { code: "SDT", nameEn: "Self-Direction - Thought", namePl: "Samosterowność - Myślenie", items: [1, 23, 39], higherOrder: "Openness" },
-    SDA: { code: "SDA", nameEn: "Self-Direction - Action", namePl: "Samosterowność - Działanie", items: [16, 30, 56], higherOrder: "Openness" },
+    SDT: { code: "SDT", nameEn: "Self-Direction - Thought", namePl: "Kierowanie sobą w myśleniu", items: [1, 23, 39], higherOrder: "Openness" },
+    SDA: { code: "SDA", nameEn: "Self-Direction - Action", namePl: "Kierowanie sobą w działaniu", items: [16, 30, 56], higherOrder: "Openness" },
     STI: { code: "STI", nameEn: "Stimulation", namePl: "Stymulacja", items: [10, 28, 43], higherOrder: "Openness" },
     HED: { code: "HED", nameEn: "Hedonism", namePl: "Hedonizm", items: [3, 36, 46], higherOrder: "Openness" },
     ACH: { code: "ACH", nameEn: "Achievement", namePl: "Osiągnięcia", items: [17, 32, 48], higherOrder: "Enhancement" },
-    POD: { code: "POD", nameEn: "Power - Dominance", namePl: "Władza - Dominacja", items: [6, 29, 41], higherOrder: "Enhancement" },
-    POR: { code: "POR", nameEn: "Power - Resources", namePl: "Władza - Zasoby", items: [12, 20, 44], higherOrder: "Enhancement" },
-    FAC: { code: "FAC", nameEn: "Face", namePl: "Wizerunek / Twarz", items: [9, 24, 49], higherOrder: "Conservation" },
-    SEP: { code: "SEP", nameEn: "Security - Personal", namePl: "Bezpieczeństwo - Osobiste", items: [13, 26, 53], higherOrder: "Conservation" },
-    SES: { code: "SES", nameEn: "Security - Societal", namePl: "Bezpieczeństwo - Społeczne", items: [2, 35, 50], higherOrder: "Conservation" },
+    POD: { code: "POD", nameEn: "Power - Dominance", namePl: "Władza nad ludźmi", items: [6, 29, 41], higherOrder: "Enhancement" },
+    POR: { code: "POR", nameEn: "Power - Resources", namePl: "Władza nad zasobami", items: [12, 20, 44], higherOrder: "Enhancement" },
+    FAC: { code: "FAC", nameEn: "Face", namePl: "Prestiż", items: [9, 24, 49], higherOrder: "Conservation" },
+    SEP: { code: "SEP", nameEn: "Security - Personal", namePl: "Bezpieczeństwo osobiste", items: [13, 26, 53], higherOrder: "Conservation" },
+    SES: { code: "SES", nameEn: "Security - Societal", namePl: "Bezpieczeństwo społeczne", items: [2, 35, 50], higherOrder: "Conservation" },
     TRD: { code: "TRD", nameEn: "Tradition", namePl: "Tradycja", items: [18, 33, 40], higherOrder: "Conservation" },
-    COR: { code: "COR", nameEn: "Conformity - Rules", namePl: "Konieczność / Konformizm - Reguły", items: [15, 31, 42], higherOrder: "Conservation" },
-    COI: { code: "COI", nameEn: "Conformity - Interpersonal", namePl: "Konformizm - Interpersonalny", items: [4, 22, 51], higherOrder: "Conservation" },
+    COR: { code: "COR", nameEn: "Conformity - Rules", namePl: "Przystosowanie do reguł", items: [15, 31, 42], higherOrder: "Conservation" },
+    COI: { code: "COI", nameEn: "Conformity - Interpersonal", namePl: "Przystosowanie do ludzi", items: [4, 22, 51], higherOrder: "Conservation" },
     HUM: { code: "HUM", nameEn: "Humility", namePl: "Pokora", items: [7, 38, 54], higherOrder: "Conservation" },
-    UNN: { code: "UNN", nameEn: "Universalism - Nature", namePl: "Uniwersalizm - Natura", items: [8, 21, 45], higherOrder: "Transcendence" },
-    UNC: { code: "UNC", nameEn: "Universalism - Concern", namePl: "Uniwersalizm - Troska", items: [5, 37, 52], higherOrder: "Transcendence" },
-    UNT: { code: "UNT", nameEn: "Universalism - Tolerance", namePl: "Uniwersalizm - Tolerancja", items: [14, 34, 57], higherOrder: "Transcendence" },
-    BEC: { code: "BEC", nameEn: "Benevolence - Care", namePl: "Opiekuńczość - Troska", items: [11, 25, 47], higherOrder: "Transcendence" },
-    BED: { code: "BED", nameEn: "Benevolence - Dependability", namePl: "Opiekuńczość - Niezawodność", items: [19, 27, 55], higherOrder: "Transcendence" }
+    UNN: { code: "UNN", nameEn: "Universalism - Nature", namePl: "Uniwersalizm ekologiczny", items: [8, 21, 45], higherOrder: "Transcendence" },
+    UNC: { code: "UNC", nameEn: "Universalism - Concern", namePl: "Uniwersalizm społeczny", items: [5, 37, 52], higherOrder: "Transcendence" },
+    UNT: { code: "UNT", nameEn: "Universalism - Tolerance", namePl: "Uniwersalizm - tolerancja", items: [14, 34, 57], higherOrder: "Transcendence" },
+    BEC: { code: "BEC", nameEn: "Benevolence - Care", namePl: "Życzliwość - troskliwość", items: [11, 25, 47], higherOrder: "Transcendence" },
+    BED: { code: "BED", nameEn: "Benevolence - Dependability", namePl: "Życzliwość - niezawodność", items: [19, 27, 55], higherOrder: "Transcendence" }
   };
 
   const HIGHER_ORDER_VALUES = {
@@ -417,7 +417,7 @@
     Conservation: {
       code: "Conservation",
       nameEn: "Conservation",
-      namePl: "Zachowawczość / Konserwatyzm",
+      namePl: "Zachowawczość",
       refinedKeys: ["FAC", "SEP", "SES", "TRD", "COR", "COI", "HUM"]
     },
     Transcendence: {
