@@ -268,47 +268,46 @@ function deobfuscateApiKey(val) {
   function renderCharts() {
     if (state.activeTab !== 'results' || !state.results || !state.results.psychometrics) return;
 
-
     const psych = state.results.psychometrics;
 
+    const buildRadarChart = ({
+      canvas,
+      chartInstance,
+      labels,
+      rawValues,
+      centeredValues,
+      rawColor,
+      centeredColor,
+      pointLabelSize,
+      legendDisplay,
+      backgroundAlpha = '0.2',
+      borderWidth = 2,
+      showLegend = true,
+      showTicks = true
+    }) => {
+      if (!canvas || !window.Chart) return null;
+      if (chartInstance) chartInstance.destroy();
 
-    const refinedCanvas = document.getElementById('refinedChartCanvas');
-    const hoCanvas = document.getElementById('higherOrderChartCanvas');
-
-    if (refinedCanvas && window.Chart) {
-      if (refinedChartInstance) refinedChartInstance.destroy();
-      const refinedVals = Object.values(psych.refinedValues);
-      const refLen = refinedVals.length;
-      const refLabels = new Array(refLen);
-      const rawScores = new Array(refLen);
-      const centeredScores = new Array(refLen);
-      for (let i = 0; i < refLen; i++) {
-        const v = refinedVals[i];
-        refLabels[i] = state.lang === 'pl' ? v.namePl : v.nameEn;
-        rawScores[i] = v.rawMean ?? 0;
-        centeredScores[i] = v.centeredMean ?? 0;
-      }
-
-      refinedChartInstance = new Chart(refinedCanvas.getContext('2d'), {
+      const nextChart = new Chart(canvas.getContext('2d'), {
         type: 'radar',
         data: {
-          labels: refLabels,
+          labels,
           datasets: [
             {
               label: state.lang === 'pl' ? 'Średnia surowa' : 'Raw Mean',
-              data: rawScores,
-              backgroundColor: 'rgba(56, 189, 248, 0.2)',
-              borderColor: '#38bdf8',
-              pointBackgroundColor: '#38bdf8',
-              borderWidth: 1
+              data: rawValues,
+              backgroundColor: `${rawColor}${backgroundAlpha}`,
+              borderColor: rawColor,
+              pointBackgroundColor: rawColor,
+              borderWidth
             },
             {
               label: state.lang === 'pl' ? 'Wynik wycentrowany' : 'Centered Score',
-              data: centeredScores,
-              backgroundColor: 'rgba(168, 85, 247, 0.2)',
-              borderColor: '#a855f7',
-              pointBackgroundColor: '#a855f7',
-              borderWidth: 1
+              data: centeredValues,
+              backgroundColor: `${centeredColor}${backgroundAlpha}`,
+              borderColor: centeredColor,
+              pointBackgroundColor: centeredColor,
+              borderWidth
             }
           ]
         },
@@ -319,221 +318,118 @@ function deobfuscateApiKey(val) {
             r: {
               grid: { color: 'rgba(255, 255, 255, 0.15)' },
               angleLines: { color: 'rgba(255, 255, 255, 0.15)' },
-              pointLabels: { color: '#e2e8f0', font: { size: 8 } },
-              ticks: { display: false }
+              pointLabels: { color: '#f8fafc', font: { size: pointLabelSize, weight: 'bold' } },
+              ticks: showTicks ? { color: '#94a3b8', backdropColor: 'transparent', z: 10 } : { display: false }
             }
           },
           plugins: {
-            legend: { display: false },
+            legend: showLegend ? { labels: { color: '#f8fafc', font: { size: 14 } }, position: 'bottom' } : { display: false },
             tooltip: {
-              bodyFont: { size: 10 },
-              titleFont: { size: 10 },
-              callbacks: {
-                label: function(context) {
-                  let label = context.dataset.label || '';
-                  if (label) label += ': ';
-                  if (context.parsed.r !== null) label += context.parsed.r.toFixed(3);
-                  const dataIndex = context.dataIndex;
-                  const codes = Object.keys(psych.refinedValues);
-
-                  return label;
-                }
-              }
+              bodyFont: { size: 14 },
+              titleFont: { size: 14 }
             }
           }
         }
       });
+
+      return nextChart;
+    };
+
+    const refinedCanvas = document.getElementById('refinedChartCanvas');
+    if (refinedCanvas) {
+      const refinedVals = Object.values(psych.refinedValues);
+      const refLabels = refinedVals.map(v => state.lang === 'pl' ? v.namePl : v.nameEn);
+      const rawScores = refinedVals.map(v => v.rawMean ?? 0);
+      const centeredScores = refinedVals.map(v => v.centeredMean ?? 0);
+
+      refinedChartInstance = buildRadarChart({
+        canvas: refinedCanvas,
+        chartInstance: refinedChartInstance,
+        labels: refLabels,
+        rawValues: rawScores,
+        centeredValues: centeredScores,
+        rawColor: '#38bdf8',
+        centeredColor: '#a855f7',
+        pointLabelSize: 8,
+        legendDisplay: false,
+        backgroundAlpha: '0.2',
+        borderWidth: 1,
+        showLegend: false,
+        showTicks: false
+      });
     }
 
-    if (hoCanvas && window.Chart) {
-      if (higherOrderChartInstance) higherOrderChartInstance.destroy();
+    const hoCanvas = document.getElementById('higherOrderChartCanvas');
+    if (hoCanvas) {
       const hoVals = Object.values(psych.higherOrderValues);
-      const hoLen = hoVals.length;
-      const hoLabels = new Array(hoLen);
-      const hoRaw = new Array(hoLen);
-      const hoCentered = new Array(hoLen);
-      for (let i = 0; i < hoLen; i++) {
-        const v = hoVals[i];
-        hoLabels[i] = state.lang === 'pl' ? v.namePl : v.nameEn;
-        hoRaw[i] = v.rawMean ?? 0;
-        hoCentered[i] = v.centeredMean ?? 0;
-      }
+      const hoLabels = hoVals.map(v => state.lang === 'pl' ? v.namePl : v.nameEn);
+      const hoRaw = hoVals.map(v => v.rawMean ?? 0);
+      const hoCentered = hoVals.map(v => v.centeredMean ?? 0);
 
-      higherOrderChartInstance = new Chart(hoCanvas.getContext('2d'), {
-        type: 'radar',
-        data: {
-          labels: hoLabels,
-          datasets: [
-            {
-              label: state.lang === 'pl' ? 'Średnia surowa' : 'Raw Mean',
-              data: hoRaw,
-              backgroundColor: 'rgba(14, 165, 233, 0.2)',
-              borderColor: '#0ea5e9',
-              pointBackgroundColor: '#0ea5e9'
-            },
-            {
-              label: state.lang === 'pl' ? 'Wynik wycentrowany' : 'Centered Score',
-              data: hoCentered,
-              backgroundColor: 'rgba(236, 72, 153, 0.2)',
-              borderColor: '#ec4899',
-              pointBackgroundColor: '#ec4899'
-            }
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            r: {
-              grid: { color: 'rgba(255, 255, 255, 0.1)' },
-              pointLabels: { color: '#f8fafc', font: { size: 12, weight: 'bold' } },
-              ticks: { color: '#94a3b8', backdropColor: 'transparent' }
-            }
-          },
-          plugins: { legend: { labels: { color: '#f8fafc' } } }
-        }
+      higherOrderChartInstance = buildRadarChart({
+        canvas: hoCanvas,
+        chartInstance: higherOrderChartInstance,
+        labels: hoLabels,
+        rawValues: hoRaw,
+        centeredValues: hoCentered,
+        rawColor: '#0ea5e9',
+        centeredColor: '#ec4899',
+        pointLabelSize: 12,
+        legendDisplay: true,
+        backgroundAlpha: '0.2',
+        borderWidth: 2,
+        showLegend: true,
+        showTicks: true
       });
     }
 
     const circleCanvas = document.getElementById('circleChartCanvas');
-    if (circleCanvas && window.Chart) {
-      if (circleChartInstance) circleChartInstance.destroy();
-
+    if (circleCanvas) {
       const values = Object.values(psych.refinedValues);
-      const circleLen = values.length;
-      const circleLabels = new Array(circleLen);
-      const circleRaw = new Array(circleLen);
-      const circleCentered = new Array(circleLen);
-      for (let i = 0; i < circleLen; i++) {
-        const v = values[i];
-        const name = state.lang === 'pl' ? v.namePl : v.nameEn;
-        circleLabels[i] = v.code + " - " + name;
-        circleRaw[i] = v.rawMean ?? 0;
-        circleCentered[i] = v.centeredMean ?? 0;
-      }
+      const circleLabels = values.map(v => `${v.code} - ${state.lang === 'pl' ? v.namePl : v.nameEn}`);
+      const circleRaw = values.map(v => v.rawMean ?? 0);
+      const circleCentered = values.map(v => v.centeredMean ?? 0);
 
-      circleChartInstance = new Chart(circleCanvas.getContext('2d'), {
-        type: 'radar',
-        data: {
-          labels: circleLabels,
-          datasets: [
-            {
-              label: state.lang === 'pl' ? 'Średnia surowa' : 'Raw Mean',
-              data: circleRaw,
-              backgroundColor: 'rgba(56, 189, 248, 0.2)',
-              borderColor: '#38bdf8',
-              pointBackgroundColor: '#38bdf8',
-              borderWidth: 2
-            },
-            {
-              label: state.lang === 'pl' ? 'Wynik wycentrowany' : 'Centered Score',
-              data: circleCentered,
-              backgroundColor: 'rgba(168, 85, 247, 0.2)',
-              borderColor: '#a855f7',
-              pointBackgroundColor: '#a855f7',
-              borderWidth: 2
-            }
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            r: {
-              grid: { color: 'rgba(255, 255, 255, 0.15)' },
-              angleLines: { color: 'rgba(255, 255, 255, 0.15)' },
-              pointLabels: {
-                color: '#e2e8f0',
-                font: { size: 12 }
-              },
-              ticks: { color: '#94a3b8', backdropColor: 'transparent', z: 10 }
-            }
-          },
-          plugins: {
-            legend: {
-              labels: { color: '#f8fafc', font: { size: 14 } },
-              position: 'bottom'
-            },
-            tooltip: {
-              bodyFont: { size: 14 },
-              titleFont: { size: 14 },
-              callbacks: {
-                label: function(context) {
-                  let label = context.dataset.label || '';
-                  if (label) label += ': ';
-                  if (context.parsed.r !== null) label += context.parsed.r.toFixed(3);
-                  const dataIndex = context.dataIndex;
-                  const codes = Object.keys(psych.refinedValues);
-
-                  return label;
-                }
-              }
-            }
-          }
-        }
+      circleChartInstance = buildRadarChart({
+        canvas: circleCanvas,
+        chartInstance: circleChartInstance,
+        labels: circleLabels,
+        rawValues: circleRaw,
+        centeredValues: circleCentered,
+        rawColor: '#38bdf8',
+        centeredColor: '#a855f7',
+        pointLabelSize: 12,
+        legendDisplay: true,
+        backgroundAlpha: '0.2',
+        borderWidth: 2,
+        showLegend: true,
+        showTicks: true
       });
     }
-
 
     const hoEnlargedCanvas = document.getElementById('hoEnlargedChartCanvas');
-    if (hoEnlargedCanvas && window.Chart) {
-      if (hoEnlargedChartInstance) hoEnlargedChartInstance.destroy();
-
+    if (hoEnlargedCanvas) {
       const hoVals = Object.values(psych.higherOrderValues);
-      const hoLen = hoVals.length;
-      const hoLabels = new Array(hoLen);
-      const hoRaw = new Array(hoLen);
-      const hoCentered = new Array(hoLen);
-      for (let i = 0; i < hoLen; i++) {
-        const v = hoVals[i];
-        hoLabels[i] = state.lang === 'pl' ? v.namePl : v.nameEn;
-        hoRaw[i] = v.rawMean ?? 0;
-        hoCentered[i] = v.centeredMean ?? 0;
-      }
+      const hoLabels = hoVals.map(v => state.lang === 'pl' ? v.namePl : v.nameEn);
+      const hoRaw = hoVals.map(v => v.rawMean ?? 0);
+      const hoCentered = hoVals.map(v => v.centeredMean ?? 0);
 
-      hoEnlargedChartInstance = new Chart(hoEnlargedCanvas.getContext('2d'), {
-        type: 'radar',
-        data: {
-          labels: hoLabels,
-          datasets: [
-            {
-              label: state.lang === 'pl' ? 'Średnia surowa' : 'Raw Mean',
-              data: hoRaw,
-              backgroundColor: 'rgba(14, 165, 233, 0.2)',
-              borderColor: '#0ea5e9',
-              pointBackgroundColor: '#0ea5e9',
-              borderWidth: 2
-            },
-            {
-              label: state.lang === 'pl' ? 'Wynik wycentrowany' : 'Centered Score',
-              data: hoCentered,
-              backgroundColor: 'rgba(236, 72, 153, 0.2)',
-              borderColor: '#ec4899',
-              pointBackgroundColor: '#ec4899',
-              borderWidth: 2
-            }
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            r: {
-              grid: { color: 'rgba(255, 255, 255, 0.15)' },
-              angleLines: { color: 'rgba(255, 255, 255, 0.15)' },
-              pointLabels: { color: '#f8fafc', font: { size: 14, weight: 'bold' } },
-              ticks: { color: '#94a3b8', backdropColor: 'transparent', z: 10 }
-            }
-          },
-          plugins: {
-            legend: { labels: { color: '#f8fafc', font: { size: 14 } }, position: 'bottom' },
-            tooltip: { bodyFont: { size: 14 }, titleFont: { size: 14 } }
-          }
-        }
+      hoEnlargedChartInstance = buildRadarChart({
+        canvas: hoEnlargedCanvas,
+        chartInstance: hoEnlargedChartInstance,
+        labels: hoLabels,
+        rawValues: hoRaw,
+        centeredValues: hoCentered,
+        rawColor: '#0ea5e9',
+        centeredColor: '#ec4899',
+        pointLabelSize: 14,
+        legendDisplay: true,
+        backgroundAlpha: '0.2',
+        borderWidth: 2,
+        showLegend: true,
+        showTicks: true
       });
     }
-
-
   }
 
     async function startEvaluation() {
