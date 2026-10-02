@@ -298,12 +298,14 @@
     }
 
     if (config.enableReasoning === true) {
-      const budget = Number(config.reasoningBudget);
-      generationConfig.thinkingConfig = {
-        thinkingBudget: (!isNaN(budget) && budget !== 0) ? budget : 1024,
-        thinkingLevel: config.reasoningEffort || 'medium',
-        includeThoughts: true
-      };
+      generationConfig.thinkingConfig = { includeThoughts: true };
+      const isGemini3 = config.model && config.model.includes('gemini-3');
+      if (isGemini3) {
+        generationConfig.thinkingConfig.thinkingLevel = config.reasoningEffort || 'medium';
+      } else {
+        const budget = Number(config.reasoningBudget);
+        generationConfig.thinkingConfig.thinkingBudget = (!isNaN(budget) && budget !== 0) ? budget : 1024;
+      }
     }
 
     if (Object.keys(generationConfig).length > 0) {
@@ -405,12 +407,13 @@
         payload.reasoning_effort = config.reasoningEffort;
       }
       if (config.provider === 'gemini' || (config.baseUrl && config.baseUrl.includes("generativelanguage.googleapis.com"))) {
-        const budget = Number(config.reasoningBudget) || 1024;
-        payload.thinking_config = { 
-          thinking_budget: budget,
-          thinking_level: config.reasoningEffort || 'medium',
-          include_thoughts: true
-        };
+        const isGemini3 = config.model && config.model.includes('gemini-3');
+        payload.thinking_config = { include_thoughts: true };
+        if (isGemini3) {
+          payload.thinking_config.thinking_level = config.reasoningEffort || 'medium';
+        } else {
+          payload.thinking_config.thinking_budget = Number(config.reasoningBudget) || 1024;
+        }
         payload.extra_body = {
           thinking_config: payload.thinking_config
         };
