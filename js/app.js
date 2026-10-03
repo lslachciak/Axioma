@@ -690,14 +690,14 @@ function deobfuscateApiKey(val) {
       el('div', { className: 'grid grid-cols-2 gap-3' },
 el('div', {},
           el('div', { className: 'flex justify-between items-center mb-1' },
-            el('label', { className: 'block text-xs font-medium text-slate-400' }, `Temperature (${state.temperature === '' ? 'Default' : state.temperature})`),
+            el('label', { className: 'block text-xs font-medium text-slate-400' }, 'Temperature'),
             el('label', { className: 'flex items-center text-xs text-slate-400 cursor-pointer' },
               el('input', {
                 type: 'checkbox',
                 className: 'mr-1',
                 checked: state.temperature !== '',
                 onChange: (e) => {
-                  state.temperature = e.target.checked ? 0.7 : '';
+                  state.temperature = e.target.checked ? '0.7' : '';
                   savePersistedOption('temperature', state.temperature);
                   renderApp();
                 }
@@ -706,20 +706,21 @@ el('div', {},
             )
           ),
           el('input', {
-            type: 'range',
+            type: 'number',
             min: '0',
             max: '2',
-            step: '0.05',
-            value: state.temperature === '' ? 0.7 : state.temperature,
+            step: '0.01',
+            placeholder: 'Default',
+            value: state.temperature,
             disabled: state.temperature === '',
             onInput: (e) => {
               if (state.temperature !== '') {
-                state.temperature = parseFloat(e.target.value);
+                state.temperature = e.target.value;
                 savePersistedOption('temperature', state.temperature);
-                renderApp();
               }
             },
-            className: `w-full accent-sky-500 ${state.temperature === '' ? 'opacity-50 cursor-not-allowed' : ''}`
+            onBlur: () => renderApp(),
+            className: `w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-sky-500 code-font ${state.temperature === '' ? 'opacity-50 cursor-not-allowed' : ''}`
           })
         ),
         el('div', {},
