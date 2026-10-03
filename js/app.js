@@ -930,7 +930,7 @@ function deobfuscateApiKey(val) {
           el('p', { className: 'text-xl font-bold text-sky-400' }, `${psych.mrat} `, el('span', { className: 'text-xs text-slate-500 font-normal' }, '/ 6.0'))
         ),
         el('div', { className: 'bg-slate-900/60 p-4 rounded-xl border border-slate-800' },
-          el('p', { className: 'text-xs text-slate-400' }, 'Exact Model & Fingerprint'),
+          el('p', { className: 'text-xs text-slate-400' }, 'Resolved Model & Fingerprint'),
           el('p', { className: 'text-sm font-bold code-font text-indigo-300 truncate', title: state.results.metadata.actualModel || state.results.metadata.config.model || 'N/A' }, state.results.metadata.actualModel || state.results.metadata.config.model || 'N/A'),
           state.results.metadata.systemFingerprint ? el('p', { className: 'text-[11px] code-font text-purple-400 truncate mt-0.5', title: `System Fingerprint: ${state.results.metadata.systemFingerprint}` }, `fp: ${state.results.metadata.systemFingerprint}`) : null
         ),

@@ -52,8 +52,8 @@
     lines.push("# AXIOMA LLM PSYCHOMETRIC EVALUATION - PVQ-RR (57 ITEMS)");
     lines.push(`# Timestamp\t${results.metadata?.timestamp || new Date().toISOString()}`);
     lines.push(`# Provider\t${results.metadata?.config?.provider || ""}`);
-    lines.push(`# Model\t${results.metadata?.config?.model || ""}`);
-    lines.push(`# Actual Model\t${results.metadata?.actualModel || results.actualModel || results.metadata?.config?.model || ""}`);
+    lines.push(`# Requested Model\t${results.metadata?.config?.model || ""}`);
+    lines.push(`# Resolved Model\t${results.metadata?.actualModel || results.actualModel || results.metadata?.config?.model || ""}`);
     lines.push(`# System Fingerprint\t${results.metadata?.systemFingerprint || results.systemFingerprint || "N/A"}`);
     lines.push(`# Base URL\t${results.metadata?.config?.baseUrl || ""}`);
     lines.push(`# System Prompt\t${(results.metadata?.config?.customSystemPrompt || "").replace(/[\r\n\t]+/g, " ")}`);
@@ -146,8 +146,8 @@
       ["Axioma LLM Evaluation - Overview & Configuration", ""],
       ["Timestamp", results.metadata?.timestamp || new Date().toISOString()],
       ["Provider", results.metadata?.config?.provider || ""],
-      ["Model (Configured)", results.metadata?.config?.model || ""],
-      ["Model (Actual / Reported)", results.metadata?.actualModel || results.actualModel || results.metadata?.config?.model || ""],
+      ["Requested Model", results.metadata?.config?.model || ""],
+      ["Resolved Model", results.metadata?.actualModel || results.actualModel || results.metadata?.config?.model || ""],
       ["System Fingerprint", results.metadata?.systemFingerprint || results.systemFingerprint || "N/A"],
       ["System Prompt", results.metadata?.config?.customSystemPrompt || ""],
       ["Base URL", results.metadata?.config?.baseUrl || ""],
@@ -277,8 +277,8 @@
       "Run #",
       "Timestamp",
       "Provider",
-      "Model",
-      "Actual Model",
+      "Requested Model",
+      "Resolved Model",
       "System Fingerprint",
       "Base URL",
       "System Prompt",
@@ -411,8 +411,8 @@
       "Run #",
       "Timestamp",
       "Provider",
-      "Model",
-      "Actual Model",
+      "Requested Model",
+      "Resolved Model",
       "System Fingerprint",
       "Base URL",
       "System Prompt",
@@ -613,13 +613,16 @@
             rawResponses[j] = getValue(`Item ${j} Raw`) || "";
           }
 
-          const actualModel = getValue("Actual Model") || getValue("Model (Actual / Reported)") || cfg.model || "";
+          const requestedModel = getValue("Requested Model") || getValue("Model (Configured)") || getValue("Model") || cfg.model || "";
+          const resolvedModel = getValue("Resolved Model") || getValue("Actual Model") || getValue("Model (Actual / Reported)") || requestedModel;
           const systemFingerprint = getValue("System Fingerprint") || null;
+
+          cfg.model = requestedModel;
 
           const meta = {
             timestamp: getValue("Timestamp") || new Date().toISOString(),
             config: cfg,
-            actualModel: actualModel,
+            actualModel: resolvedModel,
             systemFingerprint: systemFingerprint
           };
 
@@ -630,7 +633,7 @@
 
           sessionResults.push({
             metadata: meta,
-            actualModel: actualModel,
+            actualModel: resolvedModel,
             systemFingerprint: systemFingerprint,
             tokenUsage: token,
             itemRatings: itemRatings,
