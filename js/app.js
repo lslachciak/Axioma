@@ -552,7 +552,7 @@ function deobfuscateApiKey(val) {
           el('div', {},
             el('div', { className: 'flex items-baseline space-x-2' },
               el('h1', { className: 'text-xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-sky-400 to-indigo-300' }, 'Axioma'),
-              el('span', { className: 'text-xs font-mono font-medium text-slate-500' }, 'v1.0.0')
+              el('span', { className: 'text-xs font-mono font-medium text-slate-500' }, 'v1.0.1')
             ),
             el('p', { className: 'text-xs text-slate-400' }, 'LLM Psychometric Evaluation via Schwartz PVQ-RR (57 items)')
           )
