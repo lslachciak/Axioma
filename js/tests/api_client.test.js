@@ -277,7 +277,7 @@ test('completeChat - returns actualModel and systemFingerprint from Gemini respo
   const config = { provider: 'gemini', model: 'gemini-1.5-flash', apiKey: 'test' };
   const res = await completeChat(config, [{ role: 'user', content: 'test' }]);
   assert.strictEqual(res.actualModel, 'gemini-1.5-flash-001');
-  assert.strictEqual(res.systemFingerprint, 'gemini-1.5-flash-001');
+  assert.strictEqual(res.systemFingerprint, null);
   assert.strictEqual(res.text, 'gemini response');
 
   global.fetch = undefined;

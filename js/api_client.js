@@ -363,7 +363,7 @@
     const totalTokens = usage.totalTokenCount || (promptTokens + completionTokens);
 
     const actualModel = data.modelVersion || config.model || "";
-    const systemFingerprint = data.modelVersion || null;
+    const systemFingerprint = null;
 
     return {
       text: extracted.text,
