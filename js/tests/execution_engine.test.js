@@ -1,5 +1,16 @@
 const test = require('node:test');
 const assert = require('node:assert');
+const fs = require('fs');
+const path = require('path');
+
+// Read version.js
+const versionCode = fs.readFileSync(path.join(__dirname, '../version.js'), 'utf8');
+const versionExports = {};
+new Function('exports', versionCode)(versionExports);
+const APP_VERSION = versionExports.APP_VERSION;
+
+global.window = { AXIOMA_VERSION: APP_VERSION };
+
 const { buildSystemPrompt, EvaluatorEngine } = require('../execution_engine.js');
 
 test('buildSystemPrompt - returns default English prompt when no custom prompt is provided', (t) => {
@@ -161,9 +172,9 @@ test('engine run attaches actualModel and systemFingerprint to metadata and resu
 
   assert.strictEqual(result.actualModel, 'gpt-4o-2024-08-06');
   assert.strictEqual(result.systemFingerprint, 'fp_44709d6fcb');
-  assert.strictEqual(result.appVersion, 'v1.1.0');
+  assert.strictEqual(result.appVersion, APP_VERSION);
   assert.strictEqual(result.metadata.actualModel, 'gpt-4o-2024-08-06');
   assert.strictEqual(result.metadata.systemFingerprint, 'fp_44709d6fcb');
-  assert.strictEqual(result.metadata.appVersion, 'v1.1.0');
+  assert.strictEqual(result.metadata.appVersion, APP_VERSION);
 });
 

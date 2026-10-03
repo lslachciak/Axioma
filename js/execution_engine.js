@@ -8,6 +8,8 @@
 (function (exports) {
   'use strict';
 
+  const APP_VERSION = (typeof window !== 'undefined' && window.AXIOMA_VERSION) ? window.AXIOMA_VERSION : 'Unknown Version';
+
   /**
    * Helper function to shuffle an array using Fisher-Yates algorithm.
    */
@@ -327,7 +329,7 @@ Instrukcja: Oceń WSZYSTKIE 57 poniższych pozycji w skali 1-6. Podaj swoje ocen
 
       const runMetadata = {
         timestamp: new Date().toISOString(),
-        appVersion: this.config.appVersion || (typeof window !== 'undefined' && window.AXIOMA_VERSION) || "v1.1.0",
+        appVersion: this.config.appVersion || APP_VERSION,
         config: { ...this.config, apiKey: this.config.apiKey ? "***HIDDEN***" : "" },
         itemOrder: itemsToRun.map(it => it.id)
       };

@@ -7,10 +7,7 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = 'v1.1.0';
-  if (typeof window !== 'undefined') {
-    window.AXIOMA_VERSION = APP_VERSION;
-  }
+  const APP_VERSION = (typeof window !== 'undefined' && window.AXIOMA_VERSION) ? window.AXIOMA_VERSION : 'Unknown Version';
 
   // Helper function to create DOM elements quickly
 function obfuscateApiKey(key) {
