@@ -688,39 +688,20 @@ function deobfuscateApiKey(val) {
         })
       ),
       el('div', { className: 'grid grid-cols-2 gap-3' },
-el('div', {},
-          el('div', { className: 'flex justify-between items-center mb-1' },
-            el('label', { className: 'block text-xs font-medium text-slate-400' }, 'Temperature'),
-            el('label', { className: 'flex items-center text-xs text-slate-400 cursor-pointer' },
-              el('input', {
-                type: 'checkbox',
-                className: 'mr-1',
-                checked: state.temperature !== '',
-                onChange: (e) => {
-                  state.temperature = e.target.checked ? '1' : '';
-                  savePersistedOption('temperature', state.temperature);
-                  renderApp();
-                }
-              }),
-              'Custom'
-            )
+          el('div', {},
+            el('label', { className: 'block text-xs font-medium text-slate-400 mb-1' }, 'Temperature (Optional)'),
+            el('input', {
+              type: 'text', inputMode: 'decimal',
+              placeholder: 'Default',
+              value: state.temperature,
+              onInput: (e) => {
+                state.temperature = e.target.value;
+                savePersistedOption('temperature', state.temperature);
+              },
+              onBlur: () => renderApp(),
+              className: 'w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-sky-500 code-font'
+            })
           ),
-          el('input', {
-            type: 'text', inputMode: 'decimal',
-            min: '0',
-            max: '2',
-            step: '0.01',
-            placeholder: 'Default',
-            value: state.temperature,
-            disabled: state.temperature === '',
-            onInput: (e) => {
-              state.temperature = e.target.value;
-              savePersistedOption('temperature', state.temperature);
-            },
-            onBlur: () => renderApp(),
-            className: `w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-sky-500 code-font ${state.temperature === '' ? 'opacity-50 cursor-not-allowed' : ''}`
-          })
-        ),
         el('div', {},
           el('label', { className: 'block text-xs font-medium text-slate-400 mb-1' }, 'Seed (Optional)'),
           el('input', {
