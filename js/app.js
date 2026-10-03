@@ -692,7 +692,7 @@ function deobfuscateApiKey(val) {
             el('label', { className: 'block text-xs font-medium text-slate-400 mb-1' }, 'Temperature (Optional)'),
             el('input', {
               type: 'text', inputMode: 'decimal',
-              placeholder: 'Default',
+              placeholder: 'e.g. 1.0',
               value: state.temperature,
               onInput: (e) => {
                 state.temperature = e.target.value;
