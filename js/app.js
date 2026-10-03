@@ -872,7 +872,11 @@ function deobfuscateApiKey(val) {
                 renderApp();
               }
             }
-          }, ...state.sessionResults.map((r, i) => el('option', { value: i }, `Run ${i + 1} (${new Date(r.metadata.timestamp).toLocaleString()})`)))
+          }, ...state.sessionResults.map((r, i) => {
+            const modelLabel = r.metadata?.actualModel || r.metadata?.config?.model || '';
+            const labelStr = modelLabel ? `${modelLabel} - ` : '';
+            return el('option', { value: i }, `Run ${i + 1} (${labelStr}${new Date(r.metadata.timestamp).toLocaleTimeString()})`);
+          }))
         ) : null,
         el('div', { className: 'grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-950/50 p-3 rounded-xl border border-slate-800/80' },
           el('div', {}, el('p', { className: 'text-[10px] uppercase font-bold text-slate-500' }, 'Input Tokens'), el('p', { className: 'text-sm font-bold code-font text-sky-400' }, state.tokenUsage.promptTokens.toLocaleString())),
@@ -916,7 +920,7 @@ function deobfuscateApiKey(val) {
 
 
     return el('div', { className: 'space-y-8' },
-      el('div', { className: 'grid grid-cols-1 md:grid-cols-3 gap-4' },
+      el('div', { className: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4' },
         el('div', { className: 'bg-slate-900/60 p-4 rounded-xl border border-slate-800' },
           el('p', { className: 'text-xs text-slate-400' }, 'Total Items Answered'),
           el('p', { className: 'text-xl font-bold text-slate-100' }, `${psych.totalAnswered} / 57`)
@@ -924,6 +928,11 @@ function deobfuscateApiKey(val) {
         el('div', { className: 'bg-slate-900/60 p-4 rounded-xl border border-slate-800' },
           el('p', { className: 'text-xs text-slate-400' }, 'Grand Mean Score (MRAT)'),
           el('p', { className: 'text-xl font-bold text-sky-400' }, `${psych.mrat} `, el('span', { className: 'text-xs text-slate-500 font-normal' }, '/ 6.0'))
+        ),
+        el('div', { className: 'bg-slate-900/60 p-4 rounded-xl border border-slate-800' },
+          el('p', { className: 'text-xs text-slate-400' }, 'Exact Model & Fingerprint'),
+          el('p', { className: 'text-sm font-bold code-font text-indigo-300 truncate', title: state.results.metadata.actualModel || state.results.metadata.config.model || 'N/A' }, state.results.metadata.actualModel || state.results.metadata.config.model || 'N/A'),
+          state.results.metadata.systemFingerprint ? el('p', { className: 'text-[11px] code-font text-purple-400 truncate mt-0.5', title: `System Fingerprint: ${state.results.metadata.systemFingerprint}` }, `fp: ${state.results.metadata.systemFingerprint}`) : null
         ),
         el('div', { className: 'bg-slate-900/60 p-4 rounded-xl border border-slate-800' },
           el('p', { className: 'text-xs text-slate-400' }, 'Evaluation Timestamp'),

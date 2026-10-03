@@ -134,3 +134,33 @@ test('batch mode stores parsed raw text and single reasoning trace', async () =>
   assert.strictEqual(state.totalCompletionTokens, 10);
   assert.strictEqual(state.totalReasoningTokens, 5);
 });
+
+test('engine run attaches actualModel and systemFingerprint to metadata and result', async () => {
+  const apiClient = {
+    completeChat: async () => {
+      return {
+        text: '1: 4\n2: 4\n3: 4',
+        reasoning: '',
+        actualModel: 'gpt-4o-2024-08-06',
+        systemFingerprint: 'fp_44709d6fcb',
+        tokenUsage: { promptTokens: 5, completionTokens: 5, reasoningTokens: 0 }
+      };
+    }
+  };
+  const psychometrics = {
+    parseBatchResponse: () => ({
+      1: { score: 4, rawText: '1: 4', isRefusal: false }
+    }),
+    calculatePsychometrics: () => ({ mrat: 4.0, totalAnswered: 1 })
+  };
+  const pvqData = {
+    ITEMS: [{ id: 1, en: 'Item 1', pl: 'Pozycja 1' }]
+  };
+  const engine = new EvaluatorEngine({ mode: 'batch', model: 'gpt-4o' }, pvqData, psychometrics, apiClient);
+  const result = await engine.run();
+
+  assert.strictEqual(result.actualModel, 'gpt-4o-2024-08-06');
+  assert.strictEqual(result.systemFingerprint, 'fp_44709d6fcb');
+  assert.strictEqual(result.metadata.actualModel, 'gpt-4o-2024-08-06');
+  assert.strictEqual(result.metadata.systemFingerprint, 'fp_44709d6fcb');
+});

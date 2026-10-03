@@ -168,6 +168,9 @@ Instrukcja: Oceń WSZYSTKIE 57 poniższych pozycji w skali 1-6. Podaj swoje ocen
           state.totalCompletionTokens += apiRes.tokenUsage.completionTokens;
           state.totalReasoningTokens += apiRes.tokenUsage.reasoningTokens;
 
+          if (apiRes.actualModel) state.actualModel = apiRes.actualModel;
+          if (apiRes.systemFingerprint) state.systemFingerprint = apiRes.systemFingerprint;
+
           const batchParsed = this.psychometrics.parseBatchResponse(apiRes.text);
 
           for (let i = 1; i <= 57; i++) {
@@ -254,6 +257,9 @@ Instrukcja: Oceń WSZYSTKIE 57 poniższych pozycji w skali 1-6. Podaj swoje ocen
             state.totalCompletionTokens += apiRes.tokenUsage.completionTokens;
             state.totalReasoningTokens += apiRes.tokenUsage.reasoningTokens;
 
+            if (apiRes.actualModel) state.actualModel = apiRes.actualModel;
+            if (apiRes.systemFingerprint) state.systemFingerprint = apiRes.systemFingerprint;
+
             state.rawResponses[currentItem.id] = apiRes.text;
             state.reasoningTraces[currentItem.id] = apiRes.reasoning;
 
@@ -314,7 +320,9 @@ Instrukcja: Oceń WSZYSTKIE 57 poniższych pozycji w skali 1-6. Podaj swoje ocen
         reasoningTraces: {},
         totalPromptTokens: 0,
         totalCompletionTokens: 0,
-        totalReasoningTokens: 0
+        totalReasoningTokens: 0,
+        actualModel: null,
+        systemFingerprint: null
       };
 
       const runMetadata = {
@@ -340,6 +348,9 @@ Instrukcja: Oceń WSZYSTKIE 57 poniższych pozycji w skali 1-6. Podaj swoje ocen
         await this._runSequential(keepContext, itemsToRun, lang, systemPrompt, statusUpdateCallback, onProgress, state);
       }
 
+      runMetadata.actualModel = state.actualModel || this.config.model || "";
+      runMetadata.systemFingerprint = state.systemFingerprint || null;
+
       // Calculate final psychometrics
       const psychometricResults = this.psychometrics.calculatePsychometrics(state.parsedItemScores, this.pvqData);
 
@@ -347,6 +358,8 @@ Instrukcja: Oceń WSZYSTKIE 57 poniższych pozycji w skali 1-6. Podaj swoje ocen
 
       return {
         metadata: runMetadata,
+        actualModel: runMetadata.actualModel,
+        systemFingerprint: runMetadata.systemFingerprint,
         rawResponses: state.rawResponses,
         reasoningTraces: state.reasoningTraces,
         tokenUsage: {

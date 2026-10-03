@@ -362,9 +362,14 @@
     const reasoningTokens = usage.thoughtsTokenCount || usage.candidatesTokenDetails?.find(d => d.modality === "THOUGHT")?.tokenCount || 0;
     const totalTokens = usage.totalTokenCount || (promptTokens + completionTokens);
 
+    const actualModel = data.modelVersion || config.model || "";
+    const systemFingerprint = data.modelVersion || null;
+
     return {
       text: extracted.text,
       reasoning: extracted.reasoning,
+      actualModel: actualModel,
+      systemFingerprint: systemFingerprint,
       tokenUsage: {
         promptTokens,
         completionTokens,
@@ -470,9 +475,14 @@
     const reasoningTokens = usage.completion_tokens_details?.reasoning_tokens || usage.reasoning_tokens || 0;
     const totalTokens = usage.total_tokens || (promptTokens + completionTokens);
 
+    const actualModel = data.model || config.model || "";
+    const systemFingerprint = data.system_fingerprint || null;
+
     return {
       text: extracted.text,
       reasoning: extracted.reasoning,
+      actualModel: actualModel,
+      systemFingerprint: systemFingerprint,
       tokenUsage: {
         promptTokens,
         completionTokens,
@@ -581,9 +591,14 @@
     const completionTokens = usage.output_tokens || 0;
     const reasoningTokens = usage.thinking_tokens || 0;
 
+    const actualModel = data.model || config.model || "";
+    const systemFingerprint = null;
+
     return {
       text: extracted.text,
       reasoning: extracted.reasoning,
+      actualModel: actualModel,
+      systemFingerprint: systemFingerprint,
       tokenUsage: {
         promptTokens,
         completionTokens,

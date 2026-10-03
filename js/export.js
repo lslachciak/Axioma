@@ -53,6 +53,8 @@
     lines.push(`# Timestamp\t${results.metadata?.timestamp || new Date().toISOString()}`);
     lines.push(`# Provider\t${results.metadata?.config?.provider || ""}`);
     lines.push(`# Model\t${results.metadata?.config?.model || ""}`);
+    lines.push(`# Actual Model\t${results.metadata?.actualModel || results.actualModel || results.metadata?.config?.model || ""}`);
+    lines.push(`# System Fingerprint\t${results.metadata?.systemFingerprint || results.systemFingerprint || "N/A"}`);
     lines.push(`# Base URL\t${results.metadata?.config?.baseUrl || ""}`);
     lines.push(`# System Prompt\t${(results.metadata?.config?.customSystemPrompt || "").replace(/[\r\n\t]+/g, " ")}`);
     lines.push(`# Language\t${results.metadata?.config?.lang || "en"}`);
@@ -99,8 +101,9 @@
     // Section 4: 57 Items Detailed Responses
     lines.push("--- ITEM-BY-ITEM RESPONSES ---");
     lines.push("Item ID\tRefined Code\tScore (1-6)\tReasoning Trace\tRaw Response Text");
+    const itemRatings = results.psychometrics?.itemRatings || results.itemRatings || {};
     for (let i = 1; i <= 57; i++) {
-      let score = results.psychometrics.itemRatings[i];
+      let score = itemRatings[i];
       if (score === null || score === undefined) {
         score = "N/A";
       }
@@ -143,7 +146,9 @@
       ["Axioma LLM Evaluation - Overview & Configuration", ""],
       ["Timestamp", results.metadata?.timestamp || new Date().toISOString()],
       ["Provider", results.metadata?.config?.provider || ""],
-      ["Model", results.metadata?.config?.model || ""],
+      ["Model (Configured)", results.metadata?.config?.model || ""],
+      ["Model (Actual / Reported)", results.metadata?.actualModel || results.actualModel || results.metadata?.config?.model || ""],
+      ["System Fingerprint", results.metadata?.systemFingerprint || results.systemFingerprint || "N/A"],
       ["System Prompt", results.metadata?.config?.customSystemPrompt || ""],
       ["Base URL", results.metadata?.config?.baseUrl || ""],
       ["Language", results.metadata?.config?.lang || "en"],
@@ -273,6 +278,8 @@
       "Timestamp",
       "Provider",
       "Model",
+      "Actual Model",
+      "System Fingerprint",
       "Base URL",
       "System Prompt",
       "Language",
@@ -327,6 +334,8 @@
         meta.timestamp || "",
         cfg.provider || "",
         cfg.model || "",
+        meta.actualModel || results.actualModel || cfg.model || "",
+        meta.systemFingerprint || results.systemFingerprint || "N/A",
         cfg.baseUrl || "",
         cfg.customSystemPrompt || "",
         cfg.lang || "en",
@@ -403,6 +412,8 @@
       "Timestamp",
       "Provider",
       "Model",
+      "Actual Model",
+      "System Fingerprint",
       "Base URL",
       "System Prompt",
       "Language",
@@ -452,6 +463,8 @@
         meta.timestamp || "",
         cfg.provider || "",
         cfg.model || "",
+        meta.actualModel || results.actualModel || cfg.model || "",
+        meta.systemFingerprint || results.systemFingerprint || "N/A",
         cfg.baseUrl || "",
         cfg.customSystemPrompt || "",
         cfg.lang || "en",
@@ -600,9 +613,14 @@
             rawResponses[j] = getValue(`Item ${j} Raw`) || "";
           }
 
+          const actualModel = getValue("Actual Model") || getValue("Model (Actual / Reported)") || cfg.model || "";
+          const systemFingerprint = getValue("System Fingerprint") || null;
+
           const meta = {
             timestamp: getValue("Timestamp") || new Date().toISOString(),
-            config: cfg
+            config: cfg,
+            actualModel: actualModel,
+            systemFingerprint: systemFingerprint
           };
 
           let psych = {};
@@ -612,6 +630,8 @@
 
           sessionResults.push({
             metadata: meta,
+            actualModel: actualModel,
+            systemFingerprint: systemFingerprint,
             tokenUsage: token,
             itemRatings: itemRatings,
             psychometrics: psych,

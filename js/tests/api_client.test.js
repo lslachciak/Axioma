@@ -233,3 +233,52 @@ test('completeChat - OpenAI compatible API does not hardcode Gemini fallback', a
 
   global.fetch = undefined;
 });
+
+test('completeChat - returns actualModel and systemFingerprint from OpenAI response', async (t) => {
+  const { completeChat } = require('../api_client.js');
+  global.fetch = async (url, options) => {
+    return {
+      ok: true,
+      status: 200,
+      json: async () => ({
+        model: 'gpt-4o-2024-08-06',
+        system_fingerprint: 'fp_44709d6fcb',
+        choices: [{ message: { content: 'test response' } }],
+        usage: { prompt_tokens: 5, completion_tokens: 10 }
+      }),
+      headers: new Map()
+    };
+  };
+
+  const config = { provider: 'openai', model: 'gpt-4o', apiKey: 'test' };
+  const res = await completeChat(config, [{ role: 'user', content: 'test' }]);
+  assert.strictEqual(res.actualModel, 'gpt-4o-2024-08-06');
+  assert.strictEqual(res.systemFingerprint, 'fp_44709d6fcb');
+  assert.strictEqual(res.text, 'test response');
+
+  global.fetch = undefined;
+});
+
+test('completeChat - returns actualModel and systemFingerprint from Gemini response', async (t) => {
+  const { completeChat } = require('../api_client.js');
+  global.fetch = async (url, options) => {
+    return {
+      ok: true,
+      status: 200,
+      json: async () => ({
+        modelVersion: 'gemini-1.5-flash-001',
+        candidates: [{ content: { parts: [{ text: 'gemini response' }] } }],
+        usageMetadata: { promptTokenCount: 5, candidatesTokenCount: 10 }
+      }),
+      headers: new Map()
+    };
+  };
+
+  const config = { provider: 'gemini', model: 'gemini-1.5-flash', apiKey: 'test' };
+  const res = await completeChat(config, [{ role: 'user', content: 'test' }]);
+  assert.strictEqual(res.actualModel, 'gemini-1.5-flash-001');
+  assert.strictEqual(res.systemFingerprint, 'gemini-1.5-flash-001');
+  assert.strictEqual(res.text, 'gemini response');
+
+  global.fetch = undefined;
+});

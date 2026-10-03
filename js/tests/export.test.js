@@ -379,3 +379,61 @@ test('importSessionFromFile handles malformed data gracefully', (t, done) => {
         done();
     }, 10);
 });
+
+test('export and import preserve actualModel and systemFingerprint', (t, done) => {
+    const exports = loadExportModule();
+
+    const mockSession = [{
+        metadata: {
+            timestamp: '2024-01-01T00:00:00Z',
+            config: { provider: 'openai', model: 'gpt-4o' },
+            actualModel: 'gpt-4o-2024-08-06',
+            systemFingerprint: 'fp_44709d6fcb'
+        },
+        tokenUsage: { promptTokens: 5, completionTokens: 10, reasoningTokens: 0, totalTokens: 15 },
+        psychometrics: { mrat: 4.0, totalAnswered: 57, itemRatings: { 1: 4 } },
+        itemRatings: { 1: 4 },
+        reasoningTraces: { 1: '' },
+        rawResponses: { 1: '4' }
+    }];
+
+    // Test TSV output includes Actual Model and System Fingerprint
+    const tsv = exports.generateTSVContent(mockSession[0]);
+    assert.ok(tsv.includes("# Actual Model\tgpt-4o-2024-08-06"));
+    assert.ok(tsv.includes("# System Fingerprint\tfp_44709d6fcb"));
+
+    // Test CSV output includes Actual Model and System Fingerprint columns and values
+    exports.exportSessionToCSV(mockSession, 'test.csv');
+    assert.ok(lastBlobContent);
+    const csvContent = lastBlobContent[0];
+    assert.ok(csvContent.includes('"Actual Model"'));
+    assert.ok(csvContent.includes('"System Fingerprint"'));
+    assert.ok(csvContent.includes('"gpt-4o-2024-08-06"'));
+    assert.ok(csvContent.includes('"fp_44709d6fcb"'));
+
+    // Test Import reads Actual Model and System Fingerprint
+    global.window.XLSX = {
+        read: () => ({
+            SheetNames: ['Session Runs Summary'],
+            Sheets: {
+                'Session Runs Summary': {}
+            }
+        }),
+        utils: {
+            sheet_to_json: () => [
+                ['Run #', 'Timestamp', 'Provider', 'Model', 'Actual Model', 'System Fingerprint'],
+                [1, '2024-01-01T00:00:00Z', 'openai', 'gpt-4o', 'gpt-4o-2024-08-06', 'fp_44709d6fcb']
+            ]
+        }
+    };
+
+    mockFileReaderResult = new ArrayBuffer(8);
+    exports.importSessionFromFile({}, (results) => {
+        assert.strictEqual(results.length, 1);
+        assert.strictEqual(results[0].actualModel, 'gpt-4o-2024-08-06');
+        assert.strictEqual(results[0].systemFingerprint, 'fp_44709d6fcb');
+        assert.strictEqual(results[0].metadata.actualModel, 'gpt-4o-2024-08-06');
+        assert.strictEqual(results[0].metadata.systemFingerprint, 'fp_44709d6fcb');
+        done();
+    });
+});
