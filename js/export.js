@@ -563,7 +563,7 @@
           else if (rawReasoningEnabled === 'No') enableReasoning = false;
 
           let temperatureStr = getValue("Temperature");
-          let temperature = temperatureStr === "" || temperatureStr === undefined || temperatureStr === null ? "" : parseFloat(temperatureStr);
+          let temperature = temperatureStr === "" || temperatureStr === undefined || temperatureStr === null ? "" : parseFloat(String(temperatureStr).replace(',', '.'));
 
           const cfg = {
             provider: getValue("Provider") || "",

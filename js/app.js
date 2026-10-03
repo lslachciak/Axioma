@@ -142,7 +142,7 @@ function deobfuscateApiKey(val) {
       if (savedLang) state.lang = savedLang;
 
       const savedTemp = localStorage.getItem('axioma_temperature');
-      if (savedTemp !== null) state.temperature = savedTemp === '' ? '' : parseFloat(savedTemp);
+      if (savedTemp !== null) state.temperature = savedTemp === '' ? '' : parseFloat(String(savedTemp).replace(',', '.'));
 
       const savedSeed = localStorage.getItem('axioma_seed');
       if (savedSeed !== null) state.seed = savedSeed;
@@ -461,7 +461,7 @@ function deobfuscateApiKey(val) {
         apiKey: state.apiKey,
         baseUrl: state.baseUrl,
         model: state.model,
-        temperature: state.temperature === '' ? '' : parseFloat(state.temperature),
+        temperature: state.temperature === '' ? '' : parseFloat(String(state.temperature).replace(',', '.')),
         seed: state.seed ? parseInt(state.seed, 10) : undefined,
         lang: state.lang,
         customSystemPrompt: state.systemPrompt,
