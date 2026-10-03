@@ -714,10 +714,8 @@ el('div', {},
             value: state.temperature,
             disabled: state.temperature === '',
             onInput: (e) => {
-              if (state.temperature !== '') {
-                state.temperature = e.target.value;
-                savePersistedOption('temperature', state.temperature);
-              }
+              state.temperature = e.target.value;
+              savePersistedOption('temperature', state.temperature);
             },
             onBlur: () => renderApp(),
             className: `w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-sky-500 code-font ${state.temperature === '' ? 'opacity-50 cursor-not-allowed' : ''}`
