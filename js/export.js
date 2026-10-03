@@ -51,6 +51,7 @@
     // Header Metadata
     lines.push("# AXIOMA LLM PSYCHOMETRIC EVALUATION - PVQ-RR (57 ITEMS)");
     lines.push(`# Timestamp\t${results.metadata?.timestamp || new Date().toISOString()}`);
+    lines.push(`# Axioma Version\t${results.metadata?.appVersion || results.appVersion || (typeof window !== 'undefined' && window.AXIOMA_VERSION) || "v1.1.0"}`);
     lines.push(`# Provider\t${results.metadata?.config?.provider || ""}`);
     lines.push(`# Requested Model\t${results.metadata?.config?.model || ""}`);
     lines.push(`# Resolved Model\t${results.metadata?.actualModel || results.actualModel || results.metadata?.config?.model || ""}`);
@@ -145,6 +146,7 @@
     const overviewData = [
       ["Axioma LLM Evaluation - Overview & Configuration", ""],
       ["Timestamp", results.metadata?.timestamp || new Date().toISOString()],
+      ["Axioma Version", results.metadata?.appVersion || results.appVersion || (typeof window !== 'undefined' && window.AXIOMA_VERSION) || "v1.1.0"],
       ["Provider", results.metadata?.config?.provider || ""],
       ["Requested Model", results.metadata?.config?.model || ""],
       ["Resolved Model", results.metadata?.actualModel || results.actualModel || results.metadata?.config?.model || ""],
@@ -276,6 +278,7 @@
     const headers = [
       "Run #",
       "Timestamp",
+      "Axioma Version",
       "Provider",
       "Requested Model",
       "Resolved Model",
@@ -332,6 +335,7 @@
       const row = [
         idx + 1,
         meta.timestamp || "",
+        meta.appVersion || results.appVersion || (typeof window !== 'undefined' && window.AXIOMA_VERSION) || "v1.1.0",
         cfg.provider || "",
         cfg.model || "",
         meta.actualModel || results.actualModel || cfg.model || "",
@@ -410,6 +414,7 @@
     const headers = [
       "Run #",
       "Timestamp",
+      "Axioma Version",
       "Provider",
       "Requested Model",
       "Resolved Model",
@@ -461,6 +466,7 @@
       const row = [
         idx + 1,
         meta.timestamp || "",
+        meta.appVersion || results.appVersion || (typeof window !== 'undefined' && window.AXIOMA_VERSION) || "v1.1.0",
         cfg.provider || "",
         cfg.model || "",
         meta.actualModel || results.actualModel || cfg.model || "",
@@ -616,11 +622,13 @@
           const requestedModel = getValue("Requested Model") || getValue("Model (Configured)") || getValue("Model") || cfg.model || "";
           const resolvedModel = getValue("Resolved Model") || getValue("Actual Model") || getValue("Model (Actual / Reported)") || requestedModel;
           const systemFingerprint = getValue("System Fingerprint") || null;
+          const appVersion = getValue("Axioma Version") || getValue("Version") || "v1.1.0";
 
           cfg.model = requestedModel;
 
           const meta = {
             timestamp: getValue("Timestamp") || new Date().toISOString(),
+            appVersion: appVersion,
             config: cfg,
             actualModel: resolvedModel,
             systemFingerprint: systemFingerprint
@@ -633,6 +641,7 @@
 
           sessionResults.push({
             metadata: meta,
+            appVersion: appVersion,
             actualModel: resolvedModel,
             systemFingerprint: systemFingerprint,
             tokenUsage: token,

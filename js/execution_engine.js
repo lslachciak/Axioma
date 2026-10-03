@@ -327,6 +327,7 @@ Instrukcja: Oceń WSZYSTKIE 57 poniższych pozycji w skali 1-6. Podaj swoje ocen
 
       const runMetadata = {
         timestamp: new Date().toISOString(),
+        appVersion: this.config.appVersion || (typeof window !== 'undefined' && window.AXIOMA_VERSION) || "v1.1.0",
         config: { ...this.config, apiKey: this.config.apiKey ? "***HIDDEN***" : "" },
         itemOrder: itemsToRun.map(it => it.id)
       };
@@ -358,6 +359,7 @@ Instrukcja: Oceń WSZYSTKIE 57 poniższych pozycji w skali 1-6. Podaj swoje ocen
 
       return {
         metadata: runMetadata,
+        appVersion: runMetadata.appVersion,
         actualModel: runMetadata.actualModel,
         systemFingerprint: runMetadata.systemFingerprint,
         rawResponses: state.rawResponses,

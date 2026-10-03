@@ -166,6 +166,7 @@ test('generateTSVContent generates correct TSV format', (t) => {
     const tsv = exports.generateTSVContent(mockResults);
 
     assert.ok(tsv.includes("# AXIOMA LLM PSYCHOMETRIC EVALUATION"));
+    assert.ok(tsv.includes("# Axioma Version\tv1.1.0"));
     assert.ok(tsv.includes("# Provider\ttest-provider"));
     assert.ok(tsv.includes("# Keep Chat Context History\tYes (Enabled)"));
     assert.ok(tsv.includes("Prompt Tokens\t10"));
@@ -235,9 +236,11 @@ test('exportSessionToCSV triggers download with correct CSV content', (t) => {
     const headerRow = csvLines[0];
     assert.ok(headerRow.includes('"Run #"'), 'Header row formatting');
     assert.ok(headerRow.includes('"Timestamp"'));
+    assert.ok(headerRow.includes('"Axioma Version"'));
 
     const dataRow = csvLines[1];
     assert.ok(dataRow.includes('"1"'), 'Run # 1');
+    assert.ok(dataRow.includes('"v1.1.0"'), 'Axioma Version');
     assert.ok(dataRow.includes('"test-provider"'));
     assert.ok(dataRow.includes('"No"'), 'KeepContext');
     assert.ok(dataRow.includes('"Yes"'), 'RandomizeOrder');
@@ -380,12 +383,13 @@ test('importSessionFromFile handles malformed data gracefully', (t, done) => {
     }, 10);
 });
 
-test('export and import preserve actualModel and systemFingerprint', (t, done) => {
+test('export and import preserve actualModel, systemFingerprint, and appVersion', (t, done) => {
     const exports = loadExportModule();
 
     const mockSession = [{
         metadata: {
             timestamp: '2024-01-01T00:00:00Z',
+            appVersion: 'v1.1.0',
             config: { provider: 'openai', model: 'gpt-4o' },
             actualModel: 'gpt-4o-2024-08-06',
             systemFingerprint: 'fp_44709d6fcb'
@@ -397,24 +401,27 @@ test('export and import preserve actualModel and systemFingerprint', (t, done) =
         rawResponses: { 1: '4' }
     }];
 
-    // Test TSV output includes Requested Model and Resolved Model and System Fingerprint
+    // Test TSV output includes Requested Model, Resolved Model, System Fingerprint, and Axioma Version
     const tsv = exports.generateTSVContent(mockSession[0]);
+    assert.ok(tsv.includes("# Axioma Version\tv1.1.0"));
     assert.ok(tsv.includes("# Requested Model\tgpt-4o"));
     assert.ok(tsv.includes("# Resolved Model\tgpt-4o-2024-08-06"));
     assert.ok(tsv.includes("# System Fingerprint\tfp_44709d6fcb"));
 
-    // Test CSV output includes Requested Model and Resolved Model and System Fingerprint columns and values
+    // Test CSV output includes Requested Model, Resolved Model, System Fingerprint, and Axioma Version columns and values
     exports.exportSessionToCSV(mockSession, 'test.csv');
     assert.ok(lastBlobContent);
     const csvContent = lastBlobContent[0];
+    assert.ok(csvContent.includes('"Axioma Version"'));
     assert.ok(csvContent.includes('"Requested Model"'));
     assert.ok(csvContent.includes('"Resolved Model"'));
     assert.ok(csvContent.includes('"System Fingerprint"'));
+    assert.ok(csvContent.includes('"v1.1.0"'));
     assert.ok(csvContent.includes('"gpt-4o"'));
     assert.ok(csvContent.includes('"gpt-4o-2024-08-06"'));
     assert.ok(csvContent.includes('"fp_44709d6fcb"'));
 
-    // Test Import reads Requested Model and Resolved Model and System Fingerprint
+    // Test Import reads Requested Model, Resolved Model, System Fingerprint, and Axioma Version
     global.window.XLSX = {
         read: () => ({
             SheetNames: ['Session Runs Summary'],
@@ -424,8 +431,8 @@ test('export and import preserve actualModel and systemFingerprint', (t, done) =
         }),
         utils: {
             sheet_to_json: () => [
-                ['Run #', 'Timestamp', 'Provider', 'Requested Model', 'Resolved Model', 'System Fingerprint'],
-                [1, '2024-01-01T00:00:00Z', 'openai', 'gpt-4o', 'gpt-4o-2024-08-06', 'fp_44709d6fcb']
+                ['Run #', 'Timestamp', 'Axioma Version', 'Provider', 'Requested Model', 'Resolved Model', 'System Fingerprint'],
+                [1, '2024-01-01T00:00:00Z', 'v1.1.0', 'openai', 'gpt-4o', 'gpt-4o-2024-08-06', 'fp_44709d6fcb']
             ]
         }
     };
@@ -433,11 +440,41 @@ test('export and import preserve actualModel and systemFingerprint', (t, done) =
     mockFileReaderResult = new ArrayBuffer(8);
     exports.importSessionFromFile({}, (results) => {
         assert.strictEqual(results.length, 1);
+        assert.strictEqual(results[0].appVersion, 'v1.1.0');
+        assert.strictEqual(results[0].metadata.appVersion, 'v1.1.0');
         assert.strictEqual(results[0].metadata.config.model, 'gpt-4o');
         assert.strictEqual(results[0].actualModel, 'gpt-4o-2024-08-06');
         assert.strictEqual(results[0].systemFingerprint, 'fp_44709d6fcb');
         assert.strictEqual(results[0].metadata.actualModel, 'gpt-4o-2024-08-06');
         assert.strictEqual(results[0].metadata.systemFingerprint, 'fp_44709d6fcb');
+        done();
+    });
+});
+
+test('importSessionFromFile backwards compatibility defaults appVersion when column missing', (t, done) => {
+    const exports = loadExportModule();
+
+    global.window.XLSX = {
+        read: () => ({
+            SheetNames: ['Session Runs Summary'],
+            Sheets: {
+                'Session Runs Summary': {}
+            }
+        }),
+        utils: {
+            sheet_to_json: () => [
+                ['Run #', 'Timestamp', 'Provider', 'Model'],
+                [1, '2024-01-01T00:00:00Z', 'openai', 'gpt-4o']
+            ]
+        }
+    };
+
+    mockFileReaderResult = new ArrayBuffer(8);
+    exports.importSessionFromFile({}, (results) => {
+        assert.strictEqual(results.length, 1);
+        assert.strictEqual(results[0].appVersion, 'v1.1.0');
+        assert.strictEqual(results[0].metadata.appVersion, 'v1.1.0');
+        assert.strictEqual(results[0].metadata.config.model, 'gpt-4o');
         done();
     });
 });
