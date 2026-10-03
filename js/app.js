@@ -697,7 +697,7 @@ el('div', {},
                 className: 'mr-1',
                 checked: state.temperature !== '',
                 onChange: (e) => {
-                  state.temperature = e.target.checked ? '0.7' : '';
+                  state.temperature = e.target.checked ? '1' : '';
                   savePersistedOption('temperature', state.temperature);
                   renderApp();
                 }
@@ -706,7 +706,7 @@ el('div', {},
             )
           ),
           el('input', {
-            type: 'number',
+            type: 'text', inputMode: 'decimal',
             min: '0',
             max: '2',
             step: '0.01',
@@ -724,7 +724,7 @@ el('div', {},
         el('div', {},
           el('label', { className: 'block text-xs font-medium text-slate-400 mb-1' }, 'Seed (Optional)'),
           el('input', {
-            type: 'number',
+            type: 'text', inputMode: 'decimal',
             placeholder: 'e.g. 42',
             value: state.seed,
             onInput: (e) => { state.seed = e.target.value; savePersistedOption('seed', state.seed); },
@@ -766,7 +766,7 @@ el('div', {},
           el('div', {},
             el('label', { className: 'block text-xs font-medium text-slate-400 mb-1' }, 'Reasoning Token Budget'),
             el('input', {
-              type: 'number',
+              type: 'text', inputMode: 'decimal',
               min: '256',
               max: '16384',
               step: '256',
@@ -825,7 +825,7 @@ el('div', {},
       el('div', { className: 'border-t border-slate-800 pt-3' },
         el('label', { className: 'block text-xs font-medium text-slate-400 mb-1' }, 'Iterations (Repeats)'),
         el('input', {
-          type: 'number',
+          type: 'text', inputMode: 'decimal',
           min: '1',
           value: state.iterations,
           onInput: (e) => { state.iterations = e.target.value; savePersistedOption('iterations', state.iterations); },
