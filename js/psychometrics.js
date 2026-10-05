@@ -142,6 +142,14 @@
       }
     }
 
+    // Fill unrecognised items with the full response text
+    for (let i = 1; i <= 57; i++) {
+      if (results[i].score === null && results[i].rawText === "") {
+        results[i].rawText = text.trim();
+        results[i].isRefusal = REFUSAL_PATTERNS.some(p => p.test(text));
+      }
+    }
+
     return results;
   }
 
