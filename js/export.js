@@ -103,7 +103,7 @@
 
     // Section 4: 57 Items Detailed Responses
     lines.push("--- ITEM-BY-ITEM RESPONSES ---");
-    lines.push("Item ID\tRefined Code\tScore (1-6)\tReasoning Trace\tRaw Response Text");
+    lines.push("Item ID\tRefined Code\tScore (1-6)\tReasoning Trace\tRaw Response Text\tLLM Query Text");
     const itemRatings = results.psychometrics?.itemRatings || results.itemRatings || {};
     for (let i = 1; i <= 57; i++) {
       let score = itemRatings[i];
@@ -113,7 +113,8 @@
       const reasoning = (results.reasoningTraces?.[i] || "").replace(/[\r\n\t]+/g, " ");
       const rawText = (results.rawResponses?.[i] || "").replace(/[\r\n\t]+/g, " ");
       const itemMeta = window.PVQData ? window.PVQData.ITEMS[i - 1] : { valueKey: "" };
-      lines.push(`${i}\t${itemMeta?.valueKey || ""}\t${score}\t${reasoning}\t${rawText}`);
+      const queryText = (results.llmQueries?.[i] || "").replace(/[\r\n\t]+/g, " ");
+      lines.push(`${i}\t${itemMeta?.valueKey || ""}\t${score}\t${reasoning}\t${rawText}\t${queryText}`);
     }
 
     return lines.join("\n");
@@ -210,7 +211,7 @@
 
     // Tab 4: Item Responses
     const itemRows = [
-      ["Item ID", "Refined Code", "Description (EN)", "Description (PL)", "Parsed Score (1-6)", "Chain-of-Thought Trace", "Raw LLM Response Text"]
+      ["Item ID", "Refined Code", "Description (EN)", "Description (PL)", "Parsed Score (1-6)", "Chain-of-Thought Trace", "Raw LLM Response Text", "LLM Query Text"]
     ];
     for (let i = 1; i <= 57; i++) {
       let score = results.psychometrics.itemRatings[i];
@@ -227,7 +228,8 @@
         itemMeta?.pl || "",
         score,
         reasoning,
-        rawText
+        rawText,
+        results.llmQueries?.[i] || ""
       ]);
     }
     const wsItems = XLSX.utils.aoa_to_sheet(itemRows);
@@ -322,7 +324,7 @@
 
     // Add 57 Item Scores, Reasoning, and Raw Text
     for (let i = 1; i <= 57; i++) {
-      headers.push(`Item_${i}_Score`, `Item_${i}_Reasoning`, `Item_${i}_Raw`);
+      headers.push(`Item_${i}_Score`, `Item_${i}_Reasoning`, `Item_${i}_Raw`, `Item_${i}_Query`);
     }
 
     const rows = [headers.map(escapeCSVCell).join(",")];
@@ -384,7 +386,8 @@
         }
         const reasoning = results.reasoningTraces?.[i] || "";
         const rawText = results.rawResponses?.[i] || "";
-        row.push(score, reasoning, rawText);
+        const queryText = (results.llmQueries?.[i] || "").replace(/[\r\n\t]+/g, " ");
+        row.push(score, reasoning, rawText, queryText);
       }
 
       rows.push(row.map(escapeCSVCell).join(","));
@@ -453,7 +456,7 @@
     }
 
     for (let i = 1; i <= 57; i++) {
-      headers.push(`Item ${i} Score`, `Item ${i} Reasoning`, `Item ${i} Raw`);
+      headers.push(`Item ${i} Score`, `Item ${i} Reasoning`, `Item ${i} Raw`, `Item ${i} Query`);
     }
 
     const summaryRows = [headers];
@@ -512,7 +515,8 @@
         }
         const reasoning = results.reasoningTraces?.[i] || "";
         const rawText = results.rawResponses?.[i] || "";
-        row.push(score, reasoning, rawText);
+        const queryText = results.llmQueries?.[i] || "";
+        row.push(score, reasoning, rawText, queryText);
       }
 
       summaryRows.push(row);
@@ -613,12 +617,14 @@
           const itemRatings = {};
           const reasoningTraces = {};
           const rawResponses = {};
+          const llmQueries = {};
 
           for (let j = 1; j <= 57; j++) {
             const score = getValue(`Item ${j} Score`);
             itemRatings[j] = (score === "N/A" || score === null || score === undefined || score === "") ? null : parseInt(score);
             reasoningTraces[j] = getValue(`Item ${j} Reasoning`) || "";
             rawResponses[j] = getValue(`Item ${j} Raw`) || "";
+            llmQueries[j] = getValue(`Item ${j} Query`) || getValue(`Item_${j}_Query`) || "";
           }
 
           const requestedModel = getValue("Requested Model") || getValue("Model (Configured)") || getValue("Model") || cfg.model || "";
@@ -650,7 +656,8 @@
             itemRatings: itemRatings,
             psychometrics: psych,
             reasoningTraces: reasoningTraces,
-            rawResponses: rawResponses
+            rawResponses: rawResponses,
+            llmQueries: llmQueries
           });
         }
 

@@ -70,6 +70,7 @@ test('sequential mode waits for each request when context is disabled', async ()
   const engine = new EvaluatorEngine({ mode: 'sequential', keepContext: false }, null, psychometrics, apiClient);
   const state = {
     rawResponses: {},
+    llmQueries: {},
     parsedItemScores: {},
     reasoningTraces: {},
     totalPromptTokens: 0,
@@ -122,6 +123,7 @@ test('batch mode stores parsed raw text and single reasoning trace', async () =>
   const engine = new EvaluatorEngine({ mode: 'batch' }, pvqData, psychometrics, apiClient);
   const state = {
     rawResponses: {},
+    llmQueries: {},
     parsedItemScores: {},
     reasoningTraces: {},
     totalPromptTokens: 0,

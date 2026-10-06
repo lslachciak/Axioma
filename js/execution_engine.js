@@ -144,6 +144,7 @@ Instrukcja: Oceń WSZYSTKIE 57 poniższych pozycji w skali 1-6. Podaj swoje ocen
     async _runBatch(lang, systemPrompt, statusUpdateCallback, onProgress, state) {
         // --- BATCH MODE ---
         const batchUserPrompt = buildBatchPrompt(this.pvqData.ITEMS, lang);
+        const displayedPromptText = formatConversationDisplay(systemPrompt, [], batchUserPrompt);
 
         if (onProgress) {
           onProgress({
@@ -151,7 +152,7 @@ Instrukcja: Oceń WSZYSTKIE 57 poniższych pozycji w skali 1-6. Podaj swoje ocen
             statusMessage: 'Evaluating all 57 items in single batch prompt...',
             completedCount: 0,
             totalItems: 57,
-            currentPrompt: formatConversationDisplay(systemPrompt, [], batchUserPrompt),
+            currentPrompt: displayedPromptText,
             tokenUsage: { promptTokens: 0, completionTokens: 0, reasoningTokens: 0, totalTokens: 0 }
           });
         }
@@ -180,6 +181,7 @@ Instrukcja: Oceń WSZYSTKIE 57 poniższych pozycji w skali 1-6. Podaj swoje ocen
             state.parsedItemScores[i] = parsedInfo.score;
             state.rawResponses[i] = parsedInfo.rawText || "";
             state.reasoningTraces[i] = i === 1 ? apiRes.reasoning : "";
+            state.llmQueries[i] = displayedPromptText;
           }
 
           if (onProgress) {
@@ -188,12 +190,13 @@ Instrukcja: Oceń WSZYSTKIE 57 poniższych pozycji w skali 1-6. Podaj swoje ocen
               statusMessage: 'Batch evaluation complete!',
               completedCount: 57,
               totalItems: 57,
-              currentPrompt: formatConversationDisplay(systemPrompt, [], batchUserPrompt),
+              currentPrompt: displayedPromptText,
               lastResponse: apiRes.text,
               lastReasoning: apiRes.reasoning,
               parsedScoresMap: { ...state.parsedItemScores },
               rawResponses: { ...state.rawResponses },
               reasoningTraces: { ...state.reasoningTraces },
+              llmQueries: { ...state.llmQueries },
               tokenUsage: {
                 promptTokens: state.totalPromptTokens,
                 completionTokens: state.totalCompletionTokens,
@@ -264,6 +267,7 @@ Instrukcja: Oceń WSZYSTKIE 57 poniższych pozycji w skali 1-6. Podaj swoje ocen
 
             state.rawResponses[currentItem.id] = apiRes.text;
             state.reasoningTraces[currentItem.id] = apiRes.reasoning;
+            state.llmQueries[currentItem.id] = displayedPromptText;
 
             const parsed = this.psychometrics.parseItemResponse(apiRes.text);
             state.parsedItemScores[currentItem.id] = parsed.score;
@@ -288,6 +292,7 @@ Instrukcja: Oceń WSZYSTKIE 57 poniższych pozycji w skali 1-6. Podaj swoje ocen
                 parsedScoresMap: { ...state.parsedItemScores },
                 rawResponses: { ...state.rawResponses },
                 reasoningTraces: { ...state.reasoningTraces },
+                llmQueries: { ...state.llmQueries },
                 tokenUsage: {
                   promptTokens: state.totalPromptTokens,
                   completionTokens: state.totalCompletionTokens,
@@ -318,6 +323,7 @@ Instrukcja: Oceń WSZYSTKIE 57 poniższych pozycji w skali 1-6. Podaj swoje ocen
 
       const state = {
         rawResponses: {},
+        llmQueries: {},
         parsedItemScores: {},
         reasoningTraces: {},
         totalPromptTokens: 0,
@@ -366,6 +372,7 @@ Instrukcja: Oceń WSZYSTKIE 57 poniższych pozycji w skali 1-6. Podaj swoje ocen
         systemFingerprint: runMetadata.systemFingerprint,
         rawResponses: state.rawResponses,
         reasoningTraces: state.reasoningTraces,
+        llmQueries: state.llmQueries,
         tokenUsage: {
           promptTokens: state.totalPromptTokens,
           completionTokens: state.totalCompletionTokens,
