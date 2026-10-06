@@ -89,12 +89,7 @@ Instrukcja: Oceń WSZYSTKIE 57 poniższych pozycji w skali 1-6. Podaj swoje ocen
    */
   function buildSequentialPrompt(item, lang) {
     const text = lang === 'pl' ? item.pl : item.en;
-    const scaleEn = "Rate how much this statement describes you on a scale from 1 (Not like me at all) to 6 (Very much like me). State your numeric rating (1-6).";
-    const scalePl = "Oceń, na ile ten opis jest podobny do Ciebie w skali od 1 (zupełnie niepodobny do mnie) do 6 (bardzo podobny do mnie). Podaj swoją ocenę cyfrą (1-6).";
-
-    const scale = lang === 'pl' ? scalePl : scaleEn;
-
-    return `Item ${item.id}: "${text}"\n${scale}`;
+    return `Item ${item.id}: "${text}"`;
   }
 
   /**
