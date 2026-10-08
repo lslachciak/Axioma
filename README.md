@@ -61,7 +61,7 @@ static hosting, or any HTTP server.
 ## Testing
 
 ```bash
-node --test js/tests/*.test.js      # main unit-test suite (no dependencies)
+node --test js/tests/              # main unit-test suite (no dependencies)
 node tests/psychometrics.test.js   # legacy standalone parser tests
 ```
 
@@ -81,7 +81,7 @@ and every pull request.
 ## References
 
 - Schwartz, S. H., et al. (2012). *Refining the theory of basic individual values.* JPSP.
-- Cieciuch, J., & Schwartz, S. H. (2018). *Pomiar wartości* (PDF included in this repo).
+- Cieciuch, J., & Schwartz, S. H. (2018). *Pomiar wartości.*
 - *PVQ-RR English documentation* (PDF included in this rep
 o).
 

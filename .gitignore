@@ -3,6 +3,9 @@
 Thumbs.db
 *.swp
 
+# Reference PDFs
+*.pdf
+
 # LibreOffice lock files
 .~lock.*#
 
