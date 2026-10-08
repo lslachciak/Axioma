@@ -37,6 +37,7 @@ static hosting, or any HTTP server.
 ## Repository structure
 
 | Path | Purpose |
+
 |---|---|
 | `index.html` | Entry point; loads CDN dependencies (Tailwind, Chart.js, SheetJS, DOMPurify) |
 | `js/pvq_data.js` | 57 PVQ-RR items (EN/PL) and mappings to the 19 values |
@@ -60,7 +61,7 @@ static hosting, or any HTTP server.
 ## Testing
 
 ```bash
-node --test js/tests/              # main unit-test suite (no dependencies)
+node --test js/tests/*.test.js      # main unit-test suite (no dependencies)
 node tests/psychometrics.test.js   # legacy standalone parser tests
 ```
 
@@ -81,7 +82,8 @@ and every pull request.
 
 - Schwartz, S. H., et al. (2012). *Refining the theory of basic individual values.* JPSP.
 - Cieciuch, J., & Schwartz, S. H. (2018). *Pomiar wartości* (PDF included in this repo).
-- *PVQ-RR English documentation* (PDF included in this repo).
+- *PVQ-RR English documentation* (PDF included in this rep
+o).
 
 ## License
 

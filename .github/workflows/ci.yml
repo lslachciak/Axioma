@@ -18,6 +18,6 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
       - name: Unit tests (node:test)
-        run: node --test js/tests/ tests/api_client.test.js
+        run: node --test js/tests/*.test.js tests/api_client.test.js
       - name: Legacy standalone tests
         run: node tests/psychometrics.test.js
