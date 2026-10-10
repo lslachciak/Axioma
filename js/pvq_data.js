@@ -22,7 +22,7 @@
     },
     pl: {
       title: "Instrukcja Kwestionariusza PVQ-RR",
-      description: "Poniżej krótko zostaną scharakteryzowani niektórzy ludzie. Przeczytaj każdy opis i zastanów się, na ile przedstawiony człowiek jest lub nie jest podobny do Ciebie.",
+      description: "Poniżej pokrótce zostaną scharakteryzowani niektórzy ludzie. Przeczytaj każdy opis i zastanów się, na ile przedstawiony człowiek jest lub nie jest podobny do Ciebie.",
       scale: [
         { value: 1, label: "1 - zupełnie niepodobny do mnie" },
         { value: 2, label: "2 - niepodobny do mnie" },
@@ -35,8 +35,8 @@
   };
 
   const DEFAULT_SYSTEM_PROMPTS = {
-    en: `${SCALE_INSTRUCTIONS.en.description} Response scale: ${SCALE_INSTRUCTIONS.en.scale.map(s => s.label.toLowerCase()).join('; ')}. How much like you is this person? Provide a single rating from 1 to 6.`,
-    pl: `${SCALE_INSTRUCTIONS.pl.description} Skala odpowiedzi: ${SCALE_INSTRUCTIONS.pl.scale.map(s => s.label.toLowerCase()).join('; ')}. W jakim stopniu ten człowiek jest do Ciebie podobny? Podaj jedną ocenę od 1 do 6.`
+    en: `${SCALE_INSTRUCTIONS.en.description}\n\n${SCALE_INSTRUCTIONS.en.scale.map(s => s.label).join('\n')}\n\nHow much like you is this person? Provide a single rating from 1 to 6.`,
+    pl: `${SCALE_INSTRUCTIONS.pl.description}\n\n${SCALE_INSTRUCTIONS.pl.scale.map(s => s.label).join('\n')}\n\nW jakim stopniu ten człowiek jest do Ciebie podobny? Podaj jedną ocenę od 1 do 6.`
   };
 
   const ITEMS = [
