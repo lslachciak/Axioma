@@ -41,16 +41,11 @@
    * Builds prompt for Batch Mode.
    */
   function buildBatchPrompt(items, lang) {
-    const pvq = (typeof window !== 'undefined' && window.PVQData) ? window.PVQData : require('./pvq_data.js');
-    const scaleGuide = pvq.SCALE_INSTRUCTIONS[lang] || pvq.SCALE_INSTRUCTIONS['en'];
-
-    const scaleText = scaleGuide.scale.map(s => s.label).join('\n');
-    const headerTitle = lang === 'pl' ? 'Skala Odpowiedzi:' : 'Response Scale:';
     const instruction = lang === 'pl'
       ? 'Instrukcja: Oceń WSZYSTKIE 57 poniższych pozycji w skali 1-6. Podaj swoje oceny wyraźnie w formacie:\n1: [Ocena 1-6]\n2: [Ocena 1-6]\n...\n57: [Ocena 1-6]'
       : 'Instruction: Please rate ALL 57 items below on the 1-6 scale. Return your ratings clearly for each item in the following format:\n1: [Rating 1-6]\n2: [Rating 1-6]\n...\n57: [Rating 1-6]';
 
-    const guide = `\n${headerTitle}\n${scaleText}\n\n${instruction}\n`;
+    const guide = `\n${instruction}\n`;
 
     let itemsText = "";
     for (const item of items) {
