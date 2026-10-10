@@ -7,15 +7,10 @@
 (function (exports) {
   'use strict';
 
-  const DEFAULT_SYSTEM_PROMPTS = {
-    en: "Here we briefly describe some people. Please read each description and think about how much each person is or is not like you. Rate each description according to the response scale: 1 - not like me at all; 2 - not like me; 3 - a little like me; 4 - moderately like me; 5 - like me; 6 - very much like me. Answer honestly, providing a single rating from 1 to 6 for each description.",
-    pl: "Poniżej krótko zostaną scharakteryzowani niektórzy ludzie. Przeczytaj każdy opis i zastanów się, na ile przedstawiony człowiek jest lub nie jest podobny do Ciebie. Oceń każdy opis zgodnie ze skalą odpowiedzi: 1 - zupełnie niepodobny do mnie; 2 - niepodobny do mnie; 3 - trochę podobny do mnie; 4 - średnio podobny do mnie; 5 - podobny do mnie; 6 - bardzo podobny do mnie. Odpowiadaj szczerze, podając jedną ocenę od 1 do 6 dla każdego opisu."
-  };
-
   const SCALE_INSTRUCTIONS = {
     en: {
       title: "PVQ-RR Survey Instructions",
-      description: "Here we describe brief portraits of different people. Please evaluate how much each person is or is not like you.",
+      description: "Here we briefly describe some people. Please read each description and think about how much each person is or is not like you.",
       scale: [
         { value: 1, label: "1 - Not like me at all" },
         { value: 2, label: "2 - Not like me" },
@@ -27,7 +22,7 @@
     },
     pl: {
       title: "Instrukcja Kwestionariusza PVQ-RR",
-      description: "Poniżej krótko zostaną scharakteryzowani niektórzy ludzie. Przeczytaj każdy opis i zastanów się, na ile przedstawiony człowiek jest lub nie jest podobny do Ciebie. Następnie zaznacz „X” w okienku, które określa stopień podobieństwa między opisanym człowiekiem a Tobą.",
+      description: "Poniżej krótko zostaną scharakteryzowani niektórzy ludzie. Przeczytaj każdy opis i zastanów się, na ile przedstawiony człowiek jest lub nie jest podobny do Ciebie.",
       scale: [
         { value: 1, label: "1 - zupełnie niepodobny do mnie" },
         { value: 2, label: "2 - niepodobny do mnie" },
@@ -37,6 +32,11 @@
         { value: 6, label: "6 - bardzo podobny do mnie" }
       ]
     }
+  };
+
+  const DEFAULT_SYSTEM_PROMPTS = {
+    en: `${SCALE_INSTRUCTIONS.en.description} Rate each description according to the response scale: ${SCALE_INSTRUCTIONS.en.scale.map(s => s.label.toLowerCase()).join('; ')}. Answer honestly, providing a single rating from 1 to 6 for each description.`,
+    pl: `${SCALE_INSTRUCTIONS.pl.description} Oceń każdy opis zgodnie ze skalą odpowiedzi: ${SCALE_INSTRUCTIONS.pl.scale.map(s => s.label.toLowerCase()).join('; ')}. Odpowiadaj szczerze, podając jedną ocenę od 1 do 6 dla każdego opisu.`
   };
 
   const ITEMS = [

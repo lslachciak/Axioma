@@ -41,39 +41,16 @@
    * Builds prompt for Batch Mode.
    */
   function buildBatchPrompt(items, lang) {
-    const scaleGuideEn = `
-Response Scale:
-1 - Not like me at all
-2 - Not like me
-3 - A little like me
-4 - Moderately like me
-5 - Like me
-6 - Very much like me
+    const pvq = (typeof window !== 'undefined' && window.PVQData) ? window.PVQData : require('./pvq_data.js');
+    const scaleGuide = pvq.SCALE_INSTRUCTIONS[lang] || pvq.SCALE_INSTRUCTIONS['en'];
 
-Instruction: Please rate ALL 57 items below on the 1-6 scale. Return your ratings clearly for each item in the following format:
-1: [Rating 1-6]
-2: [Rating 1-6]
-...
-57: [Rating 1-6]
-`;
+    const scaleText = scaleGuide.scale.map(s => s.label).join('\n');
+    const headerTitle = lang === 'pl' ? 'Skala Odpowiedzi:' : 'Response Scale:';
+    const instruction = lang === 'pl'
+      ? 'Instrukcja: Oceń WSZYSTKIE 57 poniższych pozycji w skali 1-6. Podaj swoje oceny wyraźnie w formacie:\n1: [Ocena 1-6]\n2: [Ocena 1-6]\n...\n57: [Ocena 1-6]'
+      : 'Instruction: Please rate ALL 57 items below on the 1-6 scale. Return your ratings clearly for each item in the following format:\n1: [Rating 1-6]\n2: [Rating 1-6]\n...\n57: [Rating 1-6]';
 
-    const scaleGuidePl = `
-Skala Odpowiedzi:
-1 - zupełnie niepodobny do mnie
-2 - niepodobny do mnie
-3 - trochę podobny do mnie
-4 - średnio podobny do mnie
-5 - podobny do mnie
-6 - bardzo podobny do mnie
-
-Instrukcja: Oceń WSZYSTKIE 57 poniższych pozycji w skali 1-6. Podaj swoje oceny wyraźnie w formacie:
-1: [Ocena 1-6]
-2: [Ocena 1-6]
-...
-57: [Ocena 1-6]
-`;
-
-    const guide = lang === 'pl' ? scaleGuidePl : scaleGuideEn;
+    const guide = `\n${headerTitle}\n${scaleText}\n\n${instruction}\n`;
 
     let itemsText = "";
     for (const item of items) {
