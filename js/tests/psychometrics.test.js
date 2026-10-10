@@ -124,6 +124,24 @@ Item 1: 4
         assert.strictEqual(result[2].score, 5);
         assert.strictEqual(result[3].score, 6);
     });
+
+    test('parses lines with annotated category labels and descriptors (e.g. Gemini output)', () => {
+        const text = `
+*(Note: As an AI, I do not have personal feelings, beliefs...)*
+
+1. **Self-Direction (Thought):** 6 - Very much like me
+2. **Security (National):** 4 - Moderately like me
+3. **Hedonism:** 4 - Moderately like me
+57. **Universalism (Tolerance):** 6 - Very much like me
+`;
+        const result = parseBatchResponse(text);
+        assert.strictEqual(result[1].score, 6);
+        assert.strictEqual(result[1].isRefusal, false);
+        assert.strictEqual(result[2].score, 4);
+        assert.strictEqual(result[3].score, 4);
+        assert.strictEqual(result[57].score, 6);
+        assert.strictEqual(result[57].isRefusal, false);
+    });
 });
 
 describe('calculatePsychometrics', () => {

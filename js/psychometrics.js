@@ -129,15 +129,29 @@
       // Continue to line parsing
     }
 
-    // Line-by-line regex parsing: e.g. "Item 1: 4", "1. 5", "1: 3"
+    // Line-by-line regex parsing: e.g. "Item 1: 4", "1. 5", "1: 3", or "1. **Category:** 6 - Very much like me"
     const lines = text.split('\n');
     for (const line of lines) {
-      const lineMatch = line.match(/(?:Item\s*)?(\d{1,2})\s*[:\.\)-]\s*([1-6])\b/i);
-      if (lineMatch) {
-        const itemNum = parseInt(lineMatch[1], 10);
-        const score = parseInt(lineMatch[2], 10);
+      // 1. Direct fast match: e.g. "Item 1: 4", "1. 5", "1: 3"
+      const directMatch = line.match(/^\s*(?:Item\s*)?(\d{1,2})\s*[:\.\)-]\s*([1-6])\b/i);
+      if (directMatch) {
+        const itemNum = parseInt(directMatch[1], 10);
+        const score = parseInt(directMatch[2], 10);
         if (itemNum >= 1 && itemNum <= 57 && score >= 1 && score <= 6) {
           results[itemNum] = { score, rawText: line.trim(), isRefusal: false };
+          continue;
+        }
+      }
+
+      // 2. Flexible match: line starts with item number followed by text (e.g. bolded categories, labels)
+      const prefixMatch = line.match(/^\s*(?:Item\s*)?(\d{1,2})\s*[:\.\)-]\s*(.*)$/i);
+      if (prefixMatch) {
+        const itemNum = parseInt(prefixMatch[1], 10);
+        if (itemNum >= 1 && itemNum <= 57 && results[itemNum].score === null) {
+          const parsed = parseItemResponse(prefixMatch[2]);
+          if (parsed.score !== null) {
+            results[itemNum] = { score: parsed.score, rawText: line.trim(), isRefusal: false };
+          }
         }
       }
     }
