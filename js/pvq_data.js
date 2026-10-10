@@ -10,7 +10,7 @@
   const SCALE_INSTRUCTIONS = {
     en: {
       title: "PVQ-RR Survey Instructions",
-      description: "Here we briefly describe different people. Please read each description and think about how much that person is or is not like you.",
+      description: "Here we briefly describe different people. Please read each description and think about how much that person is or is not like you. Rate each person using the scale below:",
       scale: [
         { value: 1, label: "1 - Not like me at all" },
         { value: 2, label: "2 - Not like me" },
@@ -22,7 +22,7 @@
     },
     pl: {
       title: "Instrukcja Kwestionariusza PVQ-RR",
-      description: "Poniżej pokrótce zostaną scharakteryzowani niektórzy ludzie. Przeczytaj każdy opis i zastanów się, na ile przedstawiony człowiek jest lub nie jest podobny do Ciebie.",
+      description: "Poniżej pokrótce zostaną scharakteryzowani niektórzy ludzie. Przeczytaj każdy opis i zastanów się, na ile przedstawiony człowiek jest lub nie jest podobny do Ciebie. Oceń każdą osobę, korzystając z poniższej skali:",
       scale: [
         { value: 1, label: "1 - zupełnie niepodobny do mnie" },
         { value: 2, label: "2 - niepodobny do mnie" },

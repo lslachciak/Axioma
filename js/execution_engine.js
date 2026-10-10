@@ -41,17 +41,13 @@
    * Builds prompt for Batch Mode.
    */
   function buildBatchPrompt(items, lang) {
-    const instruction = lang === 'pl'
-      ? 'Oceń każdą z poniższych osób w skali 1-6 (np. 1: 4):'
-      : 'Rate each person below from 1 to 6 (e.g. 1: 4):';
-
     let itemsText = "";
     for (const item of items) {
       const text = lang === 'pl' ? item.pl : item.en;
       itemsText += `${item.id}. ${text}\n`;
     }
 
-    return `${instruction}\n\n${itemsText}`;
+    return itemsText.trim();
   }
 
   /**
