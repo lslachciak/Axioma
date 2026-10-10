@@ -158,6 +158,29 @@ Item 1: 4
         assert.strictEqual(result[57].score, 6);
         assert.strictEqual(result[57].isRefusal, false);
     });
+
+    test('parses markdown table format', () => {
+        const text = `
+Below is a possible set of responses for each of the 57 statements.
+
+| # | Rating |
+|---|--------|
+| 1 | 5 |
+| 2 | 4 |
+|10 | 5 |
+| 57 | 2 |
+
+**How to read the table**
+- 1 = Not like me at all
+`;
+        const result = parseBatchResponse(text);
+        assert.strictEqual(result[1].score, 5);
+        assert.strictEqual(result[1].isRefusal, false);
+        assert.strictEqual(result[2].score, 4);
+        assert.strictEqual(result[10].score, 5);
+        assert.strictEqual(result[57].score, 2);
+        assert.strictEqual(result[57].isRefusal, false);
+    });
 });
 
 describe('calculatePsychometrics', () => {

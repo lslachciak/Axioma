@@ -174,6 +174,24 @@
           const parsed = parseItemResponse(prefixMatch[2]);
           if (parsed.score !== null) {
             results[itemNum] = { score: parsed.score, rawText: line.trim(), isRefusal: false };
+            continue;
+          }
+        }
+      }
+
+      // 3. Markdown table row: e.g. "| 1 | 5 |" or "| 1 | Statement | 5 |"
+      if (line.includes('|')) {
+        const cols = line.split('|').map(c => c.trim()).filter(c => c.length > 0);
+        if (cols.length >= 2) {
+          const itemMatch = cols[0].match(/^(?:Item\s*)?(\d{1,2})$/i);
+          if (itemMatch) {
+            const itemNum = parseInt(itemMatch[1], 10);
+            if (itemNum >= 1 && itemNum <= 57 && results[itemNum].score === null) {
+              const parsed = parseItemResponse(cols[cols.length - 1]);
+              if (parsed.score !== null) {
+                results[itemNum] = { score: parsed.score, rawText: line.trim(), isRefusal: false };
+              }
+            }
           }
         }
       }
