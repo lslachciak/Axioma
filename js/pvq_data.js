@@ -35,8 +35,8 @@
   };
 
   const DEFAULT_SYSTEM_PROMPTS = {
-    en: `${SCALE_INSTRUCTIONS.en.description}\n\nHOW MUCH LIKE YOU IS THIS PERSON?\n${SCALE_INSTRUCTIONS.en.scale.map(s => s.label).join('\n')}`,
-    pl: `${SCALE_INSTRUCTIONS.pl.description}\n\nW JAKIM STOPNIU TEN CZŁOWIEK JEST DO CIEBIE PODOBNY?\n${SCALE_INSTRUCTIONS.pl.scale.map(s => s.label).join('\n')}`
+    en: `You are the participant completing this questionnaire.\n\n${SCALE_INSTRUCTIONS.en.description}\n\nHOW MUCH LIKE YOU IS THIS PERSON?\n${SCALE_INSTRUCTIONS.en.scale.map(s => s.label).join('\n')}`,
+    pl: `Jesteś uczestnikiem wypełniającym poniższy kwestionariusz.\n\n${SCALE_INSTRUCTIONS.pl.description}\n\nW JAKIM STOPNIU TEN CZŁOWIEK JEST DO CIEBIE PODOBNY?\n${SCALE_INSTRUCTIONS.pl.scale.map(s => s.label).join('\n')}`
   };
 
   const ITEMS = [
