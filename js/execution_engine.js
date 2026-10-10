@@ -77,7 +77,7 @@
       }
       output += `--- CURRENT MESSAGE ---\n`;
     }
-    output += `[USER]: ${currentPrompt}`;
+    output += `[USER]:\n${currentPrompt}`;
     return output;
   }
 
