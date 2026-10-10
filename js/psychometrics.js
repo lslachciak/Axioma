@@ -26,6 +26,22 @@
     /i do not have a personality/i
   ];
 
+  // Verbal scale labels for responses that use verbal descriptors without digits
+  const VERBAL_SCALE_PATTERNS = [
+    // 1: Not like me at all / zupełnie niepodobny
+    { score: 1, regex: /(?<!\p{L})(?:not like me at all|zupełnie niepodobn[ya](?:\s+do\s+mnie)?)(?!\p{L})/iu },
+    // 6: Very much like me / bardzo podobny
+    { score: 6, regex: /(?<!\p{L})(?:very much like me|bardzo podobn[ya](?:\s+do\s+mnie)?)(?!\p{L})/iu },
+    // 4: Moderately like me / średnio podobny
+    { score: 4, regex: /(?<!\p{L})(?:moderately like me|średnio podobn[ya](?:\s+do\s+mnie)?)(?!\p{L})/iu },
+    // 3: A little like me / trochę podobny
+    { score: 3, regex: /(?<!\p{L})(?:a little like me|trochę podobn[ya](?:\s+do\s+mnie)?)(?!\p{L})/iu },
+    // 2: Not like me / niepodobny (must not be followed by "at all")
+    { score: 2, regex: /(?<!\p{L})(?:not like me(?!\s+at\s+all)|niepodobn[ya](?:\s+do\s+mnie)?)(?!\p{L})/iu },
+    // 5: Like me / podobny (must not be preceded by negation/modifiers like not/much/moderately/little/bardzo/średnio/trochę/nie)
+    { score: 5, regex: /(?<!(?:not|much|moderately|little|bardzo|średnio|trochę|nie)\s+)(?<!\p{L})(?:like me|podobn[ya](?:\s+do\s+mnie)?)(?!\p{L})/iu }
+  ];
+
   /**
    * Parses a single item response text to extract a 1-6 numerical rating.
    * Also detects if the model refused or gave an excuse.
@@ -81,6 +97,13 @@
     const digitMatches = cleaned.match(/(?<!\d\.)\b[1-6](?!\.\d)\b/g);
     if (digitMatches && digitMatches.length === 1 && !isRefusalText) {
       return { score: parseInt(digitMatches[0], 10), isRefusal: false, parsedVia: 'single_unambiguous_digit' };
+    }
+
+    // Check verbal scale descriptors (e.g. "Moderately like me", "trochę podobny do mnie")
+    for (const item of VERBAL_SCALE_PATTERNS) {
+      if (item.regex.test(cleaned)) {
+        return { score: item.score, isRefusal: false, parsedVia: 'verbal_label' };
+      }
     }
 
     // If refusal text detected and no valid score found

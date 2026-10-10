@@ -79,6 +79,22 @@ describe('parseItemResponse', () => {
         assert.strictEqual(result.score, null);
         assert.strictEqual(result.isRefusal, false);
     });
+
+    test('extracts verbal scale labels without numeric digits (EN and PL)', () => {
+        assert.strictEqual(parseItemResponse('Not like me at all').score, 1);
+        assert.strictEqual(parseItemResponse('Not like me').score, 2);
+        assert.strictEqual(parseItemResponse('A little like me').score, 3);
+        assert.strictEqual(parseItemResponse('Moderately like me').score, 4);
+        assert.strictEqual(parseItemResponse('Like me').score, 5);
+        assert.strictEqual(parseItemResponse('Very much like me').score, 6);
+
+        assert.strictEqual(parseItemResponse('zupełnie niepodobny do mnie').score, 1);
+        assert.strictEqual(parseItemResponse('niepodobna do mnie').score, 2);
+        assert.strictEqual(parseItemResponse('trochę podobny do mnie').score, 3);
+        assert.strictEqual(parseItemResponse('średnio podobna').score, 4);
+        assert.strictEqual(parseItemResponse('podobny do mnie').score, 5);
+        assert.strictEqual(parseItemResponse('bardzo podobna do mnie').score, 6);
+    });
 });
 
 describe('parseBatchResponse', () => {
