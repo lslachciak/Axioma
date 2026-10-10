@@ -76,11 +76,6 @@ function deobfuscateApiKey(val) {
     return element;
   }
 
-  const DEFAULT_SYSTEM_PROMPTS = {
-    en: "Here we briefly describe some people. Please read each description and think about how much each person is or is not like you. Rate each description according to the response scale: 1 - not like me at all; 2 - not like me; 3 - a little like me; 4 - moderately like me; 5 - like me; 6 - very much like me. Answer honestly, providing a single rating from 1 to 6 for each description.",
-    pl: "Poniżej krótko zostaną scharakteryzowani niektórzy ludzie. Przeczytaj każdy opis i zastanów się, na ile przedstawiony człowiek jest lub nie jest podobny do Ciebie. Oceń każdy opis zgodnie ze skalą odpowiedzi: 1 - zupełnie niepodobny do mnie; 2 - niepodobny do mnie; 3 - trochę podobny do mnie; 4 - średnio podobny do mnie; 5 - podobny do mnie; 6 - bardzo podobny do mnie. Odpowiadaj szczerze, podając jedną ocenę od 1 do 6 dla każdego opisu."
-  };
-
   // Application State
   const state = {
     provider: 'openai',
@@ -92,7 +87,7 @@ function deobfuscateApiKey(val) {
     temperature: '',
     seed: '',
     lang: 'en',
-    systemPrompt: DEFAULT_SYSTEM_PROMPTS.en,
+    systemPrompt: PVQData.DEFAULT_SYSTEM_PROMPTS.en,
     mode: 'batch', // 'batch' | 'sequential'
     iterations: 1,
     randomizeOrder: false,
@@ -153,7 +148,7 @@ function deobfuscateApiKey(val) {
       if (savedSystemPrompt !== null) {
         state.systemPrompt = savedSystemPrompt;
       } else {
-        state.systemPrompt = DEFAULT_SYSTEM_PROMPTS[state.lang] || DEFAULT_SYSTEM_PROMPTS.en;
+        state.systemPrompt = PVQData.DEFAULT_SYSTEM_PROMPTS[state.lang] || PVQData.DEFAULT_SYSTEM_PROMPTS.en;
       }
 
       const savedRandomize = localStorage.getItem('axioma_randomize_order');
@@ -566,8 +561,8 @@ function deobfuscateApiKey(val) {
             onChange: (e) => {
               const oldLang = state.lang;
               state.lang = e.target.value;
-              if (state.systemPrompt === DEFAULT_SYSTEM_PROMPTS[oldLang]) {
-                state.systemPrompt = DEFAULT_SYSTEM_PROMPTS[state.lang] || DEFAULT_SYSTEM_PROMPTS.en;
+              if (state.systemPrompt === PVQData.DEFAULT_SYSTEM_PROMPTS[oldLang]) {
+                state.systemPrompt = PVQData.DEFAULT_SYSTEM_PROMPTS[state.lang] || PVQData.DEFAULT_SYSTEM_PROMPTS.en;
                 savePersistedOption('system_prompt', state.systemPrompt);
               }
               savePersistedOption('lang', state.lang);

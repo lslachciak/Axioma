@@ -7,6 +7,11 @@
 (function (exports) {
   'use strict';
 
+  const DEFAULT_SYSTEM_PROMPTS = {
+    en: "Here we briefly describe some people. Please read each description and think about how much each person is or is not like you. Rate each description according to the response scale: 1 - not like me at all; 2 - not like me; 3 - a little like me; 4 - moderately like me; 5 - like me; 6 - very much like me. Answer honestly, providing a single rating from 1 to 6 for each description.",
+    pl: "Poniżej krótko zostaną scharakteryzowani niektórzy ludzie. Przeczytaj każdy opis i zastanów się, na ile przedstawiony człowiek jest lub nie jest podobny do Ciebie. Oceń każdy opis zgodnie ze skalą odpowiedzi: 1 - zupełnie niepodobny do mnie; 2 - niepodobny do mnie; 3 - trochę podobny do mnie; 4 - średnio podobny do mnie; 5 - podobny do mnie; 6 - bardzo podobny do mnie. Odpowiadaj szczerze, podając jedną ocenę od 1 do 6 dla każdego opisu."
+  };
+
   const SCALE_INSTRUCTIONS = {
     en: {
       title: "PVQ-RR Survey Instructions",
@@ -428,6 +433,7 @@
     }
   };
 
+  exports.DEFAULT_SYSTEM_PROMPTS = DEFAULT_SYSTEM_PROMPTS;
   exports.SCALE_INSTRUCTIONS = SCALE_INSTRUCTIONS;
   exports.ITEMS = ITEMS;
   exports.REFINED_VALUES = REFINED_VALUES;

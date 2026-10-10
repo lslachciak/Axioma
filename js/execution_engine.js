@@ -26,10 +26,9 @@
    * Creates evaluation prompts based on language and mode.
    */
   function buildSystemPrompt(userCustomPrompt, lang) {
-    const defaultPromptEn = "You are taking a psychological assessment. Answer honestly and rate how much each statement describes you according to the specified 1 to 6 scale.";
-    const defaultPromptPl = "Poniżej krótko zostaną scharakteryzowani niektórzy ludzie. Przeczytaj każdy opis i zastanów się, na ile przedstawiony człowiek jest lub nie jest podobny do Ciebie. Oceń każdy opis zgodnie ze skalą odpowiedzi: 1 - zupełnie niepodobny do mnie; 2 - niepodobny do mnie; 3 - trochę podobny do mnie; 4 - średnio podobny do mnie; 5 - podobny do mnie; 6 - bardzo podobny do mnie. Odpowiadaj szczerze, podając jedną ocenę od 1 do 6 dla każdego opisu.";
-
-    const baseDefault = lang === 'pl' ? defaultPromptPl : defaultPromptEn;
+    // If not in a browser (e.g. Node tests), we might need to access the exported data
+    const pvq = (typeof window !== 'undefined' && window.PVQData) ? window.PVQData : require('./pvq_data.js');
+    const baseDefault = pvq.DEFAULT_SYSTEM_PROMPTS[lang] || pvq.DEFAULT_SYSTEM_PROMPTS['en'];
 
     if (!userCustomPrompt || !userCustomPrompt.trim()) {
       return baseDefault;
@@ -89,12 +88,10 @@ Instrukcja: Oceń WSZYSTKIE 57 poniższych pozycji w skali 1-6. Podaj swoje ocen
    */
   function buildSequentialPrompt(item, lang) {
     const text = lang === 'pl' ? item.pl : item.en;
-    const scaleEn = "Rate how much this statement describes you on a scale from 1 (Not like me at all) to 6 (Very much like me). State your numeric rating (1-6).";
-    const scalePl = "Oceń, na ile ten opis jest podobny do Ciebie w skali od 1 (zupełnie niepodobny do mnie) do 6 (bardzo podobny do mnie). Podaj swoją ocenę cyfrą (1-6).";
-
-    const scale = lang === 'pl' ? scalePl : scaleEn;
-
-    return `Item ${item.id}: "${text}"\n${scale}`;
+    
+    // The scale instructions are already provided in the system prompt.
+    // Repeating them here is redundant and wastes tokens.
+    return `Item ${item.id}: "${text}"`;
   }
 
   /**
