@@ -35,8 +35,8 @@
   };
 
   const DEFAULT_SYSTEM_PROMPTS = {
-    en: `${SCALE_INSTRUCTIONS.en.description} Response scale: ${SCALE_INSTRUCTIONS.en.scale.map(s => s.label.toLowerCase()).join('; ')}. Indicate how much the person in the description is like you by providing a single rating from 1 to 6.`,
-    pl: `${SCALE_INSTRUCTIONS.pl.description} Skala odpowiedzi: ${SCALE_INSTRUCTIONS.pl.scale.map(s => s.label.toLowerCase()).join('; ')}. Określ stopień podobieństwa między opisanym człowiekiem a Tobą, podając jedną ocenę od 1 do 6.`
+    en: `${SCALE_INSTRUCTIONS.en.description} Response scale: ${SCALE_INSTRUCTIONS.en.scale.map(s => s.label.toLowerCase()).join('; ')}. How much like you is this person? Provide a single rating from 1 to 6.`,
+    pl: `${SCALE_INSTRUCTIONS.pl.description} Skala odpowiedzi: ${SCALE_INSTRUCTIONS.pl.scale.map(s => s.label.toLowerCase()).join('; ')}. W jakim stopniu ten człowiek jest do Ciebie podobny? Podaj jedną ocenę od 1 do 6.`
   };
 
   const ITEMS = [
