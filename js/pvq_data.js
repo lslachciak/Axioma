@@ -35,8 +35,8 @@
   };
 
   const DEFAULT_SYSTEM_PROMPTS = {
-    en: `${SCALE_INSTRUCTIONS.en.description} Rate each description according to the response scale: ${SCALE_INSTRUCTIONS.en.scale.map(s => s.label.toLowerCase()).join('; ')}. Answer honestly, providing a single rating from 1 to 6 for each description.`,
-    pl: `${SCALE_INSTRUCTIONS.pl.description} Oceń każdy opis zgodnie ze skalą odpowiedzi: ${SCALE_INSTRUCTIONS.pl.scale.map(s => s.label.toLowerCase()).join('; ')}. Odpowiadaj szczerze, podając jedną ocenę od 1 do 6 dla każdego opisu.`
+    en: `${SCALE_INSTRUCTIONS.en.description} Response scale: ${SCALE_INSTRUCTIONS.en.scale.map(s => s.label.toLowerCase()).join('; ')}. Indicate how much the person in the description is like you by providing a single rating from 1 to 6.`,
+    pl: `${SCALE_INSTRUCTIONS.pl.description} Skala odpowiedzi: ${SCALE_INSTRUCTIONS.pl.scale.map(s => s.label.toLowerCase()).join('; ')}. Określ stopień podobieństwa między opisanym człowiekiem a Tobą, podając jedną ocenę od 1 do 6.`
   };
 
   const ITEMS = [
