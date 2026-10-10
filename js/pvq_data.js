@@ -10,7 +10,7 @@
   const SCALE_INSTRUCTIONS = {
     en: {
       title: "PVQ-RR Survey Instructions",
-      description: "Here we describe brief portraits of different people. Please evaluate how much each person is or is not like you.",
+      description: "Here we briefly describe different people. Please read each description and think about how much that person is or is not like you. Rate each person using the scale below:",
       scale: [
         { value: 1, label: "1 - Not like me at all" },
         { value: 2, label: "2 - Not like me" },
@@ -22,7 +22,7 @@
     },
     pl: {
       title: "Instrukcja Kwestionariusza PVQ-RR",
-      description: "Poniżej krótko zostaną scharakteryzowani niektórzy ludzie. Przeczytaj każdy opis i zastanów się, na ile przedstawiony człowiek jest lub nie jest podobny do Ciebie. Następnie zaznacz „X” w okienku, które określa stopień podobieństwa między opisanym człowiekiem a Tobą.",
+      description: "Poniżej pokrótce zostaną scharakteryzowani niektórzy ludzie. Przeczytaj każdy opis i zastanów się, na ile przedstawiony człowiek jest lub nie jest podobny do Ciebie. Oceń każdą osobę, korzystając z poniższej skali:",
       scale: [
         { value: 1, label: "1 - zupełnie niepodobny do mnie" },
         { value: 2, label: "2 - niepodobny do mnie" },
@@ -32,6 +32,11 @@
         { value: 6, label: "6 - bardzo podobny do mnie" }
       ]
     }
+  };
+
+  const DEFAULT_SYSTEM_PROMPTS = {
+    en: `You are the participant completing this questionnaire.\n\n${SCALE_INSTRUCTIONS.en.description}\n\nHOW MUCH LIKE YOU IS THIS PERSON?\n${SCALE_INSTRUCTIONS.en.scale.map(s => s.label).join('\n')}`,
+    pl: `Jesteś uczestnikiem wypełniającym poniższy kwestionariusz.\n\n${SCALE_INSTRUCTIONS.pl.description}\n\nW JAKIM STOPNIU TEN CZŁOWIEK JEST DO CIEBIE PODOBNY?\n${SCALE_INSTRUCTIONS.pl.scale.map(s => s.label).join('\n')}`
   };
 
   const ITEMS = [
@@ -428,6 +433,7 @@
     }
   };
 
+  exports.DEFAULT_SYSTEM_PROMPTS = DEFAULT_SYSTEM_PROMPTS;
   exports.SCALE_INSTRUCTIONS = SCALE_INSTRUCTIONS;
   exports.ITEMS = ITEMS;
   exports.REFINED_VALUES = REFINED_VALUES;

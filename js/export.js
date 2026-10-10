@@ -6,7 +6,8 @@
 (function (exports) {
   'use strict';
 
-  const APP_VERSION = (typeof window !== 'undefined' && window.AXIOMA_VERSION) ? window.AXIOMA_VERSION : 'Unknown Version';
+  const versionInfo = (typeof window !== 'undefined' && window.AxiomaVersion) ? window.AxiomaVersion : require('./version.js');
+  const APP_VERSION = versionInfo.APP_VERSION || 'Unknown Version';
 
   /**
    * Triggers a browser download for blob content.

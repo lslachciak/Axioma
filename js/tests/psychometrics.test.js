@@ -79,6 +79,22 @@ describe('parseItemResponse', () => {
         assert.strictEqual(result.score, null);
         assert.strictEqual(result.isRefusal, false);
     });
+
+    test('extracts verbal scale labels without numeric digits (EN and PL)', () => {
+        assert.strictEqual(parseItemResponse('Not like me at all').score, 1);
+        assert.strictEqual(parseItemResponse('Not like me').score, 2);
+        assert.strictEqual(parseItemResponse('A little like me').score, 3);
+        assert.strictEqual(parseItemResponse('Moderately like me').score, 4);
+        assert.strictEqual(parseItemResponse('Like me').score, 5);
+        assert.strictEqual(parseItemResponse('Very much like me').score, 6);
+
+        assert.strictEqual(parseItemResponse('zupełnie niepodobny do mnie').score, 1);
+        assert.strictEqual(parseItemResponse('niepodobna do mnie').score, 2);
+        assert.strictEqual(parseItemResponse('trochę podobny do mnie').score, 3);
+        assert.strictEqual(parseItemResponse('średnio podobna').score, 4);
+        assert.strictEqual(parseItemResponse('podobny do mnie').score, 5);
+        assert.strictEqual(parseItemResponse('bardzo podobna do mnie').score, 6);
+    });
 });
 
 describe('parseBatchResponse', () => {
@@ -123,6 +139,47 @@ Item 1: 4
         assert.strictEqual(result[1].score, 4);
         assert.strictEqual(result[2].score, 5);
         assert.strictEqual(result[3].score, 6);
+    });
+
+    test('parses lines with annotated category labels and descriptors (e.g. Gemini output)', () => {
+        const text = `
+*(Note: As an AI, I do not have personal feelings, beliefs...)*
+
+1. **Self-Direction (Thought):** 6 - Very much like me
+2. **Security (National):** 4 - Moderately like me
+3. **Hedonism:** 4 - Moderately like me
+57. **Universalism (Tolerance):** 6 - Very much like me
+`;
+        const result = parseBatchResponse(text);
+        assert.strictEqual(result[1].score, 6);
+        assert.strictEqual(result[1].isRefusal, false);
+        assert.strictEqual(result[2].score, 4);
+        assert.strictEqual(result[3].score, 4);
+        assert.strictEqual(result[57].score, 6);
+        assert.strictEqual(result[57].isRefusal, false);
+    });
+
+    test('parses markdown table format', () => {
+        const text = `
+Below is a possible set of responses for each of the 57 statements.
+
+| # | Rating |
+|---|--------|
+| 1 | 5 |
+| 2 | 4 |
+|10 | 5 |
+| 57 | 2 |
+
+**How to read the table**
+- 1 = Not like me at all
+`;
+        const result = parseBatchResponse(text);
+        assert.strictEqual(result[1].score, 5);
+        assert.strictEqual(result[1].isRefusal, false);
+        assert.strictEqual(result[2].score, 4);
+        assert.strictEqual(result[10].score, 5);
+        assert.strictEqual(result[57].score, 2);
+        assert.strictEqual(result[57].isRefusal, false);
     });
 });
 

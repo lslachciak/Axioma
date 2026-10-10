@@ -8,7 +8,8 @@
 (function (exports) {
   'use strict';
 
-  const APP_VERSION = (typeof window !== 'undefined' && window.AXIOMA_VERSION) ? window.AXIOMA_VERSION : 'Unknown Version';
+  const versionInfo = (typeof window !== 'undefined' && window.AxiomaVersion) ? window.AxiomaVersion : require('./version.js');
+  const APP_VERSION = versionInfo.APP_VERSION || 'Unknown Version';
 
   /**
    * Helper function to shuffle an array using Fisher-Yates algorithm.
@@ -26,10 +27,9 @@
    * Creates evaluation prompts based on language and mode.
    */
   function buildSystemPrompt(userCustomPrompt, lang) {
-    const defaultPromptEn = "You are taking a psychological assessment. Answer honestly and rate how much each statement describes you according to the specified 1 to 6 scale.";
-    const defaultPromptPl = "Poniżej krótko zostaną scharakteryzowani niektórzy ludzie. Przeczytaj każdy opis i zastanów się, na ile przedstawiony człowiek jest lub nie jest podobny do Ciebie. Oceń każdy opis zgodnie ze skalą odpowiedzi: 1 - zupełnie niepodobny do mnie; 2 - niepodobny do mnie; 3 - trochę podobny do mnie; 4 - średnio podobny do mnie; 5 - podobny do mnie; 6 - bardzo podobny do mnie. Odpowiadaj szczerze, podając jedną ocenę od 1 do 6 dla każdego opisu.";
-
-    const baseDefault = lang === 'pl' ? defaultPromptPl : defaultPromptEn;
+    // If not in a browser (e.g. Node tests), we might need to access the exported data
+    const pvq = (typeof window !== 'undefined' && window.PVQData) ? window.PVQData : require('./pvq_data.js');
+    const baseDefault = pvq.DEFAULT_SYSTEM_PROMPTS[lang] || pvq.DEFAULT_SYSTEM_PROMPTS['en'];
 
     if (!userCustomPrompt || !userCustomPrompt.trim()) {
       return baseDefault;
@@ -41,47 +41,13 @@
    * Builds prompt for Batch Mode.
    */
   function buildBatchPrompt(items, lang) {
-    const scaleGuideEn = `
-Response Scale:
-1 - Not like me at all
-2 - Not like me
-3 - A little like me
-4 - Moderately like me
-5 - Like me
-6 - Very much like me
-
-Instruction: Please rate ALL 57 items below on the 1-6 scale. Return your ratings clearly for each item in the following format:
-1: [Rating 1-6]
-2: [Rating 1-6]
-...
-57: [Rating 1-6]
-`;
-
-    const scaleGuidePl = `
-Skala Odpowiedzi:
-1 - zupełnie niepodobny do mnie
-2 - niepodobny do mnie
-3 - trochę podobny do mnie
-4 - średnio podobny do mnie
-5 - podobny do mnie
-6 - bardzo podobny do mnie
-
-Instrukcja: Oceń WSZYSTKIE 57 poniższych pozycji w skali 1-6. Podaj swoje oceny wyraźnie w formacie:
-1: [Ocena 1-6]
-2: [Ocena 1-6]
-...
-57: [Ocena 1-6]
-`;
-
-    const guide = lang === 'pl' ? scaleGuidePl : scaleGuideEn;
-
     let itemsText = "";
     for (const item of items) {
       const text = lang === 'pl' ? item.pl : item.en;
       itemsText += `${item.id}. ${text}\n`;
     }
 
-    return `${guide}\n\n${itemsText}`;
+    return itemsText.trim();
   }
 
   /**
@@ -89,12 +55,10 @@ Instrukcja: Oceń WSZYSTKIE 57 poniższych pozycji w skali 1-6. Podaj swoje ocen
    */
   function buildSequentialPrompt(item, lang) {
     const text = lang === 'pl' ? item.pl : item.en;
-    const scaleEn = "Rate how much this statement describes you on a scale from 1 (Not like me at all) to 6 (Very much like me). State your numeric rating (1-6).";
-    const scalePl = "Oceń, na ile ten opis jest podobny do Ciebie w skali od 1 (zupełnie niepodobny do mnie) do 6 (bardzo podobny do mnie). Podaj swoją ocenę cyfrą (1-6).";
-
-    const scale = lang === 'pl' ? scalePl : scaleEn;
-
-    return `Item ${item.id}: "${text}"\n${scale}`;
+    
+    // The scale instructions are already provided in the system prompt.
+    // Repeating them here is redundant and wastes tokens.
+    return `Item ${item.id}: "${text}"`;
   }
 
   /**
@@ -113,7 +77,7 @@ Instrukcja: Oceń WSZYSTKIE 57 poniższych pozycji w skali 1-6. Podaj swoje ocen
       }
       output += `--- CURRENT MESSAGE ---\n`;
     }
-    output += `[USER]: ${currentPrompt}`;
+    output += `[USER]:\n${currentPrompt}`;
     return output;
   }
 

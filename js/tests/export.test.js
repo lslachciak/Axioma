@@ -76,6 +76,7 @@ function resetMocks() {
     mockFileReaderResult = null;
 
     global.window = {
+        AxiomaVersion: { APP_VERSION: APP_VERSION },
         AXIOMA_VERSION: APP_VERSION,
         PVQData: { ITEMS: [] },
         XLSX: undefined
