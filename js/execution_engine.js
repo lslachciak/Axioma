@@ -42,10 +42,8 @@
    */
   function buildBatchPrompt(items, lang) {
     const instruction = lang === 'pl'
-      ? 'Instrukcja: Oceń WSZYSTKIE 57 poniższych pozycji w skali 1-6. Podaj swoje oceny wyraźnie w formacie:\n1: [Ocena 1-6]\n2: [Ocena 1-6]\n...\n57: [Ocena 1-6]'
-      : 'Instruction: Please rate ALL 57 items below on the 1-6 scale. Return your ratings clearly for each item in the following format:\n1: [Rating 1-6]\n2: [Rating 1-6]\n...\n57: [Rating 1-6]';
-
-    const guide = `\n${instruction}\n`;
+      ? 'Oceń każdą z poniższych osób w skali 1-6 (np. 1: 4):'
+      : 'Rate each person below from 1 to 6 (e.g. 1: 4):';
 
     let itemsText = "";
     for (const item of items) {
@@ -53,7 +51,7 @@
       itemsText += `${item.id}. ${text}\n`;
     }
 
-    return `${guide}\n\n${itemsText}`;
+    return `${instruction}\n\n${itemsText}`;
   }
 
   /**

@@ -10,7 +10,7 @@
   const SCALE_INSTRUCTIONS = {
     en: {
       title: "PVQ-RR Survey Instructions",
-      description: "Here we briefly describe some people. Please read each description and think about how much each person is or is not like you.",
+      description: "Here we briefly describe different people. Please read each description and think about how much that person is or is not like you.",
       scale: [
         { value: 1, label: "1 - Not like me at all" },
         { value: 2, label: "2 - Not like me" },
@@ -35,8 +35,8 @@
   };
 
   const DEFAULT_SYSTEM_PROMPTS = {
-    en: `${SCALE_INSTRUCTIONS.en.description}\n\n${SCALE_INSTRUCTIONS.en.scale.map(s => s.label).join('\n')}\n\nHow much like you is this person? Provide a single rating from 1 to 6.`,
-    pl: `${SCALE_INSTRUCTIONS.pl.description}\n\n${SCALE_INSTRUCTIONS.pl.scale.map(s => s.label).join('\n')}\n\nW jakim stopniu ten człowiek jest do Ciebie podobny? Podaj jedną ocenę od 1 do 6.`
+    en: `${SCALE_INSTRUCTIONS.en.description}\n\nHOW MUCH LIKE YOU IS THIS PERSON?\n${SCALE_INSTRUCTIONS.en.scale.map(s => s.label).join('\n')}`,
+    pl: `${SCALE_INSTRUCTIONS.pl.description}\n\nW JAKIM STOPNIU TEN CZŁOWIEK JEST DO CIEBIE PODOBNY?\n${SCALE_INSTRUCTIONS.pl.scale.map(s => s.label).join('\n')}`
   };
 
   const ITEMS = [
