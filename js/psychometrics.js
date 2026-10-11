@@ -197,6 +197,57 @@
       }
     }
 
+    // 4. Fallback: Raw sequential ratings without item numbers (e.g. 57 lines of "5", "2", ...)
+    let scoredCount = 0;
+    for (let i = 1; i <= 57; i++) {
+      if (results[i].score !== null) scoredCount++;
+    }
+
+    if (scoredCount === 0) {
+      // First, try line-by-line single ratings or verbal labels
+      const lineCandidates = [];
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+        if (/^[1-6]$/.test(trimmed)) {
+          lineCandidates.push({ score: parseInt(trimmed, 10), rawText: trimmed });
+        } else {
+          const parsed = parseItemResponse(trimmed);
+          if (parsed.score !== null && (parsed.parsedVia === 'verbal_label' || parsed.parsedVia === 'score_descriptor' || parsed.parsedVia === 'exact_digit')) {
+            lineCandidates.push({ score: parsed.score, rawText: trimmed });
+          }
+        }
+      }
+
+      if (lineCandidates.length === 57) {
+        for (let i = 1; i <= 57; i++) {
+          results[i] = {
+            score: lineCandidates[i - 1].score,
+            rawText: lineCandidates[i - 1].rawText,
+            isRefusal: false
+          };
+        }
+      } else {
+        // Next, try comma-, semicolon-, or whitespace-delimited tokens across text
+        const tokens = text.trim().split(/[\s,;]+/);
+        const tokenScores = [];
+        for (const token of tokens) {
+          if (/^[1-6]$/.test(token)) {
+            tokenScores.push(parseInt(token, 10));
+          }
+        }
+        if (tokenScores.length === 57) {
+          for (let i = 1; i <= 57; i++) {
+            results[i] = {
+              score: tokenScores[i - 1],
+              rawText: String(tokenScores[i - 1]),
+              isRefusal: false
+            };
+          }
+        }
+      }
+    }
+
     // Fill unrecognised items with the full response text
     for (let i = 1; i <= 57; i++) {
       if (results[i].score === null && results[i].rawText === "") {

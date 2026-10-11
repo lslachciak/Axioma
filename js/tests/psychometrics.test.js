@@ -181,6 +181,86 @@ Below is a possible set of responses for each of the 57 statements.
         assert.strictEqual(result[57].score, 2);
         assert.strictEqual(result[57].isRefusal, false);
     });
+
+    test('parses raw sequential list of 57 numbers without item prefixes', () => {
+        const raw57 = `
+5
+2
+2
+5
+5
+1
+5
+4
+4
+2
+4
+1
+3
+5
+5
+4
+3
+2
+4
+1
+4
+5
+5
+2
+5
+2
+5
+2
+1
+4
+5
+4
+1
+5
+2
+2
+5
+5
+4
+2
+1
+5
+2
+1
+5
+2
+4
+2
+3
+2
+5
+5
+5
+4
+5
+4
+5
+`;
+        const result = parseBatchResponse(raw57);
+        assert.strictEqual(result[1].score, 5);
+        assert.strictEqual(result[1].isRefusal, false);
+        assert.strictEqual(result[2].score, 2);
+        assert.strictEqual(result[3].score, 2);
+        assert.strictEqual(result[6].score, 1);
+        assert.strictEqual(result[56].score, 4);
+        assert.strictEqual(result[57].score, 5);
+        assert.strictEqual(result[57].isRefusal, false);
+    });
+
+    test('parses comma-delimited sequential list of 57 numbers', () => {
+        const scores = Array.from({ length: 57 }, (_, i) => (i % 6) + 1);
+        const text = scores.join(', ');
+        const result = parseBatchResponse(text);
+        assert.strictEqual(result[1].score, scores[0]);
+        assert.strictEqual(result[57].score, scores[56]);
+        assert.strictEqual(result[1].isRefusal, false);
+    });
 });
 
 describe('calculatePsychometrics', () => {
