@@ -76,6 +76,7 @@ function resetMocks() {
     mockFileReaderResult = null;
 
     global.window = {
+        AxiomaVersion: { APP_VERSION: APP_VERSION },
         AXIOMA_VERSION: APP_VERSION,
         PVQData: { ITEMS: [] },
         XLSX: undefined
@@ -479,8 +480,8 @@ test('importSessionFromFile backwards compatibility defaults appVersion when col
     mockFileReaderResult = new ArrayBuffer(8);
     exports.importSessionFromFile({}, (results) => {
         assert.strictEqual(results.length, 1);
-        assert.strictEqual(results[0].appVersion, 'v1.1.1');
-        assert.strictEqual(results[0].metadata.appVersion, 'v1.1.1');
+        assert.strictEqual(results[0].appVersion, APP_VERSION);
+        assert.strictEqual(results[0].metadata.appVersion, APP_VERSION);
         assert.strictEqual(results[0].metadata.config.model, 'gpt-4o');
         done();
     });
