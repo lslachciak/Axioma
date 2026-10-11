@@ -1,4 +1,4 @@
-﻿/**
+/**
  * PVQ-RR (Portrait Values Questionnaire - Revised 57 Items) Data & Mappings
  * Shalom H. Schwartz (2012 / 2016)
  * Supports English ('en') and Polish ('pl')
@@ -35,8 +35,8 @@
   };
 
   const DEFAULT_SYSTEM_PROMPTS = {
-    en: `You are the participant completing this questionnaire.\n\n${SCALE_INSTRUCTIONS.en.description}\n\nHOW MUCH LIKE YOU IS THIS PERSON?\n${SCALE_INSTRUCTIONS.en.scale.map(s => s.label).join('\n')}`,
-    pl: `Jesteś uczestnikiem wypełniającym poniższy kwestionariusz.\n\n${SCALE_INSTRUCTIONS.pl.description}\n\nW JAKIM STOPNIU TEN CZŁOWIEK JEST DO CIEBIE PODOBNY?\n${SCALE_INSTRUCTIONS.pl.scale.map(s => s.label).join('\n')}`
+    en: `${SCALE_INSTRUCTIONS.en.description}\n\nHOW MUCH LIKE YOU IS THIS PERSON?\n${SCALE_INSTRUCTIONS.en.scale.map(s => s.label).join('\n')}\n\nProvide only your rating (1-6) for each item.`,
+    pl: `${SCALE_INSTRUCTIONS.pl.description}\n\nW JAKIM STOPNIU TEN CZŁOWIEK JEST DO CIEBIE PODOBNY?\n${SCALE_INSTRUCTIONS.pl.scale.map(s => s.label).join('\n')}\n\nDla każdej pozycji podaj wyłącznie ocenę (1-6).`
   };
 
   const ITEMS = [
