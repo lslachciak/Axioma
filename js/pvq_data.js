@@ -35,8 +35,8 @@
   };
 
   const DEFAULT_SYSTEM_PROMPTS = {
-    en: `${SCALE_INSTRUCTIONS.en.description}\n\nHOW MUCH LIKE YOU IS THIS PERSON?\n${SCALE_INSTRUCTIONS.en.scale.map(s => s.label).join('\n')}\n\nProvide only your rating (1-6) for each item.`,
-    pl: `${SCALE_INSTRUCTIONS.pl.description}\n\nW JAKIM STOPNIU TEN CZŁOWIEK JEST DO CIEBIE PODOBNY?\n${SCALE_INSTRUCTIONS.pl.scale.map(s => s.label).join('\n')}\n\nDla każdej pozycji podaj wyłącznie ocenę (1-6).`
+    en: `${SCALE_INSTRUCTIONS.en.description}\n\nHOW MUCH LIKE YOU IS THIS PERSON?\n${SCALE_INSTRUCTIONS.en.scale.map(s => s.label).join('\n')}\n\nProvide your rating (1-6) for each item.`,
+    pl: `${SCALE_INSTRUCTIONS.pl.description}\n\nW JAKIM STOPNIU TEN CZŁOWIEK JEST DO CIEBIE PODOBNY?\n${SCALE_INSTRUCTIONS.pl.scale.map(s => s.label).join('\n')}\n\nDla każdej pozycji podaj ocenę (1-6).`
   };
 
   const ITEMS = [
