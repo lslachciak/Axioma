@@ -839,7 +839,18 @@ function deobfuscateApiKey(val) {
         })
       ),
       el('div', { className: 'border-t border-slate-800 pt-3' },
-        el('label', { className: 'block text-xs font-medium text-slate-400 mb-1' }, 'System Prompt'),
+        el('div', { className: 'flex items-center justify-between mb-1' },
+          el('label', { className: 'block text-xs font-medium text-slate-400' }, 'System Prompt'),
+          el('button', {
+            type: 'button',
+            onClick: () => {
+              state.systemPrompt = PVQData.DEFAULT_SYSTEM_PROMPTS[state.lang] || PVQData.DEFAULT_SYSTEM_PROMPTS.en;
+              savePersistedOption('system_prompt', state.systemPrompt);
+              renderApp();
+            },
+            className: 'text-[10px] text-sky-400 hover:text-sky-300 font-semibold flex items-center gap-1'
+          }, el('i', { className: 'fa-solid fa-rotate-left' }), state.lang === 'pl' ? 'Przywróć domyślny' : 'Reset to default')
+        ),
         el('textarea', {
           rows: '3',
           placeholder: 'System prompt instructions for psychological evaluation...',
