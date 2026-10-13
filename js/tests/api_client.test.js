@@ -2,6 +2,15 @@ const test = require('node:test');
 const assert = require('node:assert');
 const { parseRetryDelayMs } = require('../api_client.js');
 
+test('provider defaults - local providers are removed and custom uses the local server URL', () => {
+  const { PROVIDER_DEFAULTS } = require('../api_client.js');
+  assert.strictEqual(PROVIDER_DEFAULTS.custom.baseUrl, 'http://localhost:11434/v1');
+  assert.strictEqual(PROVIDER_DEFAULTS.custom.requiresApiKey, false);
+  assert.strictEqual(PROVIDER_DEFAULTS.ollama, undefined);
+  assert.strictEqual(PROVIDER_DEFAULTS.lmstudio, undefined);
+  assert.strictEqual(PROVIDER_DEFAULTS.vllm, undefined);
+});
+
 test('parseRetryDelayMs - should extract delay from retry-after header (integer)', (t) => {
   const headers = new Map();
   headers.set('retry-after', '15');
@@ -281,4 +290,41 @@ test('completeChat - returns actualModel and systemFingerprint from Gemini respo
   assert.strictEqual(res.text, 'gemini response');
 
   global.fetch = undefined;
+});
+
+test('fetchAvailableModels - exposes network failures to the caller', async (t) => {
+  const { fetchAvailableModels } = require('../api_client.js');
+  const originalFetch = global.fetch;
+  global.fetch = async () => {
+    throw new TypeError('Failed to fetch');
+  };
+
+  try {
+    await assert.rejects(
+      fetchAvailableModels('custom', 'https://example.test/v1', ''),
+      /Could not fetch models from \/models endpoint: Failed to fetch/
+    );
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
+test('fetchAvailableModels - exposes unsuccessful HTTP responses to the caller', async (t) => {
+  const { fetchAvailableModels } = require('../api_client.js');
+  const originalFetch = global.fetch;
+  global.fetch = async () => ({
+    ok: false,
+    status: 503,
+    statusText: 'Service Unavailable',
+    json: async () => ({ error: { message: 'Provider unavailable' } })
+  });
+
+  try {
+    await assert.rejects(
+      fetchAvailableModels('custom', 'https://example.test/v1', ''),
+      /Models API error \[503\]: Provider unavailable/
+    );
+  } finally {
+    global.fetch = originalFetch;
+  }
 });
