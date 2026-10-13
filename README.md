@@ -20,7 +20,9 @@ static hosting, or any HTTP server.
   - *Batch* — all 57 items rated in a single prompt.
   - *Sequential* — item by item, with optional conversation history.
 - **Multi-provider API client** — OpenAI, Anthropic, Google Gemini, xAI (Grok),
-  Ollama (local & cloud), LM Studio, vLLM, and any OpenAI-compatible endpoint.
+  Ollama Cloud, and any OpenAI-compatible endpoint. Local OpenAI-compatible
+  servers can be configured through Custom Endpoint (default:
+  `http://localhost:11434/v1`) with an optional API key.
 - **Robust answer parsing** — accepts JSON, bare digits, and "Rating: 5"-style
   text; detects refusals ("As an AI, I don't have values…").
 - **Reasoning support** — extracts and stores thinking traces (thinking tags,
@@ -53,8 +55,8 @@ static hosting, or any HTTP server.
 
 1. Clone or download this repository.
 2. Open `index.html` in a modern browser (no server or build step required).
-3. Pick a provider, paste an API key (not needed for local endpoints), and load
-   or type a model name.
+3. Pick a provider, paste an API key when required, and load or type a model
+   name. Custom Endpoint accepts an optional API key.
 4. Choose the evaluation mode, temperature, seed and item order.
 5. Press **Start** — live progress, charts and export options appear as the run completes.
 

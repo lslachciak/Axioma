@@ -99,6 +99,7 @@ function deobfuscateApiKey(val) {
     // Execution State
     isRunning: false,
     progressStatus: 'Ready',
+    errorMessage: '',
     completedCount: 0,
     tokenUsage: { promptTokens: 0, completionTokens: 0, reasoningTokens: 0, totalTokens: 0 },
     liveStreamLogs: [],
@@ -130,7 +131,9 @@ function deobfuscateApiKey(val) {
   function loadPersistedState() {
     try {
       const savedProvider = localStorage.getItem('axioma_selected_provider');
-      if (savedProvider) state.provider = savedProvider;
+      if (savedProvider) {
+        state.provider = window.ApiClient?.PROVIDER_DEFAULTS?.[savedProvider] ? savedProvider : 'custom';
+      }
 
       const savedMode = localStorage.getItem('axioma_mode');
       if (savedMode) state.mode = savedMode;
@@ -236,6 +239,7 @@ function deobfuscateApiKey(val) {
   async function loadModelsFromAPI() {
     if (!window.ApiClient?.fetchAvailableModels) return;
     state.isFetchingModels = true;
+    state.errorMessage = '';
     renderApp();
 
     try {
@@ -248,6 +252,7 @@ function deobfuscateApiKey(val) {
       }
     } catch (e) {
       console.warn("Failed to fetch models from API:", e);
+      state.errorMessage = e && e.message ? e.message : String(e);
     } finally {
       state.isFetchingModels = false;
       renderApp();
@@ -438,7 +443,8 @@ function deobfuscateApiKey(val) {
 
     async function startEvaluation() {
     state.isRunning = true;
-    renderApp();
+      state.errorMessage = '';
+      renderApp();
 
     const iterations = parseInt(state.iterations, 10) || 1;
 
@@ -506,8 +512,10 @@ function deobfuscateApiKey(val) {
           renderApp();
         }
       } catch (err) {
-        state.progressStatus = `Error in iteration ${i + 1}: ${err.message}`;
-        state.liveStreamLogs.push(`[ERROR] ${err.message}`);
+        const errorMessage = err && err.message ? err.message : String(err);
+        state.progressStatus = `Error in iteration ${i + 1}: ${errorMessage}`;
+        state.errorMessage = errorMessage;
+        state.liveStreamLogs.push(`[ERROR] ${errorMessage}`);
         renderApp();
         break; // Stop further iterations on error
       }
@@ -532,6 +540,26 @@ function deobfuscateApiKey(val) {
   function App() {
     return el('div', { className: 'min-h-screen flex flex-col bg-slate-900 text-slate-100' },
       Header(),
+      state.errorMessage ? el('div', {
+        role: 'alert',
+        className: 'max-w-7xl mx-auto mt-4 px-4 w-full'
+      },
+        el('div', { className: 'flex items-start justify-between gap-4 rounded-xl border border-rose-500/40 bg-rose-950/70 px-4 py-3 text-sm text-rose-200' },
+          el('div', { className: 'flex items-start gap-2 min-w-0' },
+            el('i', { className: 'fa-solid fa-triangle-exclamation mt-0.5 text-rose-400' }),
+            el('div', {},
+              el('p', { className: 'font-semibold' }, state.lang === 'pl' ? 'Błąd sieci / API' : 'Network / API error'),
+              el('p', { className: 'mt-1 break-words whitespace-pre-wrap' }, state.errorMessage)
+            )
+          ),
+          el('button', {
+            type: 'button',
+            'aria-label': state.lang === 'pl' ? 'Zamknij komunikat o błędzie' : 'Dismiss error message',
+            onClick: () => { state.errorMessage = ''; renderApp(); },
+            className: 'shrink-0 text-rose-300 hover:text-white'
+          }, el('i', { className: 'fa-solid fa-xmark' }))
+        )
+      ) : null,
       el('main', { className: 'max-w-7xl mx-auto px-4 py-6 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 w-full' },
         el('div', { className: 'lg:col-span-4 space-y-6' }, ConfigPanel()),
         el('div', { className: 'lg:col-span-8 space-y-6' }, ExecutionDashboard())
@@ -634,18 +662,17 @@ function deobfuscateApiKey(val) {
           el('option', { value: 'anthropic' }, 'Anthropic'),
           el('option', { value: 'gemini' }, 'Google Gemini'),
           el('option', { value: 'xai' }, 'xAI (Grok)'),
-          el('option', { value: 'ollama' }, 'Ollama (Local localhost:11434)'),
           el('option', { value: 'ollama_cloud' }, 'Ollama Cloud API'),
-          el('option', { value: 'lmstudio' }, 'LM Studio (Local localhost:1234)'),
-          el('option', { value: 'vllm' }, 'vLLM (Local localhost:8000)'),
           el('option', { value: 'custom' }, 'Custom Endpoint')
         )
       ),
-      reqKey ? el('div', {},
-        el('label', { className: 'block text-xs font-medium text-slate-400 mb-1' }, 'API Key (Saved obfuscated in LocalStorage)'),
+      (reqKey || state.provider === 'custom') ? el('div', {},
+        el('label', { className: 'block text-xs font-medium text-slate-400 mb-1' },
+          state.provider === 'custom' ? 'API Key (Optional; saved obfuscated in LocalStorage)' : 'API Key (Saved obfuscated in LocalStorage)'
+        ),
         el('input', {
           type: 'password',
-          placeholder: 'sk-...',
+          placeholder: state.provider === 'custom' ? 'Optional API key' : 'sk-...',
           value: state.apiKey,
           onInput: (e) => {
             state.apiKey = e.target.value;
@@ -1174,6 +1201,19 @@ function deobfuscateApiKey(val) {
   // Initial setup on DOM ready
   document.addEventListener('DOMContentLoaded', () => {
     loadPersistedState();
+    if (navigator.onLine === false) {
+      state.errorMessage = state.lang === 'pl' ? 'Brak połączenia z internetem.' : 'You are offline.';
+    }
+    window.addEventListener('offline', () => {
+      state.errorMessage = state.lang === 'pl' ? 'Brak połączenia z internetem.' : 'You are offline.';
+      renderApp();
+    });
+    window.addEventListener('online', () => {
+      if (state.errorMessage === 'You are offline.' || state.errorMessage === 'Brak połączenia z internetem.') {
+        state.errorMessage = '';
+        renderApp();
+      }
+    });
     renderApp();
   });
 

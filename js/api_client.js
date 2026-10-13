@@ -1,6 +1,6 @@
 /**
  * Multi-Provider API Client for Axioma LLM Evaluation
- * Supports: OpenAI, Anthropic, Google Gemini, xAI, Local Endpoints (Ollama, LM Studio, vLLM)
+ * Supports: OpenAI, Anthropic, Google Gemini, xAI, Ollama Cloud, and custom OpenAI-compatible endpoints
  * Handles custom Base URL, temperature, seed, reasoning/thinking token budget, system prompt,
  * live model fetching, automatic rate-limit (429) retry logic, and robust internal thinking block extraction.
  */
@@ -33,33 +33,15 @@
       defaultModel: "",
       requiresApiKey: true
     },
-    ollama: {
-      name: "Ollama (Local)",
-      baseUrl: "http://localhost:11434/v1",
-      defaultModel: "",
-      requiresApiKey: false
-    },
     ollama_cloud: {
       name: "Ollama Cloud API",
       baseUrl: "https://ollama.lslachciak.workers.dev/v1",
       defaultModel: "",
       requiresApiKey: true
     },
-    lmstudio: {
-      name: "LM Studio (Local)",
-      baseUrl: "http://localhost:1234/v1",
-      defaultModel: "",
-      requiresApiKey: false
-    },
-    vllm: {
-      name: "vLLM (Local)",
-      baseUrl: "http://localhost:8000/v1",
-      defaultModel: "",
-      requiresApiKey: false
-    },
     custom: {
       name: "Custom OpenAI-Compatible Endpoint",
-      baseUrl: "",
+      baseUrl: "http://localhost:11434/v1",
       defaultModel: "",
       requiresApiKey: false
     }
@@ -157,11 +139,36 @@
    * Fetches available model IDs from provider endpoint.
    */
   async function fetchAvailableModels(provider, baseUrl, apiKey) {
+    const errors = [];
+    const recordError = (label, error) => {
+      const message = error && error.message ? error.message : String(error);
+      const reportedError = new Error(`${label}: ${message}`);
+      if (error && error.status !== undefined) reportedError.status = error.status;
+      errors.push(reportedError);
+      console.warn(label, error);
+    };
+    const checkResponse = async (response, label) => {
+      if (response.ok) return;
+
+      let errorText = '';
+      try {
+        const errorJson = await response.json();
+        errorText = errorJson.error?.message || errorJson.message || JSON.stringify(errorJson);
+      } catch (e) {
+        errorText = await response.text();
+      }
+
+      const error = new Error(`${label} [${response.status}]: ${errorText || response.statusText || 'Request failed'}`);
+      error.status = response.status;
+      throw error;
+    };
+
     // 1. Google Gemini Native Models endpoint
     if (provider === 'gemini' || (baseUrl && baseUrl.includes("generativelanguage.googleapis.com"))) {
       try {
         const endpoint = `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent((apiKey || "").trim())}`;
         const res = await fetch(endpoint);
+        await checkResponse(res, 'Gemini models API error');
         if (res.ok) {
           const data = await res.json();
           if (Array.isArray(data.models)) {
@@ -171,7 +178,7 @@
           }
         }
       } catch (e) {
-        console.warn("Could not fetch Gemini native models list", e);
+        recordError('Could not fetch Gemini native models list', e);
       }
     }
 
@@ -181,6 +188,7 @@
         const ollamaBase = (baseUrl || "http://localhost:11434/v1").replace(/\/v1\/?$/, "").replace(/\/+$/, "");
         const endpoint = `${ollamaBase}/api/tags`;
         const res = await fetch(endpoint);
+        await checkResponse(res, 'Ollama models API error');
         if (res.ok) {
           const data = await res.json();
           if (Array.isArray(data.models)) {
@@ -188,7 +196,7 @@
           }
         }
       } catch (e) {
-        console.warn("Could not fetch Ollama models from /api/tags", e);
+        recordError('Could not fetch Ollama models from /api/tags', e);
       }
     }
 
@@ -206,6 +214,7 @@
       }
 
       const res = await fetch(endpoint, { headers });
+      await checkResponse(res, 'Models API error');
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data.data)) {
@@ -215,9 +224,10 @@
         }
       }
     } catch (e) {
-      console.warn("Could not fetch models from /models endpoint", e);
+      recordError('Could not fetch models from /models endpoint', e);
     }
 
+    if (errors.length > 0) throw errors[errors.length - 1];
     return [];
   }
 
