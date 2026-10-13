@@ -135,6 +135,26 @@
    * Tab 4: 57 Items & Responses
    * Tab 5: Token Usage
    */
+  const MAX_EXCEL_CELL_LENGTH = 32767;
+
+  /**
+   * Sanitizes a cell value to prevent exceeding Excel's 32,767 character limit.
+   */
+  function sanitizeExcelCellValue(val) {
+    if (typeof val === 'string' && val.length > MAX_EXCEL_CELL_LENGTH) {
+      return val.slice(0, 32750) + '... [TRUNCATED]';
+    }
+    return val;
+  }
+
+  /**
+   * Converts array of arrays to an XLSX worksheet after sanitizing cell string lengths.
+   */
+  function createSafeWorksheet(xlsxLib, rows) {
+    const sanitized = rows.map(row => row.map(sanitizeExcelCellValue));
+    return xlsxLib.utils.aoa_to_sheet(sanitized);
+  }
+
   function exportToXLSX(results, filename = "axioma_pvq_rr_results_" + getFormattedTime() + ".xlsx") {
     if (!results || !results.psychometrics) return;
     if (typeof window.XLSX === 'undefined') {
@@ -170,7 +190,7 @@
       ["Grand Mean Score (MRAT)", results.psychometrics.mrat],
       ["Total Items Answered", `${results.psychometrics.totalAnswered} / 57`]
     ];
-    const wsOverview = XLSX.utils.aoa_to_sheet(overviewData);
+    const wsOverview = createSafeWorksheet(XLSX, overviewData);
     XLSX.utils.book_append_sheet(wb, wsOverview, "Run Overview");
 
     // Tab 2: Higher-Order Values
@@ -188,7 +208,7 @@
         ho.centeredMean ?? "N/A"
       ]);
     }
-    const wsHO = XLSX.utils.aoa_to_sheet(hoRows);
+    const wsHO = createSafeWorksheet(XLSX, hoRows);
     XLSX.utils.book_append_sheet(wb, wsHO, "Higher-Order Values");
 
     // Tab 3: 19 Refined Values
@@ -207,7 +227,7 @@
         rv.centeredMean ?? "N/A"
       ]);
     }
-    const wsRefined = XLSX.utils.aoa_to_sheet(refRows);
+    const wsRefined = createSafeWorksheet(XLSX, refRows);
     XLSX.utils.book_append_sheet(wb, wsRefined, "19 Refined Values");
 
     // Tab 4: Item Responses
@@ -233,7 +253,7 @@
         results.llmQueries?.[i] || ""
       ]);
     }
-    const wsItems = XLSX.utils.aoa_to_sheet(itemRows);
+    const wsItems = createSafeWorksheet(XLSX, itemRows);
     XLSX.utils.book_append_sheet(wb, wsItems, "57 Items & Responses");
 
     // Tab 5: Token Consumption
@@ -244,11 +264,16 @@
       ["Reasoning / Thinking Tokens", results.tokenUsage?.reasoningTokens ?? 0],
       ["Total Tokens", results.tokenUsage?.totalTokens ?? 0]
     ];
-    const wsTokens = XLSX.utils.aoa_to_sheet(tokenRows);
+    const wsTokens = createSafeWorksheet(XLSX, tokenRows);
     XLSX.utils.book_append_sheet(wb, wsTokens, "Token Usage");
 
     // Save Workbook
-    XLSX.writeFile(wb, filename);
+    try {
+      XLSX.writeFile(wb, filename);
+    } catch (err) {
+      console.error("Export to XLSX failed:", err);
+      alert("Failed to export Excel file: " + err.message);
+    }
   }
 
   /**
@@ -523,10 +548,15 @@
       summaryRows.push(row);
     });
 
-    const wsSummary = XLSX.utils.aoa_to_sheet(summaryRows);
+    const wsSummary = createSafeWorksheet(XLSX, summaryRows);
     XLSX.utils.book_append_sheet(wb, wsSummary, "Session Runs Summary");
 
-    XLSX.writeFile(wb, filename);
+    try {
+      XLSX.writeFile(wb, filename);
+    } catch (err) {
+      console.error("Export to XLSX failed:", err);
+      alert("Failed to export Excel file: " + err.message);
+    }
   }
 
   exports.exportToJSON = exportToJSON;
@@ -536,6 +566,8 @@
   exports.exportSessionToCSV = exportSessionToCSV;
   exports.exportSessionToXLSX = exportSessionToXLSX;
   exports.importSessionFromFile = importSessionFromFile;
+  exports.MAX_EXCEL_CELL_LENGTH = MAX_EXCEL_CELL_LENGTH;
+  exports.sanitizeExcelCellValue = sanitizeExcelCellValue;
 
   /**
    * Imports a session from a CSV or XLSX file.
