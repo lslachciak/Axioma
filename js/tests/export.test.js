@@ -299,6 +299,91 @@ test('exportSessionToXLSX works correctly with XLSX mock', (t) => {
     assert.strictEqual(writtenFilename, 'session.xlsx');
 });
 
+test('sanitizeExcelCellValue truncates strings exceeding 32767 limit', (t) => {
+    const exports = loadExportModule();
+    const shortText = 'Hello world';
+    assert.strictEqual(exports.sanitizeExcelCellValue(shortText), shortText);
+
+    const longText = 'A'.repeat(35000);
+    const sanitized = exports.sanitizeExcelCellValue(longText);
+    assert.strictEqual(sanitized.length <= 32767, true);
+    assert.strictEqual(sanitized.endsWith('... [TRUNCATED]'), true);
+});
+
+test('exportSessionToXLSX truncates cells exceeding 32767 chars so SheetJS never throws', (t) => {
+    const exports = loadExportModule();
+
+    let passedRows = null;
+    global.window.XLSX = {
+        utils: {
+            book_new: () => ({ SheetNames: [], Sheets: {} }),
+            aoa_to_sheet: (aoa) => {
+                passedRows = aoa;
+                // Verify no cell exceeds 32,767
+                for (const row of aoa) {
+                    for (const cell of row) {
+                        if (typeof cell === 'string' && cell.length > 32767) {
+                            throw new Error('Text length must not exceed 32767 characters');
+                        }
+                    }
+                }
+                return { aoa };
+            },
+            book_append_sheet: () => {}
+        },
+        writeFile: () => {}
+    };
+
+    const mockSession = [{
+        metadata: { config: { provider: 'test', customSystemPrompt: 'P'.repeat(40000) } },
+        tokenUsage: {},
+        psychometrics: {},
+        reasoningTraces: { 1: 'R'.repeat(45000) },
+        rawResponses: { 1: 'RAW'.repeat(12000) },
+        llmQueries: { 1: 'Q'.repeat(50000) }
+    }];
+
+    // Must not throw
+    assert.doesNotThrow(() => {
+        exports.exportSessionToXLSX(mockSession, 'session.xlsx');
+    });
+
+    assert.ok(passedRows);
+    // All string cells in passedRows must be <= 32767
+    for (const row of passedRows) {
+        for (const cell of row) {
+            if (typeof cell === 'string') {
+                assert.ok(cell.length <= 32767, `Cell length ${cell.length} exceeds 32767`);
+            }
+        }
+    }
+});
+
+test('exportSessionToXLSX alerts gracefully when XLSX.writeFile fails', (t) => {
+    const exports = loadExportModule();
+    resetMocks();
+    const origError = console.error;
+    console.error = () => {};
+    try {
+        global.window.XLSX = {
+            utils: {
+                book_new: () => ({ SheetNames: [], Sheets: {} }),
+                aoa_to_sheet: () => ({}),
+                book_append_sheet: () => {}
+            },
+            writeFile: () => {
+                throw new Error('Write failed');
+            }
+        };
+
+        exports.exportSessionToXLSX([{ metadata: {} }]);
+        assert.strictEqual(alertCalledCount, 1);
+        assert.ok(lastAlertMessage.includes('Failed to export Excel file'));
+    } finally {
+        console.error = origError;
+    }
+});
+
 
 test('importSessionFromFile handles missing XLSX library', (t) => {
     const exports = loadExportModule();
