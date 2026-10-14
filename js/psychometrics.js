@@ -417,7 +417,59 @@
     return alphas;
   }
 
+  /**
+   * ICC(3,1): two-way mixed-effects, consistency, single measurement.
+   * Refined values are targets and repeated runs are fixed raters.
+   */
+  function calculateICC31ForSession(sessionResults, config) {
+    if (!Array.isArray(sessionResults) || sessionResults.length < 2) return null;
+
+    const canonicalize = value => {
+      if (Array.isArray(value)) return value.map(canonicalize);
+      if (value && typeof value === 'object') return Object.keys(value).sort().reduce((out, key) => {
+        if (key !== 'apiKey' && key !== 'iterations') out[key] = canonicalize(value[key]);
+        return out;
+      }, {});
+      return value;
+    };
+    const target = JSON.stringify(canonicalize(config || sessionResults[0]?.metadata?.config || {}));
+    const matching = sessionResults.filter(result =>
+      JSON.stringify(canonicalize(result?.metadata?.config || {})) === target
+    );
+    if (matching.length < 2) return null;
+
+    const codes = Object.keys(matching[0]?.psychometrics?.refinedValues || {});
+    const rows = codes.map(code => matching.map(result =>
+      result?.psychometrics?.refinedValues?.[code]?.centeredMean
+    ));
+    if (rows.some(row => !row.every(Number.isFinite))) return null;
+    const n = rows.length;
+    const k = matching.length;
+    if (n < 2 || k < 2) return null;
+
+    const grand = rows.flat().reduce((sum, value) => sum + value, 0) / (n * k);
+    const rowMeans = rows.map(row => row.reduce((sum, value) => sum + value, 0) / k);
+    const columnMeans = Array.from({ length: k }, (_, column) =>
+      rows.reduce((sum, row) => sum + row[column], 0) / n
+    );
+    const msRows = k * rowMeans.reduce((sum, mean) => sum + (mean - grand) ** 2, 0) / (n - 1);
+    let residual = 0;
+    rows.forEach((row, i) => row.forEach((value, j) => {
+      residual += (value - rowMeans[i] - columnMeans[j] + grand) ** 2;
+    }));
+    const msError = residual / ((n - 1) * (k - 1));
+    const denominator = msRows + (k - 1) * msError;
+    if (denominator === 0) return null;
+    return {
+      value: parseFloat(((msRows - msError) / denominator).toFixed(3)),
+      runs: k,
+      targets: n,
+      model: 'ICC(3,1)'
+    };
+  }
+
   exports.calculatePsychometrics = calculatePsychometrics;
   exports.calculateCronbachAlphaForSession = calculateCronbachAlphaForSession;
+  exports.calculateICC31ForSession = calculateICC31ForSession;
 
 })(typeof exports !== 'undefined' ? exports : (window.Psychometrics = {}));

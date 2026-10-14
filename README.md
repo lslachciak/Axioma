@@ -29,6 +29,7 @@ static hosting, or any HTTP server.
   Gemini 3.x thoughts) with a configurable thinking budget.
 - **Reproducibility controls** — temperature, seed, fixed or randomized item order.
 - **Rate-limit handling** — automatic retry on HTTP 429 with `Retry-After` support.
+- **Immediate cancellation** — Stop aborts active provider requests and queued retries.
 - **Exports** — JSON, TSV, CSV and multi-sheet XLSX with full run metadata
   (requested/resolved model, system fingerprint, configuration); import of
   previous sessions from CSV/XLSX.
@@ -78,6 +79,8 @@ and every pull request.
   casual inspection but **is not encryption**; a browser extension or XSS can
   still recover them.
 - Model output is rendered through DOMPurify.
+- UI libraries are loaded from third-party CDNs, so opening the app locally still
+  requires internet access unless those assets are hosted locally.
 - Do not commit session result files that contain sensitive data.
 
 ## References
