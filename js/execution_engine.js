@@ -92,11 +92,13 @@
       this.apiClient = apiClient;
       this.isRunning = false;
       this.shouldAbort = false;
+      this.abortController = null;
     }
 
     stop() {
       this.shouldAbort = true;
       this.isRunning = false;
+      if (this.abortController) this.abortController.abort();
     }
 
     /**
@@ -126,7 +128,8 @@
         try {
           const apiRes = await this.apiClient.completeChat({
             ...this.config,
-            systemPrompt: systemPrompt
+            systemPrompt: systemPrompt,
+            signal: this.abortController?.signal
           }, messages, statusUpdateCallback, () => this.shouldAbort);
 
           if (this.shouldAbort) throw new Error("Evaluation cancelled by user.");
@@ -217,7 +220,8 @@
 
             const apiRes = await this.apiClient.completeChat({
               ...this.config,
-              systemPrompt: systemPrompt
+              systemPrompt: systemPrompt,
+              signal: this.abortController?.signal
             }, requestMessages, statusUpdateCallback, () => this.shouldAbort);
 
             if (this.shouldAbort) throw new Error("Evaluation cancelled by user.");
@@ -272,6 +276,7 @@
     async run(onProgress) {
       this.isRunning = true;
       this.shouldAbort = false;
+      this.abortController = typeof AbortController !== 'undefined' ? new AbortController() : null;
 
       const lang = this.config.lang || 'en';
       const isBatch = this.config.mode === 'batch';
@@ -328,6 +333,7 @@
       const psychometricResults = this.psychometrics.calculatePsychometrics(state.parsedItemScores, this.pvqData);
 
       this.isRunning = false;
+      this.abortController = null;
 
       return {
         metadata: runMetadata,

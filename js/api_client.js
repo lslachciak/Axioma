@@ -241,14 +241,14 @@
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
         if (provider === 'anthropic') {
-          return await callAnthropicAPI(config, messages);
+          return await callAnthropicAPI(config, messages, config.signal);
         }
 
         if (provider === 'gemini' || (config.baseUrl && config.baseUrl.includes("generativelanguage.googleapis.com") && !config.baseUrl.includes("/openai"))) {
-          return await callGeminiNativeAPI(config, messages);
+          return await callGeminiNativeAPI(config, messages, config.signal);
         }
 
-        return await callOpenAICompatibleAPI(config, messages);
+        return await callOpenAICompatibleAPI(config, messages, config.signal);
 
       } catch (err) {
         const isRateLimit = err.status === 429 || /429|quota|rate limit|too many requests/i.test(err.message);
@@ -275,7 +275,7 @@
   /**
    * Helper for Gemini Native REST API.
    */
-  async function callGeminiNativeAPI(config, messages) {
+  async function callGeminiNativeAPI(config, messages, signal) {
     let userModel = (config.model || "gemini-1.5-flash").replace(/^models\//, "");
 
     const apiKey = (config.apiKey || "").trim();
@@ -309,11 +309,6 @@
 
     if (config.enableReasoning === true) {
       const budget = Number(config.reasoningBudget);
-      generationConfig.thinkingConfig = {
-        thinkingBudget: (!isNaN(budget) && budget !== 0) ? budget : 1024,
-        thinkingLevel: config.reasoningEffort || 'medium',
-        includeThoughts: true
-      };
       generationConfig.thinkingConfig = { includeThoughts: true };
       const isGemini3 = config.model && config.model.includes('gemini-3');
       if (isGemini3) {
@@ -331,7 +326,8 @@
     const response = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
+      signal
     });
 
     if (!response.ok) {
@@ -392,7 +388,7 @@
   /**
    * Helper for OpenAI and OpenAI-compatible endpoints.
    */
-  async function callOpenAICompatibleAPI(config, messages) {
+  async function callOpenAICompatibleAPI(config, messages, signal) {
     const baseUrl = (config.baseUrl || PROVIDER_DEFAULTS[config.provider]?.baseUrl || "https://api.openai.com/v1").replace(/\/+$/, "");
     const endpoint = `${baseUrl}/chat/completions`;
 
@@ -429,11 +425,6 @@
       }
       if (config.provider === 'gemini' || (config.baseUrl && config.baseUrl.includes("generativelanguage.googleapis.com"))) {
         const budget = Number(config.reasoningBudget) || 1024;
-        payload.thinking_config = { 
-          thinking_budget: budget,
-          thinking_level: config.reasoningEffort || 'medium',
-          include_thoughts: true
-        };
         const isGemini3 = config.model && config.model.includes('gemini-3');
         payload.thinking_config = { include_thoughts: true };
         if (isGemini3) {
@@ -450,7 +441,8 @@
     const response = await fetch(endpoint, {
       method: "POST",
       headers: headers,
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
+      signal
     });
 
     if (!response.ok) {
@@ -505,7 +497,7 @@
   /**
    * Helper for Anthropic API endpoint.
    */
-  async function callAnthropicAPI(config, messages) {
+  async function callAnthropicAPI(config, messages, signal) {
     const baseUrl = (config.baseUrl || PROVIDER_DEFAULTS.anthropic.baseUrl).replace(/\/+$/, "");
     const endpoint = `${baseUrl}/messages`;
 
@@ -562,7 +554,8 @@
     const response = await fetch(endpoint, {
       method: "POST",
       headers: headers,
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
+      signal
     });
 
     if (!response.ok) {

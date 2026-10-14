@@ -181,3 +181,23 @@ test('engine run attaches actualModel and systemFingerprint to metadata and resu
   assert.strictEqual(result.metadata.appVersion, APP_VERSION);
 });
 
+test('stop aborts an active provider request', async () => {
+  let observedSignal;
+  const apiClient = {
+    completeChat: config => new Promise((resolve, reject) => {
+      observedSignal = config.signal;
+      config.signal.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')), { once: true });
+    })
+  };
+  const psychometrics = { parseBatchResponse: () => ({}), calculatePsychometrics: () => ({}) };
+  const pvqData = { ITEMS: [{ id: 1, en: 'Item 1', pl: 'Pozycja 1' }] };
+  const engine = new EvaluatorEngine({ mode: 'batch' }, pvqData, psychometrics, apiClient);
+  const pending = engine.run();
+
+  await new Promise(resolve => setImmediate(resolve));
+  engine.stop();
+
+  assert.strictEqual(observedSignal.aborted, true);
+  await assert.rejects(pending, /Evaluation aborted/);
+});
+
