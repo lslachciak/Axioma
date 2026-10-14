@@ -275,18 +275,18 @@ describe('calculatePsychometrics', () => {
     };
 
     test('calculates correct psychometrics with valid scores', () => {
-        const itemScores = {
+        const itemScores = Object.fromEntries(Array.from({ length: 57 }, (_, i) => [i + 1, 4]));
+        Object.assign(itemScores, {
             1: 4,
             2: 6,
             3: 2,
-            4: 4,
-            5: null // Ignored
-        };
+            4: 4
+        });
 
         const result = calculatePsychometrics(itemScores, mockPvqData);
 
-        assert.strictEqual(result.totalAnswered, 4);
-        // MRAT = (4 + 6 + 2 + 4) / 4 = 16 / 4 = 4.0
+        assert.strictEqual(result.totalAnswered, 57);
+        assert.strictEqual(result.complete, true);
         assert.strictEqual(result.mrat, 4.0);
 
         // VAL1 rawMean = (4 + 6) / 2 = 5.0
@@ -306,30 +306,32 @@ describe('calculatePsychometrics', () => {
     });
 
     test('handles missing or incomplete scores gracefully', () => {
-        const itemScores = {
-            1: 5,
-            2: null, // one missing from VAL1
-            3: null, // all missing from VAL2
-            4: null
-        };
+        const itemScores = Object.fromEntries(Array.from({ length: 57 }, (_, i) => [i + 1, 4]));
+        itemScores[2] = null;
 
         const result = calculatePsychometrics(itemScores, mockPvqData);
 
-        assert.strictEqual(result.totalAnswered, 1);
-        assert.strictEqual(result.mrat, 5.0); // Only item 1 answered
+        assert.strictEqual(result.totalAnswered, 56);
+        assert.strictEqual(result.complete, false);
+        assert.strictEqual(result.mrat, null);
 
-        // VAL1 rawMean = 5.0
-        assert.strictEqual(result.refinedValues.VAL1.rawMean, 5.0);
-        assert.strictEqual(result.refinedValues.VAL1.centeredMean, 0.0);
+        // A refined value requires all of its constituent items.
+        assert.strictEqual(result.refinedValues.VAL1.rawMean, null);
+        assert.strictEqual(result.refinedValues.VAL1.centeredMean, null);
 
-        // VAL2 is completely empty
-        assert.strictEqual(result.refinedValues.VAL2.rawMean, null);
+        // Complete subscales retain a raw mean, but no centered score is derived.
+        assert.strictEqual(result.refinedValues.VAL2.rawMean, 4.0);
         assert.strictEqual(result.refinedValues.VAL2.centeredMean, null);
 
-        // HO1 rawMean only uses VAL1 since VAL2 is null
-        // HO1 rawMean = 5.0
-        assert.strictEqual(result.higherOrderValues.HO1.rawMean, 5.0);
-        assert.strictEqual(result.higherOrderValues.HO1.centeredMean, 0.0);
+        // Higher-order values require every constituent refined value.
+        assert.strictEqual(result.higherOrderValues.HO1.rawMean, null);
+        assert.strictEqual(result.higherOrderValues.HO1.centeredMean, null);
+    });
+
+    test('uses core higher-order groups and keeps Face and Humility separate', () => {
+        assert.deepStrictEqual(pvqDataExports.HIGHER_ORDER_VALUES.Conservation.refinedKeys, ["SEP", "SES", "TRD", "COR", "COI"]);
+        assert.strictEqual(pvqDataExports.REFINED_VALUES.FAC.higherOrder, null);
+        assert.strictEqual(pvqDataExports.REFINED_VALUES.HUM.higherOrder, null);
     });
 });
 

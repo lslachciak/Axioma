@@ -348,8 +348,8 @@ function deobfuscateApiKey(val) {
     if (refinedCanvas) {
       const refinedVals = Object.values(psych.refinedValues);
       const refLabels = refinedVals.map(v => state.lang === 'pl' ? v.namePl : v.nameEn);
-      const rawScores = refinedVals.map(v => v.rawMean ?? 0);
-      const centeredScores = refinedVals.map(v => v.centeredMean ?? 0);
+      const rawScores = refinedVals.map(v => v.rawMean);
+      const centeredScores = refinedVals.map(v => v.centeredMean);
 
       refinedChartInstance = buildRadarChart({
         canvas: refinedCanvas,
@@ -372,8 +372,8 @@ function deobfuscateApiKey(val) {
     if (hoCanvas) {
       const hoVals = Object.values(psych.higherOrderValues);
       const hoLabels = hoVals.map(v => state.lang === 'pl' ? v.namePl : v.nameEn);
-      const hoRaw = hoVals.map(v => v.rawMean ?? 0);
-      const hoCentered = hoVals.map(v => v.centeredMean ?? 0);
+      const hoRaw = hoVals.map(v => v.rawMean);
+      const hoCentered = hoVals.map(v => v.centeredMean);
 
       higherOrderChartInstance = buildRadarChart({
         canvas: hoCanvas,
@@ -396,8 +396,8 @@ function deobfuscateApiKey(val) {
     if (circleCanvas) {
       const values = Object.values(psych.refinedValues);
       const circleLabels = values.map(v => `${v.code} - ${state.lang === 'pl' ? v.namePl : v.nameEn}`);
-      const circleRaw = values.map(v => v.rawMean ?? 0);
-      const circleCentered = values.map(v => v.centeredMean ?? 0);
+      const circleRaw = values.map(v => v.rawMean);
+      const circleCentered = values.map(v => v.centeredMean);
 
       circleChartInstance = buildRadarChart({
         canvas: circleCanvas,
@@ -420,8 +420,8 @@ function deobfuscateApiKey(val) {
     if (hoEnlargedCanvas) {
       const hoVals = Object.values(psych.higherOrderValues);
       const hoLabels = hoVals.map(v => state.lang === 'pl' ? v.namePl : v.nameEn);
-      const hoRaw = hoVals.map(v => v.rawMean ?? 0);
-      const hoCentered = hoVals.map(v => v.centeredMean ?? 0);
+      const hoRaw = hoVals.map(v => v.rawMean);
+      const hoCentered = hoVals.map(v => v.centeredMean);
 
       hoEnlargedChartInstance = buildRadarChart({
         canvas: hoEnlargedCanvas,
@@ -956,6 +956,10 @@ function deobfuscateApiKey(val) {
 
 
     return el('div', { className: 'space-y-8' },
+      !psych.complete ? el('div', {
+        role: 'alert',
+        className: 'rounded-xl border border-amber-500/40 bg-amber-950/60 px-4 py-3 text-sm text-amber-200'
+      }, `Incomplete profile: ${psych.totalAnswered} of 57 items have valid ratings. MRAT and centered scores were not calculated.`) : null,
       el('div', { className: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4' },
         el('div', { className: 'bg-slate-900/60 p-4 rounded-xl border border-slate-800' },
           el('p', { className: 'text-xs text-slate-400' }, 'Total Items Answered'),
@@ -963,7 +967,7 @@ function deobfuscateApiKey(val) {
         ),
         el('div', { className: 'bg-slate-900/60 p-4 rounded-xl border border-slate-800' },
           el('p', { className: 'text-xs text-slate-400' }, 'Grand Mean Score (MRAT)'),
-          el('p', { className: 'text-xl font-bold text-sky-400' }, `${psych.mrat} `, el('span', { className: 'text-xs text-slate-500 font-normal' }, '/ 6.0'))
+          el('p', { className: 'text-xl font-bold text-sky-400' }, psych.mrat !== null ? `${psych.mrat} ` : 'N/A', psych.mrat !== null ? el('span', { className: 'text-xs text-slate-500 font-normal' }, '/ 6.0') : null)
         ),
         el('div', { className: 'bg-slate-900/60 p-4 rounded-xl border border-slate-800' },
           el('p', { className: 'text-xs text-slate-400' }, 'Resolved Model & Fingerprint'),
@@ -1025,13 +1029,14 @@ function deobfuscateApiKey(val) {
       ),
       // 19 Refined Values Table
       el('div', { className: 'space-y-3' },
-        el('h3', { className: 'text-sm font-semibold text-sky-400' }, '19 Refined Basic Values'),
+        el('h3', { className: 'text-sm font-semibold text-sky-400' }, '19 Refined Basic Values (Face and Humility are reported separately from the four core groups)'),
         el('div', { className: 'overflow-x-auto' },
           el('table', { className: 'w-full text-left text-xs border-collapse' },
             el('thead', {},
               el('tr', { className: 'border-b border-slate-800 text-slate-400' },
                 el('th', { className: 'py-2 px-3' }, 'Code'),
                 el('th', { className: 'py-2 px-3' }, 'Refined Value'),
+                el('th', { className: 'py-2 px-3' }, 'Grouping'),
                 el('th', { className: 'py-2 px-3' }, 'Items'),
                 el('th', { className: 'py-2 px-3' }, 'Raw Mean'),
                 el('th', { className: 'py-2 px-3' }, 'Centered Score')
@@ -1042,6 +1047,7 @@ function deobfuscateApiKey(val) {
                 el('tr', { key: rv.code, className: 'hover:bg-slate-800/30' },
                   el('td', { className: 'py-2 px-3 font-bold text-slate-400 code-font' }, rv.code),
                   el('td', { className: 'py-2 px-3 text-slate-200' }, state.lang === 'pl' ? rv.namePl : rv.nameEn),
+                  el('td', { className: 'py-2 px-3 text-slate-400' }, rv.higherOrder || 'Boundary value (separate)'),
                   el('td', { className: 'py-2 px-3 text-slate-400 code-font' }, rv.items.join(', ')),
                   el('td', { className: 'py-2 px-3 font-bold text-sky-400' }, rv.rawMean !== null ? rv.rawMean : 'N/A'),
                   el('td', { className: `py-2 px-3 font-bold ${rv.centeredMean > 0 ? 'text-emerald-400' : 'text-purple-400'}` },

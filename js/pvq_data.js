@@ -392,13 +392,13 @@
     ACH: { code: "ACH", nameEn: "Achievement", namePl: "Osiągnięcia", items: [17, 32, 48], higherOrder: "Enhancement" },
     POD: { code: "POD", nameEn: "Power - Dominance", namePl: "Władza nad ludźmi", items: [6, 29, 41], higherOrder: "Enhancement" },
     POR: { code: "POR", nameEn: "Power - Resources", namePl: "Władza nad zasobami", items: [12, 20, 44], higherOrder: "Enhancement" },
-    FAC: { code: "FAC", nameEn: "Face", namePl: "Prestiż", items: [9, 24, 49], higherOrder: "Conservation" },
+    FAC: { code: "FAC", nameEn: "Face", namePl: "Prestiż", items: [9, 24, 49], higherOrder: null },
     SEP: { code: "SEP", nameEn: "Security - Personal", namePl: "Bezpieczeństwo osobiste", items: [13, 26, 53], higherOrder: "Conservation" },
     SES: { code: "SES", nameEn: "Security - Societal", namePl: "Bezpieczeństwo społeczne", items: [2, 35, 50], higherOrder: "Conservation" },
     TRD: { code: "TRD", nameEn: "Tradition", namePl: "Tradycja", items: [18, 33, 40], higherOrder: "Conservation" },
     COR: { code: "COR", nameEn: "Conformity - Rules", namePl: "Przystosowanie do reguł", items: [15, 31, 42], higherOrder: "Conservation" },
     COI: { code: "COI", nameEn: "Conformity - Interpersonal", namePl: "Przystosowanie do ludzi", items: [4, 22, 51], higherOrder: "Conservation" },
-    HUM: { code: "HUM", nameEn: "Humility", namePl: "Pokora", items: [7, 38, 54], higherOrder: "Conservation" },
+    HUM: { code: "HUM", nameEn: "Humility", namePl: "Pokora", items: [7, 38, 54], higherOrder: null },
     UNN: { code: "UNN", nameEn: "Universalism - Nature", namePl: "Uniwersalizm ekologiczny", items: [8, 21, 45], higherOrder: "Transcendence" },
     UNC: { code: "UNC", nameEn: "Universalism - Concern", namePl: "Uniwersalizm społeczny", items: [5, 37, 52], higherOrder: "Transcendence" },
     UNT: { code: "UNT", nameEn: "Universalism - Tolerance", namePl: "Uniwersalizm - tolerancja", items: [14, 34, 57], higherOrder: "Transcendence" },
@@ -423,7 +423,7 @@
       code: "Conservation",
       nameEn: "Conservation",
       namePl: "Zachowawczość",
-      refinedKeys: ["FAC", "SEP", "SES", "TRD", "COR", "COI", "HUM"]
+      refinedKeys: ["SEP", "SES", "TRD", "COR", "COI"]
     },
     Transcendence: {
       code: "Transcendence",

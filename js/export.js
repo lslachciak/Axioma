@@ -71,7 +71,8 @@
     lines.push(`# Reasoning Enabled\t${results.metadata?.config?.enableReasoning === '' ? 'Default' : (results.metadata?.config?.enableReasoning === true ? 'Yes' : 'No')}`);
     lines.push(`# Reasoning Token Budget\t${results.metadata?.config?.enableReasoning === true ? (results.metadata?.config?.reasoningBudget || 1024) : "N/A"}`);
     lines.push(`# Reasoning Effort\t${results.metadata?.config?.enableReasoning === true ? (results.metadata?.config?.reasoningEffort || "medium") : "N/A"}`);
-    lines.push(`# Grand Mean (MRAT)\t${results.psychometrics.mrat}`);
+    lines.push(`# Profile Complete\t${results.psychometrics.complete ? "Yes" : "No"}`);
+    lines.push(`# Grand Mean (MRAT)\t${results.psychometrics.mrat ?? "N/A"}`);
     lines.push(`# Items Answered\t${results.psychometrics.totalAnswered} / 57`);
     lines.push("");
 
@@ -98,13 +99,13 @@
     lines.push("Code\tName (EN)\tName (PL)\tHigher-Order Group\tItem IDs\tRaw Mean\tCentered Score");
     for (const code in results.psychometrics.refinedValues) {
       const rv = results.psychometrics.refinedValues[code];
-      lines.push(`${rv.code}\t${rv.nameEn}\t${rv.namePl}\t${rv.higherOrder}\t${rv.items.join(",")}\t${rv.rawMean ?? ""}\t${rv.centeredMean ?? ""}`);
+      lines.push(`${rv.code}\t${rv.nameEn}\t${rv.namePl}\t${rv.higherOrder || "Boundary value (separate)"}\t${rv.items.join(",")}\t${rv.rawMean ?? ""}\t${rv.centeredMean ?? ""}`);
     }
     lines.push("");
 
     // Section 4: 57 Items Detailed Responses
     lines.push("--- ITEM-BY-ITEM RESPONSES ---");
-    lines.push("Item ID\tRefined Code\tScore (1-6)\tReasoning Trace\tRaw Response Text\tLLM Query Text");
+    lines.push("Item ID\tRefined Code\tLLM Query Text\tReasoning Trace\tRaw Response Text\tScore (1-6)");
     const itemRatings = results.psychometrics?.itemRatings || results.itemRatings || {};
     for (let i = 1; i <= 57; i++) {
       let score = itemRatings[i];
@@ -115,7 +116,7 @@
       const rawText = (results.rawResponses?.[i] || "").replace(/[\r\n\t]+/g, " ");
       const itemMeta = window.PVQData ? window.PVQData.ITEMS[i - 1] : { valueKey: "" };
       const queryText = (results.llmQueries?.[i] || "").replace(/[\r\n\t]+/g, " ");
-      lines.push(`${i}\t${itemMeta?.valueKey || ""}\t${score}\t${reasoning}\t${rawText}\t${queryText}`);
+      lines.push(`${i}\t${itemMeta?.valueKey || ""}\t${queryText}\t${reasoning}\t${rawText}\t${score}`);
     }
 
     return lines.join("\n");
@@ -187,7 +188,8 @@
       ["Reasoning Enabled", results.metadata?.config?.enableReasoning === '' ? 'Default' : (results.metadata?.config?.enableReasoning === true ? 'Yes' : 'No')],
       ["Reasoning Token Budget", results.metadata?.config?.enableReasoning === true ? (results.metadata?.config?.reasoningBudget || 1024) : "N/A"],
       ["Reasoning Effort", results.metadata?.config?.enableReasoning === true ? (results.metadata?.config?.reasoningEffort || "medium") : "N/A"],
-      ["Grand Mean Score (MRAT)", results.psychometrics.mrat],
+      ["Profile Complete", results.psychometrics.complete ? "Yes" : "No"],
+      ["Grand Mean Score (MRAT)", results.psychometrics.mrat ?? "N/A"],
       ["Total Items Answered", `${results.psychometrics.totalAnswered} / 57`]
     ];
     const wsOverview = createSafeWorksheet(XLSX, overviewData);
@@ -221,7 +223,7 @@
         rv.code,
         rv.nameEn,
         rv.namePl,
-        rv.higherOrder,
+        rv.higherOrder || "Boundary value (separate)",
         rv.items.join(", "),
         rv.rawMean ?? "N/A",
         rv.centeredMean ?? "N/A"
@@ -232,7 +234,7 @@
 
     // Tab 4: Item Responses
     const itemRows = [
-      ["Item ID", "Refined Code", "Description (EN)", "Description (PL)", "Parsed Score (1-6)", "Chain-of-Thought Trace", "Raw LLM Response Text", "LLM Query Text"]
+      ["Item ID", "Refined Code", "Description (EN)", "Description (PL)", "LLM Query Text", "Chain-of-Thought Trace", "Raw LLM Response Text", "Parsed Score (1-6)"]
     ];
     for (let i = 1; i <= 57; i++) {
       let score = results.psychometrics.itemRatings[i];
@@ -247,10 +249,10 @@
         itemMeta?.valueKey || "",
         itemMeta?.en || "",
         itemMeta?.pl || "",
-        score,
+        results.llmQueries?.[i] || "",
         reasoning,
         rawText,
-        results.llmQueries?.[i] || ""
+        score
       ]);
     }
     const wsItems = createSafeWorksheet(XLSX, itemRows);
@@ -330,7 +332,8 @@
       "Reasoning Tokens",
       "Total Tokens",
       "MRAT Grand Mean",
-      "Items Answered"
+      "Items Answered",
+      "Profile Complete"
     ];
 
     // Add 4 Higher-Order Values (Raw & Centered)
@@ -348,9 +351,9 @@
       }
     }
 
-    // Add 57 Item Scores, Reasoning, and Raw Text
+    // Add 57 item query, reasoning, raw response, and score fields.
     for (let i = 1; i <= 57; i++) {
-      headers.push(`Item_${i}_Score`, `Item_${i}_Reasoning`, `Item_${i}_Raw`, `Item_${i}_Query`);
+      headers.push(`Item_${i}_Query`, `Item_${i}_Reasoning`, `Item_${i}_Raw`, `Item_${i}_Score`);
     }
 
     const rows = [headers.map(escapeCSVCell).join(",")];
@@ -387,7 +390,8 @@
         token.reasoningTokens ?? 0,
         token.totalTokens ?? 0,
         psych.mrat ?? "N/A",
-        `${psych.totalAnswered ?? 0}/57`
+        `${psych.totalAnswered ?? 0}/57`,
+        psych.complete ? "Yes" : "No"
       ];
 
       // 4 Higher-Order Values
@@ -413,7 +417,7 @@
         const reasoning = results.reasoningTraces?.[i] || "";
         const rawText = results.rawResponses?.[i] || "";
         const queryText = (results.llmQueries?.[i] || "").replace(/[\r\n\t]+/g, " ");
-        row.push(score, reasoning, rawText, queryText);
+        row.push(queryText, reasoning, rawText, score);
       }
 
       rows.push(row.map(escapeCSVCell).join(","));
@@ -467,7 +471,8 @@
       "Reasoning Tokens",
       "Total Tokens",
       "MRAT Grand Mean",
-      "Items Answered"
+      "Items Answered",
+      "Profile Complete"
     ];
 
     const hoKeys = ["Transcendence", "Conservation", "Enhancement", "Openness"];
@@ -482,7 +487,7 @@
     }
 
     for (let i = 1; i <= 57; i++) {
-      headers.push(`Item ${i} Score`, `Item ${i} Reasoning`, `Item ${i} Raw`, `Item ${i} Query`);
+      headers.push(`Item ${i} Query`, `Item ${i} Reasoning`, `Item ${i} Raw`, `Item ${i} Score`);
     }
 
     const summaryRows = [headers];
@@ -519,7 +524,8 @@
         token.reasoningTokens ?? 0,
         token.totalTokens ?? 0,
         psych.mrat ?? "N/A",
-        `${psych.totalAnswered ?? 0}/57`
+        `${psych.totalAnswered ?? 0}/57`,
+        psych.complete ? "Yes" : "No"
       ];
 
       for (const key of hoKeys) {
@@ -542,7 +548,7 @@
         const reasoning = results.reasoningTraces?.[i] || "";
         const rawText = results.rawResponses?.[i] || "";
         const queryText = results.llmQueries?.[i] || "";
-        row.push(score, reasoning, rawText, queryText);
+        row.push(queryText, reasoning, rawText, score);
       }
 
       summaryRows.push(row);

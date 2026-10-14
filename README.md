@@ -1,13 +1,15 @@
 # Axioma
 
-**Axioma** is a browser-based research tool for the psychometric evaluation of large
-language models (LLMs) using the **PVQ-RR** — the Portrait Values Questionnaire,
-Revised (57 items) by Shalom H. Schwartz.
+**Axioma** is a browser-based research tool for generating **PVQ-RR-derived LLM
+response profiles** using the Portrait Values Questionnaire, Revised (57 items) by
+Shalom H. Schwartz. It is an experimental adaptation: the profiles do not establish
+that an LLM possesses human values, and human psychometric validation does not
+automatically transfer to language models.
 
 The evaluated LLM answers all 57 PVQ-RR portraits as a survey respondent. Axioma
-parses the ratings, computes the profile of **19 basic human values**, applies
-**grand-mean (MRAT) correction**, aggregates the **4 higher-order value groups**,
-and exports the resulting profiles for subsequent statistical analysis.
+parses the ratings, computes a profile of **19 refined values**, applies
+**grand-mean (MRAT) correction** only to complete 57-item runs, aggregates the
+**4 core higher-order value groups**, and reports Face and Humility separately.
 
 100% client-side (vanilla JS, no build step, CORS-safe) — runs from a local file,
 static hosting, or any HTTP server.
