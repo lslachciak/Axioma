@@ -30,7 +30,9 @@ static hosting, or any HTTP server.
 - **Reasoning support** — extracts and stores thinking traces (thinking tags,
   Gemini 3.x thoughts) with a configurable thinking budget.
 - **Reproducibility controls** — temperature, seed, fixed or randomized item order.
-- **Rate-limit handling** — automatic retry on HTTP 429 with `Retry-After` support.
+- **Transient-error handling** — automatic retry on HTTP 429 with `Retry-After`
+  support, plus cancellable 30-second Fibonacci backoff for HTTP 502, 503, and
+  504 provider outages (`30s`, `30s`, `60s`, `90s`, `150s` by default).
 - **Immediate cancellation** — Stop aborts active provider requests and queued retries.
 - **Exports** — JSON, TSV, CSV and multi-sheet XLSX with full run metadata
   (requested/resolved model, system fingerprint, configuration). API exchanges

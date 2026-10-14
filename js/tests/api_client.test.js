@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { parseRetryDelayMs } = require('../api_client.js');
+const { fibonacciRetryDelayMs, parseRetryDelayMs } = require('../api_client.js');
 
 test('provider defaults - local providers are removed and custom uses the local server URL', () => {
   const { PROVIDER_DEFAULTS } = require('../api_client.js');
@@ -70,6 +70,13 @@ test('parseRetryDelayMs - should return negative delay if negative header value 
   headers.set('retry-after', '-5');
   const delay = parseRetryDelayMs('An unknown error occurred.', headers);
   assert.strictEqual(delay, -5000);
+});
+
+test('fibonacciRetryDelayMs - starts at 30 seconds and follows Fibonacci intervals', () => {
+  assert.deepStrictEqual(
+    [0, 1, 2, 3, 4].map(index => fibonacciRetryDelayMs(index)),
+    [30000, 30000, 60000, 90000, 150000]
+  );
 });
 
 test('delay - should resolve after the specified time', async (t) => {
@@ -290,6 +297,85 @@ test('completeChat - returns actualModel and systemFingerprint from Gemini respo
   assert.strictEqual(res.text, 'gemini response');
 
   global.fetch = undefined;
+});
+
+test('completeChat - retries temporary Gemini 503 errors with Fibonacci backoff', async () => {
+  const { completeChat } = require('../api_client.js');
+  const originalFetch = global.fetch;
+  const statusUpdates = [];
+  let fetchCalls = 0;
+
+  global.fetch = async () => {
+    fetchCalls++;
+    if (fetchCalls <= 2) {
+      return {
+        ok: false,
+        status: 503,
+        json: async () => ({ error: { message: 'This model is currently experiencing high demand.' } }),
+        headers: new Map()
+      };
+    }
+
+    return {
+      ok: true,
+      status: 200,
+      json: async () => ({
+        modelVersion: 'gemini-test',
+        candidates: [{ content: { parts: [{ text: '4' }] } }],
+        usageMetadata: {}
+      }),
+      headers: new Map()
+    };
+  };
+
+  try {
+    const result = await completeChat(
+      {
+        provider: 'gemini',
+        model: 'gemini-test',
+        apiKey: 'test',
+        maxRetries: 2,
+        retryBaseDelayMs: 1
+      },
+      [{ role: 'user', content: 'test' }],
+      status => statusUpdates.push(status)
+    );
+
+    assert.strictEqual(fetchCalls, 3);
+    assert.strictEqual(result.text, '4');
+    assert.ok(statusUpdates.some(status => /Temporary provider error \(503\)/.test(status)));
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
+test('completeChat - does not retry non-transient provider errors', async () => {
+  const { completeChat } = require('../api_client.js');
+  const originalFetch = global.fetch;
+  let fetchCalls = 0;
+
+  global.fetch = async () => {
+    fetchCalls++;
+    return {
+      ok: false,
+      status: 400,
+      json: async () => ({ error: { message: 'Invalid request' } }),
+      headers: new Map()
+    };
+  };
+
+  try {
+    await assert.rejects(
+      completeChat(
+        { provider: 'gemini', model: 'gemini-test', apiKey: 'test', retryBaseDelayMs: 1 },
+        [{ role: 'user', content: 'test' }]
+      ),
+      /Gemini API Error \[400\]/
+    );
+    assert.strictEqual(fetchCalls, 1);
+  } finally {
+    global.fetch = originalFetch;
+  }
 });
 
 test('fetchAvailableModels - exposes network failures to the caller', async (t) => {

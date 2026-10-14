@@ -2,7 +2,7 @@
  * Multi-Provider API Client for Axioma LLM Evaluation
  * Supports: OpenAI, Anthropic, Google Gemini, xAI, Ollama Cloud, and custom OpenAI-compatible endpoints
  * Handles custom Base URL, temperature, seed, reasoning/thinking token budget, system prompt,
- * live model fetching, automatic rate-limit (429) retry logic, and robust internal thinking block extraction.
+ * live model fetching, automatic transient-error retry logic, and robust internal thinking block extraction.
  */
 
 (function (exports) {
@@ -88,6 +88,38 @@
     }
 
     return 5000;
+  }
+
+  /**
+   * Returns a Fibonacci backoff delay. Retry indexes are zero-based, producing
+   * 30, 30, 60, 90, 150 seconds with the default base delay.
+   */
+  function fibonacciRetryDelayMs(retryIndex, baseDelayMs = 30000) {
+    let previous = 1;
+    let current = 1;
+
+    for (let index = 0; index < retryIndex; index++) {
+      [previous, current] = [current, previous + current];
+    }
+
+    return previous * baseDelayMs;
+  }
+
+  async function waitForRetry(waitMs, statusMessage, onStatusUpdate, checkAbort) {
+    let remainingMs = Math.max(0, waitMs);
+
+    while (remainingMs > 0) {
+      if (checkAbort && checkAbort()) throw new Error("Evaluation cancelled by user.");
+
+      const remainingSeconds = Math.max(1, Math.ceil(remainingMs / 1000));
+      if (onStatusUpdate) onStatusUpdate(statusMessage(remainingSeconds));
+
+      const intervalMs = Math.min(1000, remainingMs);
+      await delay(intervalMs);
+      remainingMs -= intervalMs;
+    }
+
+    if (checkAbort && checkAbort()) throw new Error("Evaluation cancelled by user.");
   }
 
   /**
@@ -232,11 +264,12 @@
   }
 
   /**
-   * Main completion caller with rate limit retry logic.
+   * Main completion caller with transient-error retry logic.
    */
   async function completeChat(config, messages, onStatusUpdate, checkAbort) {
     const provider = config.provider || 'openai';
     const maxRetries = config.maxRetries ?? 5;
+    const retryBaseDelayMs = config.retryBaseDelayMs ?? 30000;
 
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
@@ -252,18 +285,24 @@
 
       } catch (err) {
         const isRateLimit = err.status === 429 || /429|quota|rate limit|too many requests/i.test(err.message);
+        const isTemporaryServerError = [502, 503, 504].includes(err.status);
 
-        if (isRateLimit && attempt < maxRetries) {
-          const waitMs = parseRetryDelayMs(err.message, err.responseHeaders);
-          let totalSeconds = Math.max(1, Math.ceil(waitMs / 1000));
-          console.warn(`Rate limit (429) hit. Waiting ${totalSeconds}s before retry ${attempt + 1}/${maxRetries}...`);
+        if ((isRateLimit || isTemporaryServerError) && attempt < maxRetries) {
+          const waitMs = isRateLimit
+            ? parseRetryDelayMs(err.message, err.responseHeaders)
+            : fibonacciRetryDelayMs(attempt, retryBaseDelayMs);
+          const errorLabel = isRateLimit
+            ? 'Rate limit (429) hit'
+            : `Temporary provider error (${err.status})`;
+          const retryLabel = `${attempt + 1}/${maxRetries}`;
 
-          for (let sec = totalSeconds; sec > 0; sec--) {
-            if (checkAbort && checkAbort()) throw new Error("Evaluation cancelled by user.");
-            const countdownMsg = `Rate limit (429) hit. Waiting ${sec}s before retry ${attempt + 1}/${maxRetries}...`;
-            if (onStatusUpdate) onStatusUpdate(countdownMsg);
-            await delay(1000);
-          }
+          console.warn(`${errorLabel}. Waiting ${Math.max(1, Math.ceil(waitMs / 1000))}s before retry ${retryLabel}...`);
+          await waitForRetry(
+            waitMs,
+            seconds => `${errorLabel}. Waiting ${seconds}s before retry ${retryLabel}...`,
+            onStatusUpdate,
+            checkAbort
+          );
           continue;
         }
 
@@ -616,5 +655,6 @@
   exports.fetchAvailableModels = fetchAvailableModels;
   exports.completeChat = completeChat;
   exports.parseRetryDelayMs = parseRetryDelayMs;
+  exports.fibonacciRetryDelayMs = fibonacciRetryDelayMs;
   exports.delay = delay;
 })(typeof exports !== 'undefined' ? exports : (window.ApiClient = {}));
