@@ -168,6 +168,9 @@ test('generateTSVContent generates correct TSV format', (t) => {
         },
         rawResponses: {
             1: "raw 1"
+        },
+        llmQueries: {
+            1: "query 1"
         }
     };
 
@@ -180,8 +183,9 @@ test('generateTSVContent generates correct TSV format', (t) => {
     assert.ok(tsv.includes("Prompt Tokens\t10"));
     assert.ok(tsv.includes("O\tOpenness\tOtwartość\tkey1\t4\t-0.5"));
     assert.ok(tsv.includes("SD1\tSelf-Direction\tKierowanie soba\tOpenness\t1,2,3\t3.5\t-1"));
-    assert.ok(tsv.includes("1\tTEST_KEY\t5\treasoning 1\traw 1"));
-    assert.ok(tsv.includes("2\tTEST_KEY\tN/A\t\t")); // null rating, empty reasoning, empty raw
+    assert.ok(tsv.includes("Item ID\tRefined Code\tLLM Query Text\tReasoning Trace\tRaw Response Text\tScore (1-6)"));
+    assert.ok(tsv.includes("1\tTEST_KEY\tquery 1\treasoning 1\traw 1\t5"));
+    assert.ok(tsv.includes("2\tTEST_KEY\t\t\t\tN/A"));
 });
 
 
@@ -229,6 +233,9 @@ test('exportSessionToCSV triggers download with correct CSV content', (t) => {
         },
         rawResponses: {
             1: "raw 1"
+        },
+        llmQueries: {
+            1: "query 1"
         }
     }];
 
@@ -246,6 +253,11 @@ test('exportSessionToCSV triggers download with correct CSV content', (t) => {
     assert.ok(headerRow.includes('"Timestamp"'));
     assert.ok(headerRow.includes('"Axioma Version"'));
     assert.ok(headerRow.includes('"Profile Complete"'));
+    const headers = JSON.parse(`[${headerRow}]`);
+    const itemOneStart = headers.indexOf('Item_1_Query');
+    assert.deepStrictEqual(headers.slice(itemOneStart, itemOneStart + 4), [
+        'Item_1_Query', 'Item_1_Reasoning', 'Item_1_Raw', 'Item_1_Score'
+    ]);
 
     const dataRow = csvLines[1];
     assert.ok(dataRow.includes('"1"'), 'Run # 1');
