@@ -33,8 +33,10 @@ static hosting, or any HTTP server.
 - **Rate-limit handling** — automatic retry on HTTP 429 with `Retry-After` support.
 - **Immediate cancellation** — Stop aborts active provider requests and queued retries.
 - **Exports** — JSON, TSV, CSV and multi-sheet XLSX with full run metadata
-  (requested/resolved model, system fingerprint, configuration); import of
-  previous sessions from CSV/XLSX.
+  (requested/resolved model, system fingerprint, configuration). API exchanges
+  preserve each complete query, reasoning trace, and provider response, while
+  item results retain the exact fragment used for parsing. Previous session
+  CSV/XLSX exports remain importable.
 - **Charts** — radar and circle charts of the value profile (Chart.js).
 - **Security** — DOMPurify-sanitized rendering of model output; API keys stored
   in `localStorage` with light obfuscation (see [Security notes](#security-notes)).

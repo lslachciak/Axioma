@@ -105,7 +105,7 @@
 
     // Section 4: 57 Items Detailed Responses
     lines.push("--- ITEM-BY-ITEM RESPONSES ---");
-    lines.push("Item ID\tRefined Code\tLLM Query Text\tReasoning Trace\tRaw Response Text\tScore (1-6)");
+    lines.push("Item ID\tRefined Code\tLLM Query Text\tReasoning Trace\tRaw Response Text\tParsed Fragment\tScore (1-6)");
     const itemRatings = results.psychometrics?.itemRatings || results.itemRatings || {};
     for (let i = 1; i <= 57; i++) {
       let score = itemRatings[i];
@@ -114,9 +114,10 @@
       }
       const reasoning = (results.reasoningTraces?.[i] || "").replace(/[\r\n\t]+/g, " ");
       const rawText = (results.rawResponses?.[i] || "").replace(/[\r\n\t]+/g, " ");
+      const parsedFragment = (results.parsedFragments?.[i] || "").replace(/[\r\n\t]+/g, " ");
       const itemMeta = window.PVQData ? window.PVQData.ITEMS[i - 1] : { valueKey: "" };
       const queryText = (results.llmQueries?.[i] || "").replace(/[\r\n\t]+/g, " ");
-      lines.push(`${i}\t${itemMeta?.valueKey || ""}\t${queryText}\t${reasoning}\t${rawText}\t${score}`);
+      lines.push(`${i}\t${itemMeta?.valueKey || ""}\t${queryText}\t${reasoning}\t${rawText}\t${parsedFragment}\t${score}`);
     }
 
     return lines.join("\n");
@@ -234,7 +235,7 @@
 
     // Tab 4: Item Responses
     const itemRows = [
-      ["Item ID", "Refined Code", "Description (EN)", "Description (PL)", "LLM Query Text", "Chain-of-Thought Trace", "Raw LLM Response Text", "Parsed Score (1-6)"]
+      ["Item ID", "Refined Code", "Description (EN)", "Description (PL)", "LLM Query Text", "Chain-of-Thought Trace", "Raw LLM Response Text", "Parsed Fragment", "Parsed Score (1-6)"]
     ];
     for (let i = 1; i <= 57; i++) {
       let score = results.psychometrics.itemRatings[i];
@@ -252,11 +253,24 @@
         results.llmQueries?.[i] || "",
         reasoning,
         rawText,
+        results.parsedFragments?.[i] || "",
         score
       ]);
     }
     const wsItems = createSafeWorksheet(XLSX, itemRows);
     XLSX.utils.book_append_sheet(wb, wsItems, "57 Items & Responses");
+
+    const exchangeRows = [["Exchange #", "Mode", "Item IDs", "Requested At", "Query", "Full Reasoning", "Full Response", "Resolved Model", "System Fingerprint", "Prompt Tokens", "Completion Tokens", "Reasoning Tokens", "Total Tokens", "Error"]];
+    (results.apiExchanges || []).forEach((exchange, index) => {
+      const usage = exchange.tokenUsage || {};
+      exchangeRows.push([
+        exchange.exchangeNumber || index + 1, exchange.mode || "", (exchange.itemIds || []).join(", "),
+        exchange.requestedAt || "", exchange.query || "", exchange.reasoning || "", exchange.response || "",
+        exchange.actualModel || "", exchange.systemFingerprint || "N/A", usage.promptTokens ?? 0,
+        usage.completionTokens ?? 0, usage.reasoningTokens ?? 0, usage.totalTokens ?? 0, exchange.error || ""
+      ]);
+    });
+    XLSX.utils.book_append_sheet(wb, createSafeWorksheet(XLSX, exchangeRows), "API Exchanges");
 
     // Tab 5: Token Consumption
     const tokenRows = [
@@ -333,7 +347,10 @@
       "Total Tokens",
       "MRAT Grand Mean",
       "Items Answered",
-      "Profile Complete"
+      "Profile Complete",
+      "Full Batch Query",
+      "Full Batch Reasoning",
+      "Full Batch Response"
     ];
 
     // Add 4 Higher-Order Values (Raw & Centered)
@@ -351,9 +368,9 @@
       }
     }
 
-    // Add 57 item query, reasoning, raw response, and score fields.
+    // Add 57 item query, reasoning, raw response, parsed fragment, and score fields.
     for (let i = 1; i <= 57; i++) {
-      headers.push(`Item_${i}_Query`, `Item_${i}_Reasoning`, `Item_${i}_Raw`, `Item_${i}_Score`);
+      headers.push(`Item_${i}_Query`, `Item_${i}_Reasoning`, `Item_${i}_Raw`, `Item_${i}_Parsed`, `Item_${i}_Score`);
     }
 
     const rows = [headers.map(escapeCSVCell).join(",")];
@@ -363,6 +380,7 @@
       const cfg = meta.config || {};
       const psych = results.psychometrics || {};
       const token = results.tokenUsage || {};
+      const batchExchange = (results.apiExchanges || []).find(exchange => exchange.mode === 'batch');
 
 
       const row = [
@@ -391,7 +409,10 @@
         token.totalTokens ?? 0,
         psych.mrat ?? "N/A",
         `${psych.totalAnswered ?? 0}/57`,
-        psych.complete ? "Yes" : "No"
+        psych.complete ? "Yes" : "No",
+        batchExchange?.query || "",
+        batchExchange?.reasoning || "",
+        batchExchange?.response || ""
       ];
 
       // 4 Higher-Order Values
@@ -416,8 +437,9 @@
         }
         const reasoning = results.reasoningTraces?.[i] || "";
         const rawText = results.rawResponses?.[i] || "";
+        const parsedFragment = results.parsedFragments?.[i] || "";
         const queryText = (results.llmQueries?.[i] || "").replace(/[\r\n\t]+/g, " ");
-        row.push(queryText, reasoning, rawText, score);
+        row.push(queryText, reasoning, rawText, parsedFragment, score);
       }
 
       rows.push(row.map(escapeCSVCell).join(","));
@@ -445,8 +467,8 @@
     const XLSX = window.XLSX;
     const wb = XLSX.utils.book_new();
 
-    // Summary Sheet: 1 row per run
-    const headers = [
+    // Session Summary: one row per run, without repeated item-level fields.
+    const summaryRows = [[
       "Run #",
       "Timestamp",
       "Axioma Version",
@@ -473,24 +495,25 @@
       "MRAT Grand Mean",
       "Items Answered",
       "Profile Complete"
-    ];
-
-    const hoKeys = ["Transcendence", "Conservation", "Enhancement", "Openness"];
-    for (const key of hoKeys) {
-      headers.push(`${key} (Raw)`, `${key} (Centered)`);
-    }
-
-    if (sessionResults[0]?.psychometrics?.refinedValues) {
-      for (const code in sessionResults[0].psychometrics.refinedValues) {
-        headers.push(`${code} (Raw)`, `${code} (Centered)`);
-      }
-    }
-
-    for (let i = 1; i <= 57; i++) {
-      headers.push(`Item ${i} Query`, `Item ${i} Reasoning`, `Item ${i} Raw`, `Item ${i} Score`);
-    }
-
-    const summaryRows = [headers];
+    ]];
+    const exchangeRows = [[
+      "Run #", "Exchange #", "Mode", "Item IDs", "Requested At", "Query",
+      "Full Reasoning", "Full Response", "Parsed Scores", "Resolved Model",
+      "System Fingerprint", "Prompt Tokens", "Completion Tokens",
+      "Reasoning Tokens", "Total Tokens", "Error"
+    ]];
+    const itemRows = [[
+      "Run #", "Item ID", "Refined Code", "Description (EN)", "Description (PL)",
+      "Query", "Reasoning", "Raw", "Parsed Fragment", "Score"
+    ]];
+    const refinedRows = [[
+      "Run #", "Code", "Name (EN)", "Name (PL)", "Grouping", "Item IDs",
+      "Scores Count", "Raw Mean", "Centered Score"
+    ]];
+    const higherOrderRows = [[
+      "Run #", "Code", "Name (EN)", "Name (PL)", "Constituent Refined Keys",
+      "Raw Mean", "Centered Score"
+    ]];
 
     sessionResults.forEach((results, idx) => {
       const meta = results.metadata || {};
@@ -499,7 +522,7 @@
       const token = results.tokenUsage || {};
 
 
-      const row = [
+      summaryRows.push([
         idx + 1,
         meta.timestamp || "",
         meta.appVersion || results.appVersion || APP_VERSION,
@@ -526,36 +549,67 @@
         psych.mrat ?? "N/A",
         `${psych.totalAnswered ?? 0}/57`,
         psych.complete ? "Yes" : "No"
-      ];
+      ]);
 
-      for (const key of hoKeys) {
-        const ho = psych.higherOrderValues?.[key];
-        row.push(ho?.rawMean ?? "N/A", ho?.centeredMean ?? "N/A");
-      }
-
-      if (psych.refinedValues) {
-        for (const code in psych.refinedValues) {
-          const rv = psych.refinedValues[code];
-          row.push(rv?.rawMean ?? "N/A", rv?.centeredMean ?? "N/A");
-        }
-      }
+      (results.apiExchanges || []).forEach((exchange, exchangeIndex) => {
+        const usage = exchange.tokenUsage || {};
+        const parsedScores = Object.entries(exchange.parsedScores || {})
+          .map(([itemId, score]) => `${itemId}=${score ?? 'N/A'}`).join('; ');
+        exchangeRows.push([
+          idx + 1,
+          exchange.exchangeNumber || exchangeIndex + 1,
+          exchange.mode || cfg.mode || "",
+          (exchange.itemIds || []).join(", "),
+          exchange.requestedAt || "",
+          exchange.query || "",
+          exchange.reasoning || "",
+          exchange.response || "",
+          parsedScores,
+          exchange.actualModel || meta.actualModel || results.actualModel || cfg.model || "",
+          exchange.systemFingerprint || meta.systemFingerprint || results.systemFingerprint || "N/A",
+          usage.promptTokens ?? 0,
+          usage.completionTokens ?? 0,
+          usage.reasoningTokens ?? 0,
+          usage.totalTokens ?? ((usage.promptTokens || 0) + (usage.completionTokens || 0)),
+          exchange.error || ""
+        ]);
+      });
 
       for (let i = 1; i <= 57; i++) {
-        let score = psych.itemRatings?.[i];
-        if (score === null || score === undefined) {
-          score = "N/A";
-        }
-        const reasoning = results.reasoningTraces?.[i] || "";
-        const rawText = results.rawResponses?.[i] || "";
-        const queryText = results.llmQueries?.[i] || "";
-        row.push(queryText, reasoning, rawText, score);
+        const itemMeta = window.PVQData?.ITEMS?.[i - 1] || {};
+        itemRows.push([
+          idx + 1,
+          i,
+          itemMeta.valueKey || "",
+          itemMeta.en || "",
+          itemMeta.pl || "",
+          results.llmQueries?.[i] || "",
+          results.reasoningTraces?.[i] || "",
+          results.rawResponses?.[i] || "",
+          results.parsedFragments?.[i] || "",
+          psych.itemRatings?.[i] ?? "N/A"
+        ]);
       }
 
-      summaryRows.push(row);
+      Object.values(psych.refinedValues || {}).forEach(rv => refinedRows.push([
+        idx + 1, rv.code, rv.nameEn, rv.namePl,
+        rv.higherOrder || "Boundary value (separate)", rv.items.join(", "),
+        rv.scoresCount, rv.rawMean ?? "N/A", rv.centeredMean ?? "N/A"
+      ]));
+
+      Object.values(psych.higherOrderValues || {}).forEach(ho => higherOrderRows.push([
+        idx + 1, ho.code, ho.nameEn, ho.namePl, ho.refinedKeys.join(", "),
+        ho.rawMean ?? "N/A", ho.centeredMean ?? "N/A"
+      ]));
     });
 
-    const wsSummary = createSafeWorksheet(XLSX, summaryRows);
-    XLSX.utils.book_append_sheet(wb, wsSummary, "Session Runs Summary");
+    [
+      ["Session Summary", summaryRows],
+      ["API Exchanges", exchangeRows],
+      ["Item Results", itemRows],
+      ["Refined Values", refinedRows],
+      ["Higher-Order Values", higherOrderRows]
+    ].forEach(([name, rows]) => XLSX.utils.book_append_sheet(wb, createSafeWorksheet(XLSX, rows), name));
 
     try {
       XLSX.writeFile(wb, filename);
@@ -593,6 +647,96 @@
         const data = new Uint8Array(e.target.result);
         const XLSX = window.XLSX;
         const wb = XLSX.read(data, { type: 'array' });
+
+        if (wb.SheetNames.includes("Session Summary") && wb.SheetNames.includes("Item Results")) {
+          const sheetObjects = (name) => {
+            const sheetRows = XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1 });
+            const sheetHeaders = sheetRows[0] || [];
+            return sheetRows.slice(1).filter(row => row && row.length > 0).map(row =>
+              Object.fromEntries(sheetHeaders.map((header, index) => [String(header || ""), row[index]]))
+            );
+          };
+          const summaries = sheetObjects("Session Summary");
+          const items = sheetObjects("Item Results");
+          const exchanges = wb.SheetNames.includes("API Exchanges") ? sheetObjects("API Exchanges") : [];
+          const sessionResults = summaries.map(summary => {
+            const runNumber = Number(summary["Run #"]);
+            const runItems = items.filter(item => Number(item["Run #"]) === runNumber);
+            const itemRatings = {};
+            const reasoningTraces = {};
+            const rawResponses = {};
+            const parsedFragments = {};
+            const llmQueries = {};
+            runItems.forEach(item => {
+              const itemId = Number(item["Item ID"]);
+              const score = item["Score"];
+              itemRatings[itemId] = score === "N/A" || score === "" || score === null || score === undefined ? null : Number(score);
+              llmQueries[itemId] = item["Query"] || "";
+              reasoningTraces[itemId] = item["Reasoning"] || "";
+              rawResponses[itemId] = item["Raw"] || "";
+              parsedFragments[itemId] = item["Parsed Fragment"] || "";
+            });
+            const cfg = {
+              provider: summary["Provider"] || "",
+              model: summary["Requested Model"] || "",
+              baseUrl: summary["Base URL"] || "",
+              customSystemPrompt: summary["System Prompt"] || "",
+              lang: summary["Language"] || "en",
+              mode: summary["Execution Mode"] || "batch",
+              iterations: parseInt(summary["Iterations"]) || 1,
+              keepContext: summary["Keep Context History"] === "Yes",
+              randomizeOrder: summary["Randomize Order"] === "Yes",
+              temperature: summary["Temperature"] ?? "",
+              seed: summary["Seed"] ?? "",
+              enableReasoning: summary["Reasoning Enabled"] === "Yes" ? true : (summary["Reasoning Enabled"] === "No" ? false : ''),
+              reasoningBudget: parseInt(summary["Reasoning Token Budget"]) || 1024,
+              reasoningEffort: summary["Reasoning Effort"] || "medium"
+            };
+            const apiExchanges = exchanges.filter(exchange => Number(exchange["Run #"]) === runNumber).map(exchange => ({
+              exchangeNumber: Number(exchange["Exchange #"]),
+              mode: exchange["Mode"] || cfg.mode,
+              itemIds: String(exchange["Item IDs"] || "").split(/,\s*/).filter(Boolean).map(Number),
+              requestedAt: exchange["Requested At"] || "",
+              query: exchange["Query"] || "",
+              reasoning: exchange["Full Reasoning"] || "",
+              response: exchange["Full Response"] || "",
+              actualModel: exchange["Resolved Model"] || "",
+              systemFingerprint: exchange["System Fingerprint"] || null,
+              tokenUsage: {
+                promptTokens: Number(exchange["Prompt Tokens"]) || 0,
+                completionTokens: Number(exchange["Completion Tokens"]) || 0,
+                reasoningTokens: Number(exchange["Reasoning Tokens"]) || 0,
+                totalTokens: Number(exchange["Total Tokens"]) || 0
+              },
+              error: exchange["Error"] || null
+            }));
+            const psych = window.Psychometrics && window.PVQData
+              ? window.Psychometrics.calculatePsychometrics(itemRatings, window.PVQData) : {};
+            const appVersion = summary["Axioma Version"] || APP_VERSION;
+            const actualModel = summary["Resolved Model"] || cfg.model;
+            const systemFingerprint = summary["System Fingerprint"] || null;
+            return {
+              metadata: { timestamp: summary["Timestamp"] || new Date().toISOString(), appVersion, config: cfg, actualModel, systemFingerprint },
+              appVersion,
+              actualModel,
+              systemFingerprint,
+              tokenUsage: {
+                promptTokens: Number(summary["Prompt Tokens"]) || 0,
+                completionTokens: Number(summary["Completion Tokens"]) || 0,
+                reasoningTokens: Number(summary["Reasoning Tokens"]) || 0,
+                totalTokens: Number(summary["Total Tokens"]) || 0
+              },
+              psychometrics: psych,
+              reasoningTraces,
+              rawResponses,
+              parsedFragments,
+              llmQueries,
+              apiExchanges
+            };
+          });
+          callback(sessionResults);
+          return;
+        }
 
         const sheetName = wb.SheetNames[0];
         const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { header: 1 });
@@ -656,6 +800,7 @@
           const itemRatings = {};
           const reasoningTraces = {};
           const rawResponses = {};
+          const parsedFragments = {};
           const llmQueries = {};
 
           for (let j = 1; j <= 57; j++) {
@@ -663,6 +808,7 @@
             itemRatings[j] = (score === "N/A" || score === null || score === undefined || score === "") ? null : parseInt(score);
             reasoningTraces[j] = getValue(`Item ${j} Reasoning`) || "";
             rawResponses[j] = getValue(`Item ${j} Raw`) || "";
+            parsedFragments[j] = getValue(`Item ${j} Parsed`) || getValue(`Item_${j}_Parsed`) || "";
             llmQueries[j] = getValue(`Item ${j} Query`) || getValue(`Item_${j}_Query`) || "";
           }
 
@@ -685,6 +831,39 @@
           if (window.Psychometrics && window.PVQData) {
             psych = window.Psychometrics.calculatePsychometrics(itemRatings, window.PVQData);
           }
+          const apiExchanges = [];
+          if (cfg.mode === 'batch' && (getValue("Full Batch Query") || getValue("Full Batch Response") || getValue("Full Batch Reasoning"))) {
+            apiExchanges.push({
+              exchangeNumber: 1,
+              mode: 'batch',
+              itemIds: Array.from({ length: 57 }, (_, index) => index + 1),
+              query: getValue("Full Batch Query") || llmQueries[1] || "",
+              reasoning: getValue("Full Batch Reasoning") || "",
+              response: getValue("Full Batch Response") || "",
+              parsedScores: { ...itemRatings },
+              tokenUsage: { ...token },
+              actualModel: resolvedModel,
+              systemFingerprint,
+              error: null
+            });
+          } else if (cfg.mode === 'sequential') {
+            for (let itemId = 1; itemId <= 57; itemId++) {
+              if (!llmQueries[itemId] && !rawResponses[itemId]) continue;
+              apiExchanges.push({
+                exchangeNumber: apiExchanges.length + 1,
+                mode: 'sequential',
+                itemIds: [itemId],
+                query: llmQueries[itemId],
+                reasoning: reasoningTraces[itemId],
+                response: rawResponses[itemId],
+                parsedScores: { [itemId]: itemRatings[itemId] },
+                tokenUsage: {},
+                actualModel: resolvedModel,
+                systemFingerprint,
+                error: null
+              });
+            }
+          }
 
           sessionResults.push({
             metadata: meta,
@@ -696,7 +875,9 @@
             psychometrics: psych,
             reasoningTraces: reasoningTraces,
             rawResponses: rawResponses,
-            llmQueries: llmQueries
+            parsedFragments: parsedFragments,
+            llmQueries: llmQueries,
+            apiExchanges: apiExchanges
           });
         }
 

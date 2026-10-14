@@ -171,7 +171,9 @@ test('generateTSVContent generates correct TSV format', (t) => {
         },
         llmQueries: {
             1: "query 1"
-        }
+        },
+        parsedFragments: { 1: "1: 5" },
+        apiExchanges: [{ mode: 'batch', query: 'full batch query', reasoning: 'full batch reasoning', response: 'full batch response' }]
     };
 
     const tsv = exports.generateTSVContent(mockResults);
@@ -183,9 +185,9 @@ test('generateTSVContent generates correct TSV format', (t) => {
     assert.ok(tsv.includes("Prompt Tokens\t10"));
     assert.ok(tsv.includes("O\tOpenness\tOtwartość\tkey1\t4\t-0.5"));
     assert.ok(tsv.includes("SD1\tSelf-Direction\tKierowanie soba\tOpenness\t1,2,3\t3.5\t-1"));
-    assert.ok(tsv.includes("Item ID\tRefined Code\tLLM Query Text\tReasoning Trace\tRaw Response Text\tScore (1-6)"));
-    assert.ok(tsv.includes("1\tTEST_KEY\tquery 1\treasoning 1\traw 1\t5"));
-    assert.ok(tsv.includes("2\tTEST_KEY\t\t\t\tN/A"));
+    assert.ok(tsv.includes("Item ID\tRefined Code\tLLM Query Text\tReasoning Trace\tRaw Response Text\tParsed Fragment\tScore (1-6)"));
+    assert.ok(tsv.includes("1\tTEST_KEY\tquery 1\treasoning 1\traw 1\t1: 5\t5"));
+    assert.ok(tsv.includes("2\tTEST_KEY\t\t\t\t\tN/A"));
 });
 
 
@@ -236,7 +238,9 @@ test('exportSessionToCSV triggers download with correct CSV content', (t) => {
         },
         llmQueries: {
             1: "query 1"
-        }
+        },
+        parsedFragments: { 1: "1: 5" },
+        apiExchanges: [{ mode: 'batch', query: 'full batch query', reasoning: 'full batch reasoning', response: 'full batch response' }]
     }];
 
     exports.exportSessionToCSV(mockSession, 'session.csv');
@@ -253,10 +257,11 @@ test('exportSessionToCSV triggers download with correct CSV content', (t) => {
     assert.ok(headerRow.includes('"Timestamp"'));
     assert.ok(headerRow.includes('"Axioma Version"'));
     assert.ok(headerRow.includes('"Profile Complete"'));
+    assert.ok(headerRow.includes('"Full Batch Response"'));
     const headers = JSON.parse(`[${headerRow}]`);
     const itemOneStart = headers.indexOf('Item_1_Query');
-    assert.deepStrictEqual(headers.slice(itemOneStart, itemOneStart + 4), [
-        'Item_1_Query', 'Item_1_Reasoning', 'Item_1_Raw', 'Item_1_Score'
+    assert.deepStrictEqual(headers.slice(itemOneStart, itemOneStart + 5), [
+        'Item_1_Query', 'Item_1_Reasoning', 'Item_1_Raw', 'Item_1_Parsed', 'Item_1_Score'
     ]);
 
     const dataRow = csvLines[1];
@@ -267,6 +272,7 @@ test('exportSessionToCSV triggers download with correct CSV content', (t) => {
     assert.ok(dataRow.includes('"Yes"'), 'RandomizeOrder');
     assert.ok(dataRow.includes('"reasoning,with,commas"'), 'Escaped commas');
     assert.ok(dataRow.includes('"reasoning with ""quotes"""'), 'Escaped quotes');
+    assert.ok(dataRow.includes('"full batch response"'), 'Full batch response');
 });
 
 test('exportSessionToXLSX handles missing XLSX library', (t) => {
@@ -284,6 +290,7 @@ test('exportSessionToXLSX works correctly with XLSX mock', (t) => {
 
     let aoaToSheetCalled = 0;
     let bookAppendSheetCalled = 0;
+    const sheetNames = [];
     let writeFileCalled = 0;
     let writtenFilename = null;
 
@@ -291,7 +298,7 @@ test('exportSessionToXLSX works correctly with XLSX mock', (t) => {
         utils: {
             book_new: () => ({ SheetNames: [], Sheets: {} }),
             aoa_to_sheet: (aoa) => { aoaToSheetCalled++; return { aoa }; },
-            book_append_sheet: (wb, ws, name) => { bookAppendSheetCalled++; }
+            book_append_sheet: (wb, ws, name) => { bookAppendSheetCalled++; sheetNames.push(name); }
         },
         writeFile: (wb, filename) => { writeFileCalled++; writtenFilename = filename; }
     };
@@ -306,8 +313,9 @@ test('exportSessionToXLSX works correctly with XLSX mock', (t) => {
 
     exports.exportSessionToXLSX(mockSession, 'session.xlsx');
 
-    assert.strictEqual(aoaToSheetCalled, 1);
-    assert.strictEqual(bookAppendSheetCalled, 1);
+    assert.strictEqual(aoaToSheetCalled, 5);
+    assert.strictEqual(bookAppendSheetCalled, 5);
+    assert.deepStrictEqual(sheetNames, ['Session Summary', 'API Exchanges', 'Item Results', 'Refined Values', 'Higher-Order Values']);
     assert.strictEqual(writeFileCalled, 1);
     assert.strictEqual(writtenFilename, 'session.xlsx');
 });
@@ -456,6 +464,43 @@ test('importSessionFromFile processes valid file correctly', (t, done) => {
         assert.strictEqual(row2.metadata.config.temperature, "");
         assert.strictEqual(row2.itemRatings[1], null); // N/A parsed to null
 
+        done();
+    });
+});
+
+test('importSessionFromFile restores normalized multi-sheet exports', (t, done) => {
+    const exports = loadExportModule();
+    const sheetData = {
+        'Session Summary': [
+            ['Run #', 'Timestamp', 'Axioma Version', 'Provider', 'Requested Model', 'Resolved Model', 'Execution Mode', 'Prompt Tokens', 'Completion Tokens', 'Reasoning Tokens', 'Total Tokens'],
+            [1, '2026-10-14T20:00:00.000Z', APP_VERSION, 'openai', 'requested', 'resolved', 'batch', 10, 5, 2, 15]
+        ],
+        'API Exchanges': [
+            ['Run #', 'Exchange #', 'Mode', 'Item IDs', 'Requested At', 'Query', 'Full Reasoning', 'Full Response', 'Resolved Model', 'System Fingerprint', 'Prompt Tokens', 'Completion Tokens', 'Reasoning Tokens', 'Total Tokens', 'Error'],
+            [1, 1, 'batch', '1, 2', '2026-10-14T20:00:00.000Z', 'full query', 'full reasoning', '1: 4\n2: 5', 'resolved', 'fp_test', 10, 5, 2, 15, '']
+        ],
+        'Item Results': [
+            ['Run #', 'Item ID', 'Query', 'Reasoning', 'Raw', 'Parsed Fragment', 'Score'],
+            [1, 1, 'full query', '', '', '1: 4', 4],
+            [1, 2, 'full query', '', '', '2: 5', 5]
+        ]
+    };
+    global.window.XLSX = {
+        read: () => ({
+            SheetNames: ['Session Summary', 'API Exchanges', 'Item Results', 'Refined Values', 'Higher-Order Values'],
+            Sheets: Object.fromEntries(Object.keys(sheetData).map(name => [name, { name }]))
+        }),
+        utils: { sheet_to_json: sheet => sheetData[sheet.name] || [[]] }
+    };
+    global.window.Psychometrics = { calculatePsychometrics: ratings => ({ itemRatings: ratings }) };
+    mockFileReaderResult = new ArrayBuffer(8);
+
+    exports.importSessionFromFile({}, results => {
+        assert.strictEqual(results.length, 1);
+        assert.strictEqual(results[0].apiExchanges.length, 1);
+        assert.strictEqual(results[0].apiExchanges[0].response, '1: 4\n2: 5');
+        assert.strictEqual(results[0].parsedFragments[1], '1: 4');
+        assert.strictEqual(results[0].psychometrics.itemRatings[2], 5);
         done();
     });
 });

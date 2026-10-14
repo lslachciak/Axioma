@@ -74,6 +74,8 @@ test('sequential mode waits for each request when context is disabled', async ()
     llmQueries: {},
     parsedItemScores: {},
     reasoningTraces: {},
+    parsedFragments: {},
+    apiExchanges: [],
     totalPromptTokens: 0,
     totalCompletionTokens: 0,
     totalReasoningTokens: 0
@@ -91,7 +93,7 @@ test('sequential mode waits for each request when context is disabled', async ()
   assert.ok(requestMessages.every(messages => messages.length === 1));
 });
 
-test('batch mode stores parsed raw text and single reasoning trace', async () => {
+test('batch mode stores full output at exchange level and item parsing fragments separately', async () => {
   const apiClient = {
     completeChat: async (config, messages, statusUpdateCallback, checkAbort) => {
       return {
@@ -127,6 +129,8 @@ test('batch mode stores parsed raw text and single reasoning trace', async () =>
     llmQueries: {},
     parsedItemScores: {},
     reasoningTraces: {},
+    parsedFragments: {},
+    apiExchanges: [],
     totalPromptTokens: 0,
     totalCompletionTokens: 0,
     totalReasoningTokens: 0
@@ -134,19 +138,46 @@ test('batch mode stores parsed raw text and single reasoning trace', async () =>
 
   await engine._runBatch('en', 'System prompt', null, null, state);
 
-  // Check that rawText is correctly mapped instead of duplicating full batch text
-  assert.strictEqual(state.rawResponses[1], 'Item 1: 5');
-  assert.strictEqual(state.rawResponses[2], 'Item 2: 4');
-  
-  // Check that reasoning trace is only on the first item
-  assert.strictEqual(state.reasoningTraces[1], 'Here is the reasoning for the entire batch');
+  assert.strictEqual(state.rawResponses[1], '');
+  assert.strictEqual(state.parsedFragments[1], 'Item 1: 5');
+  assert.strictEqual(state.parsedFragments[2], 'Item 2: 4');
+  assert.strictEqual(state.reasoningTraces[1], '');
   assert.strictEqual(state.reasoningTraces[2], '');
   assert.strictEqual(state.reasoningTraces[3], '');
+  assert.strictEqual(state.apiExchanges.length, 1);
+  assert.strictEqual(state.apiExchanges[0].response, 'Item 1: 5\nItem 2: 4\nItem 3: 3');
+  assert.strictEqual(state.apiExchanges[0].reasoning, 'Here is the reasoning for the entire batch');
+  assert.deepStrictEqual(state.apiExchanges[0].itemIds, [1, 2, 3]);
   
   // Check token counts
   assert.strictEqual(state.totalPromptTokens, 10);
   assert.strictEqual(state.totalCompletionTokens, 10);
   assert.strictEqual(state.totalReasoningTokens, 5);
+});
+
+test('sequential mode creates one complete exchange per item', async () => {
+  const apiClient = {
+    completeChat: async (config, messages) => ({
+      text: messages.at(-1).content.includes('1') ? '4' : '5',
+      reasoning: 'item reasoning',
+      actualModel: 'test-model',
+      systemFingerprint: 'fp_test',
+      tokenUsage: { promptTokens: 2, completionTokens: 1, reasoningTokens: 1 }
+    })
+  };
+  const psychometrics = {
+    parseItemResponse: text => ({ score: Number(text), isRefusal: false }),
+    calculatePsychometrics: () => ({})
+  };
+  const pvqData = { ITEMS: [{ id: 1, en: 'Item 1', pl: 'Pozycja 1' }, { id: 2, en: 'Item 2', pl: 'Pozycja 2' }] };
+  const engine = new EvaluatorEngine({ mode: 'sequential', keepContext: true, model: 'requested-model' }, pvqData, psychometrics, apiClient);
+  const result = await engine.run();
+
+  assert.strictEqual(result.apiExchanges.length, 2);
+  assert.deepStrictEqual(result.apiExchanges.map(exchange => exchange.itemIds), [[1], [2]]);
+  assert.deepStrictEqual(result.apiExchanges.map(exchange => exchange.response), ['4', '5']);
+  assert.strictEqual(result.apiExchanges[1].query.includes('CONVERSATION HISTORY'), true);
+  assert.deepStrictEqual(result.parsedFragments, { 1: '4', 2: '5' });
 });
 
 test('engine run attaches actualModel and systemFingerprint to metadata and result', async () => {
