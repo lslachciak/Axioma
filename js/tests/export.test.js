@@ -245,6 +245,7 @@ test('exportSessionToCSV triggers download with correct CSV content', (t) => {
     assert.ok(headerRow.includes('"Run #"'), 'Header row formatting');
     assert.ok(headerRow.includes('"Timestamp"'));
     assert.ok(headerRow.includes('"Axioma Version"'));
+    assert.ok(headerRow.includes('"Profile Complete"'));
 
     const dataRow = csvLines[1];
     assert.ok(dataRow.includes('"1"'), 'Run # 1');

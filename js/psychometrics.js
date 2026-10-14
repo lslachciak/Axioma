@@ -281,8 +281,9 @@
     }
 
     const totalAnswered = validScores.length;
+    const complete = totalAnswered === 57;
     // Grand Mean Across All Items (MRAT)
-    const mrat = totalAnswered > 0 ? validScores.reduce((a, b) => a + b, 0) / totalAnswered : 0;
+    const mrat = complete ? validScores.reduce((a, b) => a + b, 0) / 57 : null;
 
     // 19 Refined Values
     const refinedResults = {};
@@ -293,8 +294,8 @@
       const itemNums = meta.items;
       const scores = itemNums.map(num => itemRatings[num]).filter(s => s !== null);
 
-      const rawMean = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : null;
-      const centeredMean = rawMean !== null ? rawMean - mrat : null;
+      const rawMean = scores.length === itemNums.length ? scores.reduce((a, b) => a + b, 0) / scores.length : null;
+      const centeredMean = complete && rawMean !== null ? rawMean - mrat : null;
 
       refinedResults[code] = {
         code: code,
@@ -320,11 +321,11 @@
         .map(k => refinedResults[k]?.rawMean)
         .filter(m => m !== null && m !== undefined);
 
-      const rawMean = validRawMeans.length > 0
+      const rawMean = validRawMeans.length === constituentKeys.length
         ? validRawMeans.reduce((a, b) => a + b, 0) / validRawMeans.length
         : null;
 
-      const centeredMean = rawMean !== null ? rawMean - mrat : null;
+      const centeredMean = complete && rawMean !== null ? rawMean - mrat : null;
 
       higherOrderResults[hoKey] = {
         code: hoKey,
@@ -339,7 +340,8 @@
     return {
       totalItems: 57,
       totalAnswered: totalAnswered,
-      mrat: parseFloat(mrat.toFixed(3)),
+      complete: complete,
+      mrat: mrat !== null ? parseFloat(mrat.toFixed(3)) : null,
       itemRatings: itemRatings,
       refinedValues: refinedResults,
       higherOrderValues: higherOrderResults
@@ -349,75 +351,6 @@
   exports.parseItemResponse = parseItemResponse;
   exports.parseBatchResponse = parseBatchResponse;
 
-  /**
-   * Calculates Cronbach's Alpha for a given set of iterations and item mappings.
-   * @param {Array} sessionResults - Array of results from multiple iterations
-   * @param {Object} pvqData - PVQ Data module
-   * @param {Object} [config] - Configuration to calculate alpha for
-   * @returns {Object} Map of refined value code to alpha
-   */
-  function calculateCronbachAlphaForSession(sessionResults, pvqData, config) {
-    const alphas = {};
-
-    if (!pvqData || !Array.isArray(sessionResults)) {
-      return alphas; // Alpha cannot be computed with less than 2 iterations
-    }
-
-    const canonicalize = (value) => {
-      if (Array.isArray(value)) return value.map(canonicalize);
-      if (value && typeof value === 'object') {
-        return Object.keys(value).sort().reduce((result, key) => {
-          result[key] = canonicalize(value[key]);
-          return result;
-        }, {});
-      }
-      return value;
-    };
-    const targetConfig = config || sessionResults[0]?.metadata?.config || {};
-    const targetConfigKey = JSON.stringify(canonicalize(targetConfig));
-    const matchingResults = sessionResults.filter(result => {
-      const resultConfig = result?.metadata?.config || {};
-      return JSON.stringify(canonicalize(resultConfig)) === targetConfigKey;
-    });
-    if (matchingResults.length < 2) return alphas;
-
-    const calcAlpha = (items) => {
-      const K = items.length;
-      if (K < 2) return null;
-
-      const completeRows = matchingResults
-        .map(result => items.map(item => result?.psychometrics?.itemRatings?.[item]))
-        .filter(row => row.every(value => typeof value === 'number' && Number.isFinite(value) && value >= 1 && value <= 6));
-      if (completeRows.length < 2) return null;
-
-      let itemVariancesSum = 0;
-      for (let j = 0; j < K; j++) {
-        const itemScores = completeRows.map(row => row[j]);
-        const mean = itemScores.reduce((a, b) => a + b, 0) / itemScores.length;
-        const variance = itemScores.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / (itemScores.length - 1);
-        itemVariancesSum += variance;
-      }
-
-      const totalScores = completeRows.map(row => row.reduce((total, value) => total + value, 0));
-      const meanTotal = totalScores.reduce((a, b) => a + b, 0) / totalScores.length;
-      const varianceTotal = totalScores.reduce((a, b) => a + Math.pow(b - meanTotal, 2), 0) / (totalScores.length - 1);
-
-      if (varianceTotal === 0) return null;
-
-      const alpha = (K / (K - 1)) * (1 - (itemVariancesSum / varianceTotal));
-      return parseFloat(alpha.toFixed(3));
-    };
-
-    // Calculate for Refined Values
-    const refined = pvqData.REFINED_VALUES || {};
-    for (const code in refined) {
-      alphas[code] = calcAlpha(refined[code].items);
-    }
-
-    return alphas;
-  }
-
   exports.calculatePsychometrics = calculatePsychometrics;
-  exports.calculateCronbachAlphaForSession = calculateCronbachAlphaForSession;
 
 })(typeof exports !== 'undefined' ? exports : (window.Psychometrics = {}));

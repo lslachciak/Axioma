@@ -71,7 +71,8 @@
     lines.push(`# Reasoning Enabled\t${results.metadata?.config?.enableReasoning === '' ? 'Default' : (results.metadata?.config?.enableReasoning === true ? 'Yes' : 'No')}`);
     lines.push(`# Reasoning Token Budget\t${results.metadata?.config?.enableReasoning === true ? (results.metadata?.config?.reasoningBudget || 1024) : "N/A"}`);
     lines.push(`# Reasoning Effort\t${results.metadata?.config?.enableReasoning === true ? (results.metadata?.config?.reasoningEffort || "medium") : "N/A"}`);
-    lines.push(`# Grand Mean (MRAT)\t${results.psychometrics.mrat}`);
+    lines.push(`# Profile Complete\t${results.psychometrics.complete ? "Yes" : "No"}`);
+    lines.push(`# Grand Mean (MRAT)\t${results.psychometrics.mrat ?? "N/A"}`);
     lines.push(`# Items Answered\t${results.psychometrics.totalAnswered} / 57`);
     lines.push("");
 
@@ -98,7 +99,7 @@
     lines.push("Code\tName (EN)\tName (PL)\tHigher-Order Group\tItem IDs\tRaw Mean\tCentered Score");
     for (const code in results.psychometrics.refinedValues) {
       const rv = results.psychometrics.refinedValues[code];
-      lines.push(`${rv.code}\t${rv.nameEn}\t${rv.namePl}\t${rv.higherOrder}\t${rv.items.join(",")}\t${rv.rawMean ?? ""}\t${rv.centeredMean ?? ""}`);
+      lines.push(`${rv.code}\t${rv.nameEn}\t${rv.namePl}\t${rv.higherOrder || "Boundary value (separate)"}\t${rv.items.join(",")}\t${rv.rawMean ?? ""}\t${rv.centeredMean ?? ""}`);
     }
     lines.push("");
 
@@ -187,7 +188,8 @@
       ["Reasoning Enabled", results.metadata?.config?.enableReasoning === '' ? 'Default' : (results.metadata?.config?.enableReasoning === true ? 'Yes' : 'No')],
       ["Reasoning Token Budget", results.metadata?.config?.enableReasoning === true ? (results.metadata?.config?.reasoningBudget || 1024) : "N/A"],
       ["Reasoning Effort", results.metadata?.config?.enableReasoning === true ? (results.metadata?.config?.reasoningEffort || "medium") : "N/A"],
-      ["Grand Mean Score (MRAT)", results.psychometrics.mrat],
+      ["Profile Complete", results.psychometrics.complete ? "Yes" : "No"],
+      ["Grand Mean Score (MRAT)", results.psychometrics.mrat ?? "N/A"],
       ["Total Items Answered", `${results.psychometrics.totalAnswered} / 57`]
     ];
     const wsOverview = createSafeWorksheet(XLSX, overviewData);
@@ -221,7 +223,7 @@
         rv.code,
         rv.nameEn,
         rv.namePl,
-        rv.higherOrder,
+        rv.higherOrder || "Boundary value (separate)",
         rv.items.join(", "),
         rv.rawMean ?? "N/A",
         rv.centeredMean ?? "N/A"
@@ -330,7 +332,8 @@
       "Reasoning Tokens",
       "Total Tokens",
       "MRAT Grand Mean",
-      "Items Answered"
+      "Items Answered",
+      "Profile Complete"
     ];
 
     // Add 4 Higher-Order Values (Raw & Centered)
@@ -387,7 +390,8 @@
         token.reasoningTokens ?? 0,
         token.totalTokens ?? 0,
         psych.mrat ?? "N/A",
-        `${psych.totalAnswered ?? 0}/57`
+        `${psych.totalAnswered ?? 0}/57`,
+        psych.complete ? "Yes" : "No"
       ];
 
       // 4 Higher-Order Values
@@ -467,7 +471,8 @@
       "Reasoning Tokens",
       "Total Tokens",
       "MRAT Grand Mean",
-      "Items Answered"
+      "Items Answered",
+      "Profile Complete"
     ];
 
     const hoKeys = ["Transcendence", "Conservation", "Enhancement", "Openness"];
@@ -519,7 +524,8 @@
         token.reasoningTokens ?? 0,
         token.totalTokens ?? 0,
         psych.mrat ?? "N/A",
-        `${psych.totalAnswered ?? 0}/57`
+        `${psych.totalAnswered ?? 0}/57`,
+        psych.complete ? "Yes" : "No"
       ];
 
       for (const key of hoKeys) {
