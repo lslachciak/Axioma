@@ -508,8 +508,6 @@ function deobfuscateApiKey(val) {
         if (state.isRunning) {
           state.results = runResult;
           state.sessionResults.push(runResult);
-          const reliability = psychometrics.calculateICC31ForSession(state.sessionResults, runResult.metadata.config);
-          state.sessionResults.forEach(result => { result.reliability = { icc31: reliability }; });
           state.progressStatus = `Iteration ${i + 1} completed successfully!`;
           renderApp();
         }
@@ -954,7 +952,6 @@ function deobfuscateApiKey(val) {
 
 
     const psych = state.results.psychometrics;
-    const icc = window.Psychometrics.calculateICC31ForSession(state.sessionResults, state.results.metadata?.config);
 
 
 
@@ -974,9 +971,8 @@ function deobfuscateApiKey(val) {
           state.results.metadata.systemFingerprint ? el('p', { className: 'text-[11px] code-font text-purple-400 truncate mt-0.5', title: `System Fingerprint: ${state.results.metadata.systemFingerprint}` }, `fp: ${state.results.metadata.systemFingerprint}`) : null
         ),
         el('div', { className: 'bg-slate-900/60 p-4 rounded-xl border border-slate-800' },
-          el('p', { className: 'text-xs text-slate-400' }, 'Cross-Iteration Reliability'),
-          el('p', { className: 'text-xl font-bold text-emerald-400' }, icc ? `${icc.model}: ${icc.value}` : 'N/A'),
-          el('p', { className: 'text-[11px] text-slate-500 mt-1' }, icc ? `${icc.runs} comparable runs` : 'Requires at least 2 comparable runs')
+          el('p', { className: 'text-xs text-slate-400' }, 'Evaluation Timestamp'),
+          el('p', { className: 'text-xs code-font text-slate-300 mt-1' }, new Date(state.results.metadata.timestamp).toLocaleString())
         )
       ),
       el('div', { className: 'grid grid-cols-1 lg:grid-cols-2 gap-6' },

@@ -7,7 +7,7 @@ Revised (57 items) by Shalom H. Schwartz.
 The evaluated LLM answers all 57 PVQ-RR portraits as a survey respondent. Axioma
 parses the ratings, computes the profile of **19 basic human values**, applies
 **grand-mean (MRAT) correction**, aggregates the **4 higher-order value groups**,
-and estimates cross-iteration reliability with **ICC(3,1)**.
+and exports the resulting profiles for subsequent statistical analysis.
 
 100% client-side (vanilla JS, no build step, CORS-safe) — runs from a local file,
 static hosting, or any HTTP server.
@@ -46,7 +46,7 @@ static hosting, or any HTTP server.
 | `js/pvq_data.js` | 57 PVQ-RR items (EN/PL) and mappings to the 19 values |
 | `js/api_client.js` | Multi-provider LLM client, retries, reasoning extraction |
 | `js/execution_engine.js` | Batch vs. sequential evaluation, ordering, progress |
-| `js/psychometrics.js` | Scoring: 19 value means, MRAT correction, higher-order groups, ICC(3,1), refusal detection |
+| `js/psychometrics.js` | Scoring: 19 value means, MRAT correction, higher-order groups, refusal detection |
 | `js/export.js` | JSON/TSV/CSV/XLSX export and session import |
 | `js/app.js` | UI, charts, persistence |
 | `js/version.js` | Central version constant |

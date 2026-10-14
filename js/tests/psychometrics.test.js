@@ -22,7 +22,7 @@ const evalCode = (code, exportsObj) => {
 evalCode(psychCode, psychMetricsExports);
 evalCode(pvqDataCode, pvqDataExports);
 
-const { parseItemResponse, parseBatchResponse, calculatePsychometrics, calculateICC31ForSession } = psychMetricsExports;
+const { parseItemResponse, parseBatchResponse, calculatePsychometrics } = psychMetricsExports;
 
 describe('parseItemResponse', () => {
     test('handles empty and invalid input', () => {
@@ -94,28 +94,6 @@ describe('parseItemResponse', () => {
         assert.strictEqual(parseItemResponse('średnio podobna').score, 4);
         assert.strictEqual(parseItemResponse('podobny do mnie').score, 5);
         assert.strictEqual(parseItemResponse('bardzo podobna do mnie').score, 6);
-    });
-});
-
-describe('calculateICC31ForSession', () => {
-    const makeRun = values => ({
-        metadata: { config: { provider: 'openai', model: 'test', iterations: 3 } },
-        psychometrics: { refinedValues: Object.fromEntries(values.map((value, i) => [`V${i}`, { centeredMean: value }])) }
-    });
-
-    test('returns perfect consistency for profiles separated only by a constant offset', () => {
-        const result = calculateICC31ForSession([
-            makeRun([-1, 0, 1]),
-            makeRun([-0.5, 0.5, 1.5]),
-            makeRun([0, 1, 2])
-        ]);
-        assert.deepStrictEqual(result, { value: 1, runs: 3, targets: 3, model: 'ICC(3,1)' });
-    });
-
-    test('requires two complete comparable runs', () => {
-        assert.strictEqual(calculateICC31ForSession([makeRun([-1, 0, 1])]), null);
-        const incomplete = makeRun([-1, null, 1]);
-        assert.strictEqual(calculateICC31ForSession([incomplete, incomplete]), null);
     });
 });
 

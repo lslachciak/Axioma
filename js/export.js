@@ -330,8 +330,7 @@
       "Reasoning Tokens",
       "Total Tokens",
       "MRAT Grand Mean",
-      "Items Answered",
-      "ICC(3,1)"
+      "Items Answered"
     ];
 
     // Add 4 Higher-Order Values (Raw & Centered)
@@ -388,8 +387,7 @@
         token.reasoningTokens ?? 0,
         token.totalTokens ?? 0,
         psych.mrat ?? "N/A",
-        `${psych.totalAnswered ?? 0}/57`,
-        results.reliability?.icc31?.value ?? "N/A"
+        `${psych.totalAnswered ?? 0}/57`
       ];
 
       // 4 Higher-Order Values
@@ -469,8 +467,7 @@
       "Reasoning Tokens",
       "Total Tokens",
       "MRAT Grand Mean",
-      "Items Answered",
-      "ICC(3,1)"
+      "Items Answered"
     ];
 
     const hoKeys = ["Transcendence", "Conservation", "Enhancement", "Openness"];
@@ -522,8 +519,7 @@
         token.reasoningTokens ?? 0,
         token.totalTokens ?? 0,
         psych.mrat ?? "N/A",
-        `${psych.totalAnswered ?? 0}/57`,
-        results.reliability?.icc31?.value ?? "N/A"
+        `${psych.totalAnswered ?? 0}/57`
       ];
 
       for (const key of hoKeys) {
