@@ -91,10 +91,11 @@
   }
 
   /**
-   * Returns a Fibonacci backoff delay. Retry indexes are zero-based, producing
-   * 30, 30, 60, 90, 150 seconds with the default base delay.
+   * Returns a capped Fibonacci backoff delay. Retry indexes are zero-based,
+   * producing 30, 30, 60, 90, 150 seconds and eventually reaching the default
+   * maximum of five hours.
    */
-  function fibonacciRetryDelayMs(retryIndex, baseDelayMs = 30000) {
+  function fibonacciRetryDelayMs(retryIndex, baseDelayMs = 30000, maxDelayMs = 5 * 60 * 60 * 1000) {
     let previous = 1;
     let current = 1;
 
@@ -102,7 +103,7 @@
       [previous, current] = [current, previous + current];
     }
 
-    return previous * baseDelayMs;
+    return Math.min(previous * baseDelayMs, maxDelayMs);
   }
 
   async function waitForRetry(waitMs, statusMessage, onStatusUpdate, checkAbort) {
@@ -268,8 +269,11 @@
    */
   async function completeChat(config, messages, onStatusUpdate, checkAbort) {
     const provider = config.provider || 'openai';
-    const maxRetries = config.maxRetries ?? 5;
+    const rateLimitMaxRetries = config.maxRetries ?? 5;
+    const temporaryErrorMaxRetries = config.maxRetries ?? 15;
+    const maxRetries = Math.max(rateLimitMaxRetries, temporaryErrorMaxRetries);
     const retryBaseDelayMs = config.retryBaseDelayMs ?? 30000;
+    const retryMaxDelayMs = config.retryMaxDelayMs ?? 5 * 60 * 60 * 1000;
 
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
@@ -286,15 +290,16 @@
       } catch (err) {
         const isRateLimit = err.status === 429 || /429|quota|rate limit|too many requests/i.test(err.message);
         const isTemporaryServerError = [502, 503, 504].includes(err.status);
+        const retryLimit = isTemporaryServerError ? temporaryErrorMaxRetries : rateLimitMaxRetries;
 
-        if ((isRateLimit || isTemporaryServerError) && attempt < maxRetries) {
+        if ((isRateLimit || isTemporaryServerError) && attempt < retryLimit) {
           const waitMs = isRateLimit
             ? parseRetryDelayMs(err.message, err.responseHeaders)
-            : fibonacciRetryDelayMs(attempt, retryBaseDelayMs);
+            : fibonacciRetryDelayMs(attempt, retryBaseDelayMs, retryMaxDelayMs);
           const errorLabel = isRateLimit
             ? 'Rate limit (429) hit'
             : `Temporary provider error (${err.status})`;
-          const retryLabel = `${attempt + 1}/${maxRetries}`;
+          const retryLabel = `${attempt + 1}/${retryLimit}`;
 
           console.warn(`${errorLabel}. Waiting ${Math.max(1, Math.ceil(waitMs / 1000))}s before retry ${retryLabel}...`);
           await waitForRetry(

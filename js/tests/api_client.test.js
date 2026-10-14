@@ -72,10 +72,10 @@ test('parseRetryDelayMs - should return negative delay if negative header value 
   assert.strictEqual(delay, -5000);
 });
 
-test('fibonacciRetryDelayMs - starts at 30 seconds and follows Fibonacci intervals', () => {
+test('fibonacciRetryDelayMs - follows Fibonacci intervals capped at five hours', () => {
   assert.deepStrictEqual(
-    [0, 1, 2, 3, 4].map(index => fibonacciRetryDelayMs(index)),
-    [30000, 30000, 60000, 90000, 150000]
+    [0, 1, 2, 3, 4, 13, 14, 15].map(index => fibonacciRetryDelayMs(index)),
+    [30000, 30000, 60000, 90000, 150000, 11310000, 18000000, 18000000]
   );
 });
 

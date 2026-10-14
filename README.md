@@ -32,7 +32,8 @@ static hosting, or any HTTP server.
 - **Reproducibility controls** — temperature, seed, fixed or randomized item order.
 - **Transient-error handling** — automatic retry on HTTP 429 with `Retry-After`
   support, plus cancellable 30-second Fibonacci backoff for HTTP 502, 503, and
-  504 provider outages (`30s`, `30s`, `60s`, `90s`, `150s` by default).
+  504 provider outages. Temporary outages are retried up to 15 times, with the
+  interval capped at five hours (`30s`, `30s`, `60s`, ... `3h 8m 30s`, `5h`).
 - **Immediate cancellation** — Stop aborts active provider requests and queued retries.
 - **Exports** — JSON, TSV, CSV and multi-sheet XLSX with full run metadata
   (requested/resolved model, system fingerprint, configuration). API exchanges
