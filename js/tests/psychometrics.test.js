@@ -37,6 +37,22 @@ describe('parseItemResponse', () => {
         assert.strictEqual(refusal.score, null);
     });
 
+    test('rejects instructional placeholders before extracting example digits', () => {
+        const responses = [
+            '[User should replace this bracketed text with their chosen rating, e.g., 5]',
+            '[User 35: "It is important to him to have excitement."]\n[User should replace this bracketed text with their chosen rating, e.g., 5]',
+            '[Please provide your rating (1-6) for this item to proceed.]',
+            'Please provide your responses for the items when you are ready. The rating must be from 1 to 6.'
+        ];
+
+        for (const response of responses) {
+            const result = parseItemResponse(response);
+            assert.strictEqual(result.score, null);
+            assert.strictEqual(result.isRefusal, true);
+            assert.match(result.reason, /instruction or placeholder/i);
+        }
+    });
+
     test('extracts JSON format', () => {
         const result = parseItemResponse('\`\`\`json\n{"score": 4}\n\`\`\`');
         assert.strictEqual(result.score, 4);

@@ -26,7 +26,8 @@ static hosting, or any HTTP server.
   servers can be configured through Custom Endpoint (default:
   `http://localhost:11434/v1`) with an optional API key.
 - **Robust answer parsing** — accepts JSON, bare digits, and "Rating: 5"-style
-  text; detects refusals ("As an AI, I don't have values…").
+  text; detects refusals and rejects instructional placeholders or requests for
+  the user to supply a rating, even when they contain example scale digits.
 - **Reasoning support** — extracts and stores thinking traces (thinking tags,
   Gemini 3.x thoughts) with a configurable thinking budget.
 - **Reproducibility controls** — temperature, seed, fixed or randomized item order.
