@@ -110,6 +110,7 @@ function deobfuscateApiKey(val) {
     // Interim live responses in Sequential Mode
     liveItemRatings: {},
     liveRawResponses: {},
+    liveParsedFragments: {},
     liveReasoningTraces: {},
 
     // Results State
@@ -457,6 +458,7 @@ function deobfuscateApiKey(val) {
       state.tokenUsage = { promptTokens: 0, completionTokens: 0, reasoningTokens: 0, totalTokens: 0 };
       state.liveItemRatings = {};
       state.liveRawResponses = {};
+      state.liveParsedFragments = {};
       state.liveReasoningTraces = {};
 
       const config = {
@@ -497,6 +499,7 @@ function deobfuscateApiKey(val) {
 
           if (event.parsedScoresMap) state.liveItemRatings = event.parsedScoresMap;
           if (event.rawResponses) state.liveRawResponses = event.rawResponses;
+          if (event.parsedFragments) state.liveParsedFragments = event.parsedFragments;
           if (event.reasoningTraces) state.liveReasoningTraces = event.reasoningTraces;
 
           if (event.type === 'item_complete' || event.type === 'batch_complete') {
@@ -1065,6 +1068,7 @@ function deobfuscateApiKey(val) {
   function ItemsTab() {
     const activeRatings = state.results?.psychometrics?.itemRatings || state.liveItemRatings || {};
     const activeRawResponses = state.results?.rawResponses || state.liveRawResponses || {};
+    const activeParsedFragments = state.results?.parsedFragments || state.liveParsedFragments || {};
     const activeReasoningTraces = state.results?.reasoningTraces || state.liveReasoningTraces || {};
 
     return el('div', { className: 'space-y-4' },
@@ -1084,6 +1088,7 @@ function deobfuscateApiKey(val) {
               const score = activeRatings[item.id];
               const reasoning = activeReasoningTraces[item.id];
               const rawResponse = activeRawResponses[item.id];
+              const parsedFragment = activeParsedFragments[item.id];
 
               return el('tr', { key: item.id, className: 'hover:bg-slate-800/30' },
                 el('td', { className: 'py-2 px-3 font-bold text-slate-400 code-font' }, item.id),
@@ -1091,7 +1096,7 @@ function deobfuscateApiKey(val) {
                 el('td', { className: 'py-2 px-3 text-sky-400 code-font' }, item.valueKey),
                 el('td', { className: 'py-2 px-3' },
                   score !== undefined && score !== null ? el('span', { className: 'px-2 py-0.5 rounded bg-sky-500/20 text-sky-400 font-bold code-font' }, score) : (
-                    rawResponse ? el('span', { className: 'px-2 py-0.5 rounded bg-rose-500/20 text-rose-400 font-medium text-[10px]' }, 'Refused / N/A') : el('span', { className: 'text-slate-600 text-[10px]' }, 'Pending')
+                    (rawResponse || parsedFragment) ? el('span', { className: 'px-2 py-0.5 rounded bg-rose-500/20 text-rose-400 font-medium text-[10px]' }, 'Refused / N/A') : el('span', { className: 'text-slate-600 text-[10px]' }, 'Pending')
                   )
                 ),
                 el('td', { className: 'py-2 px-3' },

@@ -126,6 +126,7 @@
         const messages = [{ role: "user", content: batchUserPrompt }];
 
         try {
+          const requestedAt = new Date().toISOString();
           const apiRes = await this.apiClient.completeChat({
             ...this.config,
             systemPrompt: systemPrompt,
@@ -142,14 +143,32 @@
           if (apiRes.systemFingerprint) state.systemFingerprint = apiRes.systemFingerprint;
 
           const batchParsed = this.psychometrics.parseBatchResponse(apiRes.text);
+          const parsedScores = {};
 
           for (let i = 1; i <= 57; i++) {
             const parsedInfo = batchParsed[i] || { score: null, rawText: "", isRefusal: false };
             state.parsedItemScores[i] = parsedInfo.score;
-            state.rawResponses[i] = parsedInfo.rawText || "";
-            state.reasoningTraces[i] = i === 1 ? apiRes.reasoning : "";
+            parsedScores[i] = parsedInfo.score;
+            state.rawResponses[i] = "";
+            state.parsedFragments[i] = parsedInfo.rawText || "";
+            state.reasoningTraces[i] = "";
             state.llmQueries[i] = displayedPromptText;
           }
+
+          state.apiExchanges.push({
+            exchangeNumber: 1,
+            mode: 'batch',
+            itemIds: this.pvqData.ITEMS.map(item => item.id),
+            requestedAt,
+            query: displayedPromptText,
+            reasoning: apiRes.reasoning || "",
+            response: apiRes.text || "",
+            parsedScores,
+            tokenUsage: { ...apiRes.tokenUsage },
+            actualModel: apiRes.actualModel || this.config.model || "",
+            systemFingerprint: apiRes.systemFingerprint || null,
+            error: null
+          });
 
           if (onProgress) {
             onProgress({
@@ -162,6 +181,7 @@
               lastReasoning: apiRes.reasoning,
               parsedScoresMap: { ...state.parsedItemScores },
               rawResponses: { ...state.rawResponses },
+              parsedFragments: { ...state.parsedFragments },
               reasoningTraces: { ...state.reasoningTraces },
               llmQueries: { ...state.llmQueries },
               tokenUsage: {
@@ -218,6 +238,7 @@
               ? [...conversationHistory, { role: "user", content: itemPromptText }]
               : [{ role: "user", content: itemPromptText }];
 
+            const requestedAt = new Date().toISOString();
             const apiRes = await this.apiClient.completeChat({
               ...this.config,
               systemPrompt: systemPrompt,
@@ -239,6 +260,21 @@
 
             const parsed = this.psychometrics.parseItemResponse(apiRes.text);
             state.parsedItemScores[currentItem.id] = parsed.score;
+            state.parsedFragments[currentItem.id] = apiRes.text || "";
+            state.apiExchanges.push({
+              exchangeNumber: state.apiExchanges.length + 1,
+              mode: 'sequential',
+              itemIds: [currentItem.id],
+              requestedAt,
+              query: displayedPromptText,
+              reasoning: apiRes.reasoning || "",
+              response: apiRes.text || "",
+              parsedScores: { [currentItem.id]: parsed.score },
+              tokenUsage: { ...apiRes.tokenUsage },
+              actualModel: apiRes.actualModel || this.config.model || "",
+              systemFingerprint: apiRes.systemFingerprint || null,
+              error: null
+            });
 
             if (keepContext) {
               conversationHistory.push({ role: "user", content: itemPromptText });
@@ -259,6 +295,7 @@
                 isRefusal: parsed.isRefusal,
                 parsedScoresMap: { ...state.parsedItemScores },
                 rawResponses: { ...state.rawResponses },
+              parsedFragments: { ...state.parsedFragments },
                 reasoningTraces: { ...state.reasoningTraces },
                 llmQueries: { ...state.llmQueries },
                 tokenUsage: {
@@ -295,6 +332,8 @@
         llmQueries: {},
         parsedItemScores: {},
         reasoningTraces: {},
+        parsedFragments: {},
+        apiExchanges: [],
         totalPromptTokens: 0,
         totalCompletionTokens: 0,
         totalReasoningTokens: 0,
@@ -341,8 +380,10 @@
         actualModel: runMetadata.actualModel,
         systemFingerprint: runMetadata.systemFingerprint,
         rawResponses: state.rawResponses,
+        parsedFragments: state.parsedFragments,
         reasoningTraces: state.reasoningTraces,
         llmQueries: state.llmQueries,
+        apiExchanges: state.apiExchanges,
         tokenUsage: {
           promptTokens: state.totalPromptTokens,
           completionTokens: state.totalCompletionTokens,
