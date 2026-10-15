@@ -26,6 +26,17 @@
     /i do not have a personality/i
   ];
 
+  // Detect prompts, placeholders, and requests for input that are not ratings.
+  // These must be rejected before extracting digits because they often contain
+  // scale examples such as "e.g., 5" or the range "1-6".
+  const NON_RESPONSE_PATTERNS = [
+    /user should (?:replace|provide|enter|choose|select)/i,
+    /replace (?:this|the) (?:bracketed )?text/i,
+    /please provide (?:your )?(?:rating|score|answer|response|responses)/i,
+    /provide (?:a|the|your) (?:rating|score|answer).*(?:to proceed|when (?:you are )?ready)/i,
+    /waiting for (?:your|the) (?:rating|score|answer|response)/i
+  ];
+
   // Verbal scale labels for responses that use verbal descriptors without digits
   const VERBAL_SCALE_PATTERNS = [
     // 1: Not like me at all / zupełnie niepodobny
@@ -55,6 +66,10 @@
     }
 
     const cleaned = text.trim();
+
+    if (NON_RESPONSE_PATTERNS.some(pattern => pattern.test(cleaned))) {
+      return { score: null, isRefusal: true, reason: 'Model returned an instruction or placeholder instead of a rating' };
+    }
 
     const isRefusalText = REFUSAL_PATTERNS.some(pattern => pattern.test(cleaned));
 

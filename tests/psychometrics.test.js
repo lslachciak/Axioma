@@ -72,6 +72,9 @@ function runTests() {
   test("AI refusal: Cannot rate", "I am unable to rate this item.", { score: null, isRefusal: true });
   test("AI refusal: Cannot possess", "I do not possess personal values.", { score: null, isRefusal: true });
   test("AI refusal: Mixed with number", "As an AI, I don't have personal values. I cannot give a 5.", { score: null, isRefusal: true });
+  test("Placeholder with example digit", "[User should replace this bracketed text with their chosen rating, e.g., 5]", { score: null, isRefusal: true });
+  test("Input request with scale range", "[Please provide your rating (1-6) for this item to proceed.]", { score: null, isRefusal: true });
+  test("Responses requested when ready", "Please provide your responses for the items when you are ready. The rating must be from 1 to 6.", { score: null, isRefusal: true });
 
   // Invalid/unparseable values
   test("Unparseable: out of bounds high", "7", { score: null, isRefusal: false });
