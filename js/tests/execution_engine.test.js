@@ -24,6 +24,18 @@ test('buildSystemPrompt - returns default Polish prompt when no custom prompt is
   assert.strictEqual(result, PVQData.DEFAULT_SYSTEM_PROMPTS.pl);
 });
 
+test('buildSystemPrompt - uses the singular default instruction in sequential mode', () => {
+  const result = buildSystemPrompt(null, 'en', 'sequential');
+  assert.strictEqual(result, PVQData.SEQUENTIAL_SYSTEM_PROMPTS.en);
+  assert.match(result, /Provide only your rating \(1-6\) for the item below\.$/);
+  assert.doesNotMatch(result, /Act as|survey respondent/i);
+});
+
+test('buildSystemPrompt - keeps custom prompts unchanged in sequential mode', () => {
+  const result = buildSystemPrompt('  My original questionnaire prompt  ', 'en', 'sequential');
+  assert.strictEqual(result, 'My original questionnaire prompt');
+});
+
 test('buildSystemPrompt - returns default English prompt when lang is undefined or not pl', (t) => {
   const result = buildSystemPrompt(null);
   assert.strictEqual(result, PVQData.DEFAULT_SYSTEM_PROMPTS.en);
