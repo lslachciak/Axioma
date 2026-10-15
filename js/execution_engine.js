@@ -26,10 +26,12 @@
   /**
    * Creates evaluation prompts based on language and mode.
    */
-  function buildSystemPrompt(userCustomPrompt, lang) {
+  function buildSystemPrompt(userCustomPrompt, lang, mode) {
     // If not in a browser (e.g. Node tests), we might need to access the exported data
     const pvq = (typeof window !== 'undefined' && window.PVQData) ? window.PVQData : require('./pvq_data.js');
-    const baseDefault = pvq.DEFAULT_SYSTEM_PROMPTS[lang] || pvq.DEFAULT_SYSTEM_PROMPTS['en'];
+    const baseDefault = typeof pvq.getDefaultSystemPrompt === 'function'
+      ? pvq.getDefaultSystemPrompt(lang, mode)
+      : (pvq.DEFAULT_SYSTEM_PROMPTS[lang] || pvq.DEFAULT_SYSTEM_PROMPTS.en);
 
     if (!userCustomPrompt || !userCustomPrompt.trim()) {
       return baseDefault;
@@ -348,7 +350,7 @@
         itemOrder: itemsToRun.map(it => it.id)
       };
 
-      const systemPrompt = buildSystemPrompt(this.config.customSystemPrompt, lang);
+      const systemPrompt = buildSystemPrompt(this.config.customSystemPrompt, lang, this.config.mode);
 
       const statusUpdateCallback = (retryMsg) => {
         if (onProgress) {
