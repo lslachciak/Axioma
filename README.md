@@ -42,7 +42,9 @@ static hosting, or any HTTP server.
   preserve each complete query, reasoning trace, and provider response, while
   item results retain the exact fragment used for parsing. Previous session
   CSV/XLSX exports remain importable.
-- **Charts** — radar and circle charts of the value profile (Chart.js).
+- **Charts** — radar and circle charts of the value profile (Chart.js). These
+  charts use zero as a visual origin so that the minimum valid rating remains
+  visible; questionnaire ratings themselves remain on the 1–6 scale.
 - **Security** — DOMPurify-sanitized rendering of model output; API keys stored
   in `localStorage` with light obfuscation, while system-prompt edits remain
   session-only and reset on reload (see [Security notes](#security-notes)).

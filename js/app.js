@@ -357,6 +357,10 @@ function deobfuscateApiKey(val) {
           maintainAspectRatio: false,
           scales: {
             r: {
+              // Keep the valid minimum rating (1) away from the chart origin.
+              // These are suggested bounds so negative centered scores remain visible.
+              suggestedMin: 0,
+              suggestedMax: 6,
               grid: { color: 'rgba(255, 255, 255, 0.15)' },
               angleLines: { color: 'rgba(255, 255, 255, 0.15)' },
               pointLabels: { color: '#f8fafc', font: { size: pointLabelSize, weight: 'bold' } },
