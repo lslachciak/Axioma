@@ -21,7 +21,7 @@ static hosting, or any HTTP server.
 - **Two evaluation modes**
   - *Batch* — all 57 items rated in a single prompt.
   - *Sequential* — item by item, with optional conversation history and a
-    singular default response instruction tailored to one item.
+    singular default introduction and response instruction tailored to one item.
 - **Multi-provider API client** — OpenAI, Anthropic, Google Gemini, xAI (Grok),
   Ollama Cloud, and any OpenAI-compatible endpoint. Local OpenAI-compatible
   servers can be configured through Custom Endpoint (default:

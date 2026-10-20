@@ -40,8 +40,8 @@
   };
 
   const SEQUENTIAL_SYSTEM_PROMPTS = {
-    en: `${SCALE_INSTRUCTIONS.en.description}\n\nHOW MUCH LIKE YOU IS THIS PERSON?\n${SCALE_INSTRUCTIONS.en.scale.map(s => s.label).join('\n')}\n\nProvide only your rating (1-6) for the item below.`,
-    pl: `${SCALE_INSTRUCTIONS.pl.description}\n\nW JAKIM STOPNIU TEN CZŁOWIEK JEST DO CIEBIE PODOBNY?\n${SCALE_INSTRUCTIONS.pl.scale.map(s => s.label).join('\n')}\n\nDla poniższej pozycji podaj wyłącznie ocenę (1-6).`
+    en: `Here we briefly describe a person. Please read the description and think about how much that person is or is not like you. Rate this person using the scale below:\n\nHOW MUCH LIKE YOU IS THIS PERSON?\n${SCALE_INSTRUCTIONS.en.scale.map(s => s.label).join('\n')}\n\nProvide only your rating (1-6) for the item below.`,
+    pl: `Poniżej pokrótce zostanie scharakteryzowany pewien człowiek. Przeczytaj opis i zastanów się, na ile przedstawiony człowiek jest lub nie jest podobny do Ciebie. Oceń tę osobę, korzystając z poniższej skali:\n\nW JAKIM STOPNIU TEN CZŁOWIEK JEST DO CIEBIE PODOBNY?\n${SCALE_INSTRUCTIONS.pl.scale.map(s => s.label).join('\n')}\n\nDla poniższej pozycji podaj wyłącznie ocenę (1-6).`
   };
 
   function getDefaultSystemPrompt(lang, mode) {

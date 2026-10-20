@@ -33,8 +33,19 @@ test('batch and sequential prompts are independent named constants', () => {
 test('buildSystemPrompt - uses the singular default instruction in sequential mode', () => {
   const result = buildSystemPrompt(null, 'en', 'sequential');
   assert.strictEqual(result, PVQData.SEQUENTIAL_SYSTEM_PROMPTS.en);
+  assert.match(result, /^Here we briefly describe a person\./);
+  assert.match(result, /Rate this person using the scale below:/);
+  assert.doesNotMatch(result, /different people|each description|Rate each person/);
   assert.match(result, /Provide only your rating \(1-6\) for the item below\.$/);
   assert.doesNotMatch(result, /Act as|survey respondent/i);
+});
+
+test('buildSystemPrompt - uses singular Polish wording in sequential mode', () => {
+  const result = buildSystemPrompt(null, 'pl', 'sequential');
+  assert.strictEqual(result, PVQData.SEQUENTIAL_SYSTEM_PROMPTS.pl);
+  assert.match(result, /^Poniżej pokrótce zostanie scharakteryzowany pewien człowiek\./);
+  assert.match(result, /Oceń tę osobę, korzystając z poniższej skali:/);
+  assert.match(result, /Dla poniższej pozycji podaj wyłącznie ocenę \(1-6\)\.$/);
 });
 
 test('buildSystemPrompt - keeps custom prompts unchanged in sequential mode', () => {
