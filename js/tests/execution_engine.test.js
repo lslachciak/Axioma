@@ -16,12 +16,19 @@ const { buildSystemPrompt, EvaluatorEngine } = require('../execution_engine.js')
 
 test('buildSystemPrompt - returns default English prompt when no custom prompt is provided', (t) => {
   const result = buildSystemPrompt(null, 'en');
-  assert.strictEqual(result, PVQData.DEFAULT_SYSTEM_PROMPTS.en);
+  assert.strictEqual(result, PVQData.BATCH_SYSTEM_PROMPTS.en);
 });
 
 test('buildSystemPrompt - returns default Polish prompt when no custom prompt is provided and lang is pl', (t) => {
   const result = buildSystemPrompt(null, 'pl');
-  assert.strictEqual(result, PVQData.DEFAULT_SYSTEM_PROMPTS.pl);
+  assert.strictEqual(result, PVQData.BATCH_SYSTEM_PROMPTS.pl);
+});
+
+test('batch and sequential prompts are independent named constants', () => {
+  assert.notStrictEqual(PVQData.BATCH_SYSTEM_PROMPTS, PVQData.SEQUENTIAL_SYSTEM_PROMPTS);
+  assert.notStrictEqual(PVQData.BATCH_SYSTEM_PROMPTS, PVQData.DEFAULT_SYSTEM_PROMPTS);
+  assert.match(PVQData.BATCH_SYSTEM_PROMPTS.en, /for each item\.$/);
+  assert.match(PVQData.SEQUENTIAL_SYSTEM_PROMPTS.en, /for the item below\.$/);
 });
 
 test('buildSystemPrompt - uses the singular default instruction in sequential mode', () => {
@@ -38,7 +45,7 @@ test('buildSystemPrompt - keeps custom prompts unchanged in sequential mode', ()
 
 test('buildSystemPrompt - returns default English prompt when lang is undefined or not pl', (t) => {
   const result = buildSystemPrompt(null);
-  assert.strictEqual(result, PVQData.DEFAULT_SYSTEM_PROMPTS.en);
+  assert.strictEqual(result, PVQData.BATCH_SYSTEM_PROMPTS.en);
 });
 
 test('buildSystemPrompt - returns trimmed custom prompt when a valid custom prompt is provided', (t) => {
@@ -48,12 +55,12 @@ test('buildSystemPrompt - returns trimmed custom prompt when a valid custom prom
 
 test('buildSystemPrompt - handles whitespace-only custom prompt by returning default', (t) => {
   const result = buildSystemPrompt("   \n\t  ", 'en');
-  assert.strictEqual(result, PVQData.DEFAULT_SYSTEM_PROMPTS.en);
+  assert.strictEqual(result, PVQData.BATCH_SYSTEM_PROMPTS.en);
 });
 
 test('buildSystemPrompt - returns default prompt when custom prompt is empty string', (t) => {
   const result = buildSystemPrompt("", 'pl');
-  assert.strictEqual(result, PVQData.DEFAULT_SYSTEM_PROMPTS.pl);
+  assert.strictEqual(result, PVQData.BATCH_SYSTEM_PROMPTS.pl);
 });
 
 test('sequential mode waits for each request when context is disabled', async () => {

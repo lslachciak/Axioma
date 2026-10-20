@@ -31,7 +31,7 @@
     const pvq = (typeof window !== 'undefined' && window.PVQData) ? window.PVQData : require('./pvq_data.js');
     const baseDefault = typeof pvq.getDefaultSystemPrompt === 'function'
       ? pvq.getDefaultSystemPrompt(lang, mode)
-      : (pvq.DEFAULT_SYSTEM_PROMPTS[lang] || pvq.DEFAULT_SYSTEM_PROMPTS.en);
+      : ((pvq.BATCH_SYSTEM_PROMPTS || pvq.DEFAULT_SYSTEM_PROMPTS)[lang] || (pvq.BATCH_SYSTEM_PROMPTS || pvq.DEFAULT_SYSTEM_PROMPTS).en);
 
     if (!userCustomPrompt || !userCustomPrompt.trim()) {
       return baseDefault;

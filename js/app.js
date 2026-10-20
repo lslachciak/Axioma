@@ -87,7 +87,7 @@ function deobfuscateApiKey(val) {
     temperature: '',
     seed: '',
     lang: 'en',
-    systemPrompt: PVQData.DEFAULT_SYSTEM_PROMPTS.en,
+    systemPrompt: (PVQData.BATCH_SYSTEM_PROMPTS || PVQData.DEFAULT_SYSTEM_PROMPTS).en,
     mode: 'batch', // 'batch' | 'sequential'
     iterations: 1,
     randomizeOrder: false,
@@ -125,11 +125,12 @@ function deobfuscateApiKey(val) {
   function getDefaultSystemPrompt(lang = state.lang, mode = state.mode) {
     return typeof PVQData.getDefaultSystemPrompt === 'function'
       ? PVQData.getDefaultSystemPrompt(lang, mode)
-      : (PVQData.DEFAULT_SYSTEM_PROMPTS[lang] || PVQData.DEFAULT_SYSTEM_PROMPTS.en);
+      : ((PVQData.BATCH_SYSTEM_PROMPTS || PVQData.DEFAULT_SYSTEM_PROMPTS)[lang] || (PVQData.BATCH_SYSTEM_PROMPTS || PVQData.DEFAULT_SYSTEM_PROMPTS).en);
   }
 
   function isDefaultSystemPrompt(prompt, lang = state.lang) {
-    const batchPrompt = PVQData.DEFAULT_SYSTEM_PROMPTS[lang] || PVQData.DEFAULT_SYSTEM_PROMPTS.en;
+    const batchPrompts = PVQData.BATCH_SYSTEM_PROMPTS || PVQData.DEFAULT_SYSTEM_PROMPTS;
+    const batchPrompt = batchPrompts[lang] || batchPrompts.en;
     const sequentialPrompts = PVQData.SEQUENTIAL_SYSTEM_PROMPTS || {};
     const sequentialPrompt = sequentialPrompts[lang] || sequentialPrompts.en;
     return prompt === batchPrompt || (sequentialPrompt && prompt === sequentialPrompt);
