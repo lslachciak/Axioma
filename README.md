@@ -20,7 +20,8 @@ static hosting, or any HTTP server.
   scale wording (Cieciuch & Schwartz, 2018).
 - **Two evaluation modes**
   - *Batch* — all 57 items rated in a single prompt.
-  - *Sequential* — item by item, with optional conversation history.
+  - *Sequential* — item by item, with optional conversation history and a
+    singular default introduction and response instruction tailored to one item.
 - **Multi-provider API client** — OpenAI, Anthropic, Google Gemini, xAI (Grok),
   Ollama Cloud, and any OpenAI-compatible endpoint. Local OpenAI-compatible
   servers can be configured through Custom Endpoint (default:
@@ -43,7 +44,8 @@ static hosting, or any HTTP server.
   CSV/XLSX exports remain importable.
 - **Charts** — radar and circle charts of the value profile (Chart.js).
 - **Security** — DOMPurify-sanitized rendering of model output; API keys stored
-  in `localStorage` with light obfuscation (see [Security notes](#security-notes)).
+  in `localStorage` with light obfuscation, while system-prompt edits remain
+  session-only and reset on reload (see [Security notes](#security-notes)).
 
 ## Repository structure
 

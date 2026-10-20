@@ -87,7 +87,16 @@ function deobfuscateApiKey(val) {
     temperature: '',
     seed: '',
     lang: 'en',
-    systemPrompt: PVQData.DEFAULT_SYSTEM_PROMPTS.en,
+    systemPrompts: {
+      batch: {
+        text: PVQData.BATCH_SYSTEM_PROMPTS.en,
+        customized: false
+      },
+      sequential: {
+        text: PVQData.SEQUENTIAL_SYSTEM_PROMPTS.en,
+        customized: false
+      }
+    },
     mode: 'batch', // 'batch' | 'sequential'
     iterations: 1,
     randomizeOrder: false,
@@ -122,6 +131,29 @@ function deobfuscateApiKey(val) {
     activeTab: 'results' // 'results' | 'items' | 'logs'
   };
 
+  function getDefaultSystemPrompt(lang = state.lang, mode = state.mode) {
+    return PVQData.getDefaultSystemPrompt(lang, mode);
+  }
+
+  function getActiveSystemPromptState() {
+    return state.systemPrompts[state.mode];
+  }
+
+  function updateUncustomizedSystemPrompts(lang) {
+    for (const mode of ['batch', 'sequential']) {
+      const promptState = state.systemPrompts[mode];
+      if (!promptState.customized) {
+        promptState.text = getDefaultSystemPrompt(lang, mode);
+      }
+    }
+  }
+
+  function setMode(mode) {
+    state.mode = mode;
+    savePersistedOption('mode', mode);
+    renderApp();
+  }
+
   let engineInstance = null;
   let refinedChartInstance = null;
   let higherOrderChartInstance = null;
@@ -148,12 +180,11 @@ function deobfuscateApiKey(val) {
       const savedSeed = localStorage.getItem('axioma_seed');
       if (savedSeed !== null) state.seed = savedSeed;
 
-      const savedSystemPrompt = localStorage.getItem('axioma_system_prompt') || localStorage.getItem('axioma_custom_system_prompt');
-      if (savedSystemPrompt !== null) {
-        state.systemPrompt = savedSystemPrompt;
-      } else {
-        state.systemPrompt = PVQData.DEFAULT_SYSTEM_PROMPTS[state.lang] || PVQData.DEFAULT_SYSTEM_PROMPTS.en;
-      }
+      // System prompts are session-only. Remove values saved by earlier versions
+      // without reading or migrating them.
+      localStorage.removeItem('axioma_system_prompt');
+      localStorage.removeItem('axioma_custom_system_prompt');
+      updateUncustomizedSystemPrompts(state.lang);
 
       const savedRandomize = localStorage.getItem('axioma_randomize_order');
       if (savedRandomize !== null) state.randomizeOrder = savedRandomize === 'true';
@@ -470,7 +501,7 @@ function deobfuscateApiKey(val) {
         temperature: state.temperature === '' ? '' : parseFloat(String(state.temperature).replace(',', '.')),
         seed: state.seed ? parseInt(state.seed, 10) : undefined,
         lang: state.lang,
-        customSystemPrompt: state.systemPrompt,
+        customSystemPrompt: getActiveSystemPromptState().text,
         mode: state.mode,
         randomizeOrder: state.randomizeOrder,
         keepContext: state.keepContext,
@@ -590,12 +621,8 @@ function deobfuscateApiKey(val) {
           el('select', {
             value: state.lang,
             onChange: (e) => {
-              const oldLang = state.lang;
               state.lang = e.target.value;
-              if (state.systemPrompt === PVQData.DEFAULT_SYSTEM_PROMPTS[oldLang]) {
-                state.systemPrompt = PVQData.DEFAULT_SYSTEM_PROMPTS[state.lang] || PVQData.DEFAULT_SYSTEM_PROMPTS.en;
-                savePersistedOption('system_prompt', state.systemPrompt);
-              }
+              updateUncustomizedSystemPrompts(state.lang);
               savePersistedOption('lang', state.lang);
               renderApp();
             },
@@ -803,12 +830,12 @@ function deobfuscateApiKey(val) {
         el('div', { className: 'grid grid-cols-2 gap-2' },
           el('button', {
             type: 'button',
-            onClick: () => { state.mode = 'batch'; savePersistedOption('mode', 'batch'); renderApp(); },
+            onClick: () => setMode('batch'),
             className: `py-2 px-3 text-xs font-medium rounded-lg border text-center transition ${state.mode === 'batch' ? 'bg-sky-500/10 border-sky-500 text-sky-400' : 'bg-slate-900 border-slate-700 text-slate-400 hover:text-slate-200'}`
           }, 'Batch Mode (1 Prompt)'),
           el('button', {
             type: 'button',
-            onClick: () => { state.mode = 'sequential'; savePersistedOption('mode', 'sequential'); renderApp(); },
+            onClick: () => setMode('sequential'),
             className: `py-2 px-3 text-xs font-medium rounded-lg border text-center transition ${state.mode === 'sequential' ? 'bg-sky-500/10 border-sky-500 text-sky-400' : 'bg-slate-900 border-slate-700 text-slate-400 hover:text-slate-200'}`
           }, 'Sequential Mode (57 Prompts)')
         ),
@@ -847,8 +874,9 @@ function deobfuscateApiKey(val) {
           el('button', {
             type: 'button',
             onClick: () => {
-              state.systemPrompt = PVQData.DEFAULT_SYSTEM_PROMPTS[state.lang] || PVQData.DEFAULT_SYSTEM_PROMPTS.en;
-              savePersistedOption('system_prompt', state.systemPrompt);
+              const promptState = getActiveSystemPromptState();
+              promptState.text = getDefaultSystemPrompt(state.lang, state.mode);
+              promptState.customized = false;
               renderApp();
             },
             className: 'text-[10px] text-sky-400 hover:text-sky-300 font-semibold flex items-center gap-1'
@@ -857,8 +885,12 @@ function deobfuscateApiKey(val) {
         el('textarea', {
           rows: '3',
           placeholder: 'System prompt instructions for psychological evaluation...',
-          value: state.systemPrompt,
-          onInput: (e) => { state.systemPrompt = e.target.value; savePersistedOption('system_prompt', state.systemPrompt); },
+          value: getActiveSystemPromptState().text,
+          onInput: (e) => {
+            const promptState = getActiveSystemPromptState();
+            promptState.text = e.target.value;
+            promptState.customized = true;
+          },
           className: 'w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-sky-500'
         })
       ),
