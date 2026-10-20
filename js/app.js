@@ -87,7 +87,16 @@ function deobfuscateApiKey(val) {
     temperature: '',
     seed: '',
     lang: 'en',
-    systemPrompt: PVQData.BATCH_SYSTEM_PROMPTS.en,
+    systemPrompts: {
+      batch: {
+        text: PVQData.BATCH_SYSTEM_PROMPTS.en,
+        customized: false
+      },
+      sequential: {
+        text: PVQData.SEQUENTIAL_SYSTEM_PROMPTS.en,
+        customized: false
+      }
+    },
     mode: 'batch', // 'batch' | 'sequential'
     iterations: 1,
     randomizeOrder: false,
@@ -126,18 +135,20 @@ function deobfuscateApiKey(val) {
     return PVQData.getDefaultSystemPrompt(lang, mode);
   }
 
-  function isDefaultSystemPrompt(prompt, lang = state.lang) {
-    const batchPrompts = PVQData.BATCH_SYSTEM_PROMPTS;
-    const batchPrompt = batchPrompts[lang] || batchPrompts.en;
-    const sequentialPrompts = PVQData.SEQUENTIAL_SYSTEM_PROMPTS;
-    const sequentialPrompt = sequentialPrompts[lang] || sequentialPrompts.en;
-    return prompt === batchPrompt || (sequentialPrompt && prompt === sequentialPrompt);
+  function getActiveSystemPromptState() {
+    return state.systemPrompts[state.mode];
+  }
+
+  function updateUncustomizedSystemPrompts(lang) {
+    for (const mode of ['batch', 'sequential']) {
+      const promptState = state.systemPrompts[mode];
+      if (!promptState.customized) {
+        promptState.text = getDefaultSystemPrompt(lang, mode);
+      }
+    }
   }
 
   function setMode(mode) {
-    if (isDefaultSystemPrompt(state.systemPrompt)) {
-      state.systemPrompt = getDefaultSystemPrompt(state.lang, mode);
-    }
     state.mode = mode;
     savePersistedOption('mode', mode);
     renderApp();
@@ -173,7 +184,7 @@ function deobfuscateApiKey(val) {
       // without reading or migrating them.
       localStorage.removeItem('axioma_system_prompt');
       localStorage.removeItem('axioma_custom_system_prompt');
-      state.systemPrompt = getDefaultSystemPrompt(state.lang, state.mode);
+      updateUncustomizedSystemPrompts(state.lang);
 
       const savedRandomize = localStorage.getItem('axioma_randomize_order');
       if (savedRandomize !== null) state.randomizeOrder = savedRandomize === 'true';
@@ -490,7 +501,7 @@ function deobfuscateApiKey(val) {
         temperature: state.temperature === '' ? '' : parseFloat(String(state.temperature).replace(',', '.')),
         seed: state.seed ? parseInt(state.seed, 10) : undefined,
         lang: state.lang,
-        customSystemPrompt: state.systemPrompt,
+        customSystemPrompt: getActiveSystemPromptState().text,
         mode: state.mode,
         randomizeOrder: state.randomizeOrder,
         keepContext: state.keepContext,
@@ -610,11 +621,8 @@ function deobfuscateApiKey(val) {
           el('select', {
             value: state.lang,
             onChange: (e) => {
-              const oldLang = state.lang;
               state.lang = e.target.value;
-              if (isDefaultSystemPrompt(state.systemPrompt, oldLang)) {
-                state.systemPrompt = getDefaultSystemPrompt(state.lang, state.mode);
-              }
+              updateUncustomizedSystemPrompts(state.lang);
               savePersistedOption('lang', state.lang);
               renderApp();
             },
@@ -866,7 +874,9 @@ function deobfuscateApiKey(val) {
           el('button', {
             type: 'button',
             onClick: () => {
-              state.systemPrompt = getDefaultSystemPrompt(state.lang, state.mode);
+              const promptState = getActiveSystemPromptState();
+              promptState.text = getDefaultSystemPrompt(state.lang, state.mode);
+              promptState.customized = false;
               renderApp();
             },
             className: 'text-[10px] text-sky-400 hover:text-sky-300 font-semibold flex items-center gap-1'
@@ -875,8 +885,12 @@ function deobfuscateApiKey(val) {
         el('textarea', {
           rows: '3',
           placeholder: 'System prompt instructions for psychological evaluation...',
-          value: state.systemPrompt,
-          onInput: (e) => { state.systemPrompt = e.target.value; },
+          value: getActiveSystemPromptState().text,
+          onInput: (e) => {
+            const promptState = getActiveSystemPromptState();
+            promptState.text = e.target.value;
+            promptState.customized = true;
+          },
           className: 'w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-sky-500'
         })
       ),

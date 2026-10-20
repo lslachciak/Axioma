@@ -15,3 +15,11 @@ test('obsolete persisted system prompts are removed without reading them', () =>
   assert.match(appSource, /localStorage\.removeItem\(['"]axioma_system_prompt['"]\)/);
   assert.match(appSource, /localStorage\.removeItem\(['"]axioma_custom_system_prompt['"]\)/);
 });
+
+test('batch and sequential prompts keep independent in-memory customization state', () => {
+  assert.match(appSource, /systemPrompts:\s*\{\s*batch:\s*\{[\s\S]*?customized:\s*false[\s\S]*?sequential:\s*\{[\s\S]*?customized:\s*false/);
+  assert.match(appSource, /return state\.systemPrompts\[state\.mode\]/);
+  assert.match(appSource, /promptState\.customized = true/);
+  assert.match(appSource, /promptState\.customized = false/);
+  assert.doesNotMatch(appSource, /isDefaultSystemPrompt/);
+});
