@@ -125,7 +125,8 @@ function deobfuscateApiKey(val) {
     // Results State
     results: null,
     sessionResults: [],
-    selectedCoTItem: null,
+    selectedResponse: null,
+    responseCopyStatus: '',
     showCircleModal: false,
     showHoModal: false,
     activeTab: 'results' // 'results' | 'items' | 'logs'
@@ -602,7 +603,7 @@ function deobfuscateApiKey(val) {
         el('div', { className: 'lg:col-span-4 space-y-6' }, ConfigPanel()),
         el('div', { className: 'lg:col-span-8 space-y-6' }, ExecutionDashboard())
       ),
-      selectedCoTModal(),
+      responseModal(),
       circleModal(),
       hoModal()
     );
@@ -1106,8 +1107,50 @@ function deobfuscateApiKey(val) {
     const activeRawResponses = state.results?.rawResponses || state.liveRawResponses || {};
     const activeParsedFragments = state.results?.parsedFragments || state.liveParsedFragments || {};
     const activeReasoningTraces = state.results?.reasoningTraces || state.liveReasoningTraces || {};
+    const mode = window.ResponseView.getExecutionMode(state.results) || state.mode;
+    const isBatch = mode === 'batch';
+    const batchExchange = isBatch
+      ? (window.ResponseView.findBatchExchange(state.results) || (state.activeItemResponse ? {
+          mode: 'batch',
+          query: state.activeItemPrompt,
+          reasoning: state.activeReasoningTrace,
+          response: state.activeItemResponse
+        } : null))
+      : null;
+    const batchSummary = batchExchange && state.results
+      ? window.ResponseView.summarizeBatchResponse(state.results, batchExchange)
+      : null;
+
+    const openResponse = (details) => {
+      state.selectedResponse = details;
+      state.responseCopyStatus = '';
+      renderApp();
+    };
 
     return el('div', { className: 'space-y-4' },
+      isBatch ? el('div', { className: 'rounded-xl border border-slate-700 bg-slate-900/60 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3' },
+        el('div', { className: 'min-w-0' },
+          el('h4', { className: 'text-sm font-semibold text-slate-200 flex items-center gap-2' },
+            el('i', { className: 'fa-solid fa-code text-emerald-400' }),
+            'Batch Raw Output'
+          ),
+          batchSummary
+            ? el('p', { className: `text-xs mt-1 ${batchSummary.complete ? 'text-emerald-400' : 'text-amber-300'}` }, batchSummary.message)
+            : el('p', { className: 'text-xs text-slate-500 mt-1' }, batchExchange ? 'Response available.' : 'No batch response available yet.')
+        ),
+        batchExchange?.response ? el('button', {
+          type: 'button',
+          onClick: () => openResponse({
+            title: 'Batch API Response',
+            query: batchExchange.query || '',
+            reasoning: batchExchange.reasoning || '',
+            response: batchExchange.response || '',
+            parsedFragment: '',
+            summary: batchSummary
+          }),
+          className: 'shrink-0 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs font-semibold text-emerald-300 hover:bg-emerald-500/20'
+        }, el('i', { className: 'fa-solid fa-eye mr-1.5' }), 'View Full Response') : null
+      ) : null,
       el('div', { className: 'overflow-x-auto' },
         el('table', { className: 'w-full text-left text-xs border-collapse' },
           el('thead', {},
@@ -1116,7 +1159,8 @@ function deobfuscateApiKey(val) {
               el('th', { className: 'py-2 px-3' }, 'Item Description'),
               el('th', { className: 'py-2 px-3 w-28' }, 'Refined Value'),
               el('th', { className: 'py-2 px-3 w-20' }, 'Score'),
-              el('th', { className: 'py-2 px-3 w-28' }, 'CoT Trace')
+              el('th', { className: 'py-2 px-3 min-w-36' }, isBatch ? 'Parsed Fragment' : 'Raw Output'),
+              el('th', { className: 'py-2 px-3 w-28' }, 'Reasoning')
             )
           ),
           el('tbody', { className: 'divide-y divide-slate-800/50' },
@@ -1124,7 +1168,19 @@ function deobfuscateApiKey(val) {
               const score = activeRatings[item.id];
               const reasoning = activeReasoningTraces[item.id];
               const rawResponse = activeRawResponses[item.id];
-              const parsedFragment = activeParsedFragments[item.id];
+              const parsedFragment = isBatch && state.results
+                ? window.ResponseView.getDisplayParsedFragment(state.results, item.id, batchExchange)
+                : activeParsedFragments[item.id];
+              const responseDetails = !isBatch && state.results
+                ? window.ResponseView.getItemResponseDetails(state.results, item.id)
+                : {
+                    itemId: item.id,
+                    query: '',
+                    reasoning: reasoning || '',
+                    response: rawResponse || '',
+                    parsedFragment: parsedFragment || '',
+                    score: score ?? null
+                  };
 
               return el('tr', { key: item.id, className: 'hover:bg-slate-800/30' },
                 el('td', { className: 'py-2 px-3 font-bold text-slate-400 code-font' }, item.id),
@@ -1132,14 +1188,31 @@ function deobfuscateApiKey(val) {
                 el('td', { className: 'py-2 px-3 text-sky-400 code-font' }, item.valueKey),
                 el('td', { className: 'py-2 px-3' },
                   score !== undefined && score !== null ? el('span', { className: 'px-2 py-0.5 rounded bg-sky-500/20 text-sky-400 font-bold code-font' }, score) : (
-                    (rawResponse || parsedFragment) ? el('span', { className: 'px-2 py-0.5 rounded bg-rose-500/20 text-rose-400 font-medium text-[10px]' }, 'Refused / N/A') : el('span', { className: 'text-slate-600 text-[10px]' }, 'Pending')
+                    (state.results || rawResponse || parsedFragment) ? el('span', { className: 'px-2 py-0.5 rounded bg-rose-500/20 text-rose-400 font-medium text-[10px]' }, 'Refused / N/A') : el('span', { className: 'text-slate-600 text-[10px]' }, 'Pending')
                   )
                 ),
                 el('td', { className: 'py-2 px-3' },
+                  isBatch
+                    ? (parsedFragment
+                        ? el('span', { className: 'block max-w-52 truncate code-font text-slate-300', title: parsedFragment }, parsedFragment)
+                        : el('span', { className: 'text-amber-400/80 text-[10px]' }, 'Not identified'))
+                    : (responseDetails.response
+                        ? el('div', { className: 'max-w-52 space-y-1' },
+                            el('span', { className: 'block truncate code-font text-slate-300', title: responseDetails.response }, responseDetails.response),
+                            el('button', {
+                              type: 'button',
+                              onClick: () => openResponse({ ...responseDetails, title: `Item #${item.id} API Response` }),
+                              className: 'text-[10px] text-emerald-400 hover:text-emerald-300 font-medium flex items-center gap-1'
+                            }, el('i', { className: 'fa-solid fa-eye' }), ' View Raw')
+                          )
+                        : el('span', { className: 'text-slate-600 text-[10px]' }, 'None'))
+                ),
+                el('td', { className: 'py-2 px-3' },
                   reasoning ? el('button', {
-                    onClick: () => { state.selectedCoTItem = { id: item.id, reasoning, rawResponse }; renderApp(); },
+                    type: 'button',
+                    onClick: () => openResponse({ ...responseDetails, title: `Item #${item.id} API Response` }),
                     className: 'text-xs text-purple-400 hover:text-purple-300 font-medium flex items-center gap-1'
-                  }, el('i', { className: 'fa-solid fa-brain' }), ' View CoT') : el('span', { className: 'text-slate-600 text-[10px]' }, 'None')
+                  }, el('i', { className: 'fa-solid fa-brain' }), ' View') : el('span', { className: 'text-slate-600 text-[10px]' }, 'None')
                 )
               );
             })
@@ -1224,31 +1297,79 @@ function deobfuscateApiKey(val) {
     );
   }
 
-  function selectedCoTModal() {
-    if (!state.selectedCoTItem) return null;
+  async function copyResponseText(text) {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        const copied = document.execCommand('copy');
+        document.body.removeChild(textarea);
+        if (!copied) throw new Error('Copy command was rejected.');
+      }
+      return true;
+    } catch (error) {
+      console.warn('Could not copy response text:', error);
+      return false;
+    }
+  }
+
+  function responseModal() {
+    if (!state.selectedResponse) return null;
+    const details = state.selectedResponse;
+    const close = () => {
+      state.selectedResponse = null;
+      state.responseCopyStatus = '';
+      renderApp();
+    };
+
+    const responseSection = (title, text, colorClass, maxHeight = 'max-h-52') => text
+      ? el('div', {},
+          el('h4', { className: 'text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1' }, title),
+          el('pre', { className: `bg-slate-950 p-3 rounded-xl border border-slate-800 text-xs ${colorClass} code-font whitespace-pre-wrap ${maxHeight} overflow-y-auto` }, text)
+        )
+      : null;
 
     return el('div', { className: 'fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4' },
-      el('div', { className: 'glass-panel bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full p-6 space-y-4 shadow-2xl' },
+      el('div', { className: 'glass-panel bg-slate-900 border border-slate-800 rounded-2xl max-w-3xl w-full p-6 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto' },
         el('div', { className: 'flex items-center justify-between border-b border-slate-800 pb-3' },
-          el('h3', { className: 'text-base font-bold text-purple-400 flex items-center gap-2' }, el('i', { className: 'fa-solid fa-brain' }), ` Reasoning Trace for Item #${state.selectedCoTItem.id}`),
+          el('h3', { className: 'text-base font-bold text-emerald-400 flex items-center gap-2' }, el('i', { className: 'fa-solid fa-code' }), details.title || 'API Response'),
           el('button', {
-            onClick: () => { state.selectedCoTItem = null; renderApp(); },
+            type: 'button',
+            'aria-label': 'Close response details',
+            onClick: close,
             className: 'text-slate-400 hover:text-slate-200 text-lg'
           }, el('i', { className: 'fa-solid fa-xmark' }))
         ),
+        details.summary ? el('div', { className: `rounded-lg border px-3 py-2 text-xs ${details.summary.complete ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300' : 'border-amber-500/30 bg-amber-500/10 text-amber-200'}` },
+          details.summary.message
+        ) : null,
         el('div', { className: 'space-y-3' },
-          el('div', {},
-            el('h4', { className: 'text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1' }, 'Extracted Chain-of-Thought'),
-            el('pre', { className: 'bg-slate-950 p-3 rounded-xl border border-slate-800 text-xs text-purple-300 code-font whitespace-pre-wrap max-h-60 overflow-y-auto' }, state.selectedCoTItem.reasoning)
-          ),
-          state.selectedCoTItem.rawResponse ? el('div', {},
-            el('h4', { className: 'text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1' }, 'Final Answer Text'),
-            el('pre', { className: 'bg-slate-950 p-3 rounded-xl border border-slate-800 text-xs text-slate-200 code-font whitespace-pre-wrap max-h-40 overflow-y-auto' }, state.selectedCoTItem.rawResponse)
-          ) : null
+          responseSection('Query', details.query, 'text-sky-300'),
+          responseSection('Full Reasoning', details.reasoning, 'text-purple-300'),
+          responseSection('Full Raw Response', details.response || 'No raw response stored.', 'text-emerald-300', 'max-h-72'),
+          responseSection('Parsed Fragment', details.parsedFragment, 'text-slate-300')
         ),
-        el('div', { className: 'pt-2 text-right' },
+        el('div', { className: 'pt-2 flex items-center justify-end gap-3' },
+          state.responseCopyStatus ? el('span', { className: `text-xs ${state.responseCopyStatus === 'Copied' ? 'text-emerald-400' : 'text-rose-400'}` }, state.responseCopyStatus) : null,
           el('button', {
-            onClick: () => { state.selectedCoTItem = null; renderApp(); },
+            type: 'button',
+            disabled: !details.response,
+            onClick: async () => {
+              const copied = await copyResponseText(details.response || '');
+              state.responseCopyStatus = copied ? 'Copied' : 'Copy failed';
+              renderApp();
+            },
+            className: 'bg-emerald-500/10 hover:bg-emerald-500/20 disabled:opacity-40 text-emerald-300 text-xs font-semibold px-4 py-2 rounded-lg border border-emerald-500/30 transition'
+          }, el('i', { className: 'fa-regular fa-copy mr-1.5' }), 'Copy Raw Response'),
+          el('button', {
+            type: 'button',
+            onClick: close,
             className: 'bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold px-4 py-2 rounded-lg transition'
           }, 'Close')
         )
