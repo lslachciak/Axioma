@@ -44,7 +44,8 @@ static hosting, or any HTTP server.
   CSV/XLSX exports remain importable.
 - **Charts** — radar and circle charts of the value profile (Chart.js).
 - **Security** — DOMPurify-sanitized rendering of model output; API keys stored
-  in `localStorage` with light obfuscation (see [Security notes](#security-notes)).
+  in `localStorage` with light obfuscation, while system-prompt edits remain
+  session-only and reset on reload (see [Security notes](#security-notes)).
 
 ## Repository structure
 

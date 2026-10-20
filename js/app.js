@@ -137,7 +137,6 @@ function deobfuscateApiKey(val) {
   function setMode(mode) {
     if (isDefaultSystemPrompt(state.systemPrompt)) {
       state.systemPrompt = getDefaultSystemPrompt(state.lang, mode);
-      savePersistedOption('system_prompt', state.systemPrompt);
     }
     state.mode = mode;
     savePersistedOption('mode', mode);
@@ -170,14 +169,11 @@ function deobfuscateApiKey(val) {
       const savedSeed = localStorage.getItem('axioma_seed');
       if (savedSeed !== null) state.seed = savedSeed;
 
-      const savedSystemPrompt = localStorage.getItem('axioma_system_prompt') || localStorage.getItem('axioma_custom_system_prompt');
-      if (savedSystemPrompt !== null) {
-        state.systemPrompt = isDefaultSystemPrompt(savedSystemPrompt, state.lang)
-          ? getDefaultSystemPrompt(state.lang, state.mode)
-          : savedSystemPrompt;
-      } else {
-        state.systemPrompt = getDefaultSystemPrompt(state.lang, state.mode);
-      }
+      // System prompts are session-only. Remove values saved by earlier versions
+      // without reading or migrating them.
+      localStorage.removeItem('axioma_system_prompt');
+      localStorage.removeItem('axioma_custom_system_prompt');
+      state.systemPrompt = getDefaultSystemPrompt(state.lang, state.mode);
 
       const savedRandomize = localStorage.getItem('axioma_randomize_order');
       if (savedRandomize !== null) state.randomizeOrder = savedRandomize === 'true';
@@ -618,7 +614,6 @@ function deobfuscateApiKey(val) {
               state.lang = e.target.value;
               if (isDefaultSystemPrompt(state.systemPrompt, oldLang)) {
                 state.systemPrompt = getDefaultSystemPrompt(state.lang, state.mode);
-                savePersistedOption('system_prompt', state.systemPrompt);
               }
               savePersistedOption('lang', state.lang);
               renderApp();
@@ -872,7 +867,6 @@ function deobfuscateApiKey(val) {
             type: 'button',
             onClick: () => {
               state.systemPrompt = getDefaultSystemPrompt(state.lang, state.mode);
-              savePersistedOption('system_prompt', state.systemPrompt);
               renderApp();
             },
             className: 'text-[10px] text-sky-400 hover:text-sky-300 font-semibold flex items-center gap-1'
@@ -882,7 +876,7 @@ function deobfuscateApiKey(val) {
           rows: '3',
           placeholder: 'System prompt instructions for psychological evaluation...',
           value: state.systemPrompt,
-          onInput: (e) => { state.systemPrompt = e.target.value; savePersistedOption('system_prompt', state.systemPrompt); },
+          onInput: (e) => { state.systemPrompt = e.target.value; },
           className: 'w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-sky-500'
         })
       ),
