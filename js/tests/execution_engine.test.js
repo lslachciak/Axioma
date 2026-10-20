@@ -26,7 +26,6 @@ test('buildSystemPrompt - returns default Polish prompt when no custom prompt is
 
 test('batch and sequential prompts are independent named constants', () => {
   assert.notStrictEqual(PVQData.BATCH_SYSTEM_PROMPTS, PVQData.SEQUENTIAL_SYSTEM_PROMPTS);
-  assert.notStrictEqual(PVQData.BATCH_SYSTEM_PROMPTS, PVQData.DEFAULT_SYSTEM_PROMPTS);
   assert.match(PVQData.BATCH_SYSTEM_PROMPTS.en, /for each item\.$/);
   assert.match(PVQData.SEQUENTIAL_SYSTEM_PROMPTS.en, /for the item below\.$/);
 });

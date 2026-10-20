@@ -29,9 +29,7 @@
   function buildSystemPrompt(userCustomPrompt, lang, mode) {
     // If not in a browser (e.g. Node tests), we might need to access the exported data
     const pvq = (typeof window !== 'undefined' && window.PVQData) ? window.PVQData : require('./pvq_data.js');
-    const baseDefault = typeof pvq.getDefaultSystemPrompt === 'function'
-      ? pvq.getDefaultSystemPrompt(lang, mode)
-      : ((pvq.BATCH_SYSTEM_PROMPTS || pvq.DEFAULT_SYSTEM_PROMPTS)[lang] || (pvq.BATCH_SYSTEM_PROMPTS || pvq.DEFAULT_SYSTEM_PROMPTS).en);
+    const baseDefault = pvq.getDefaultSystemPrompt(lang, mode);
 
     if (!userCustomPrompt || !userCustomPrompt.trim()) {
       return baseDefault;

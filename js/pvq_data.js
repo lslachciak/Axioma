@@ -44,9 +44,6 @@
     pl: `${SCALE_INSTRUCTIONS.pl.description}\n\nW JAKIM STOPNIU TEN CZŁOWIEK JEST DO CIEBIE PODOBNY?\n${SCALE_INSTRUCTIONS.pl.scale.map(s => s.label).join('\n')}\n\nDla poniższej pozycji podaj wyłącznie ocenę (1-6).`
   };
 
-  // Backward-compatible export for integrations that predate named mode prompts.
-  const DEFAULT_SYSTEM_PROMPTS = { ...BATCH_SYSTEM_PROMPTS };
-
   function getDefaultSystemPrompt(lang, mode) {
     const prompts = mode === 'sequential' ? SEQUENTIAL_SYSTEM_PROMPTS : BATCH_SYSTEM_PROMPTS;
     return prompts[lang] || prompts.en;
@@ -446,7 +443,6 @@
     }
   };
 
-  exports.DEFAULT_SYSTEM_PROMPTS = DEFAULT_SYSTEM_PROMPTS;
   exports.BATCH_SYSTEM_PROMPTS = BATCH_SYSTEM_PROMPTS;
   exports.SEQUENTIAL_SYSTEM_PROMPTS = SEQUENTIAL_SYSTEM_PROMPTS;
   exports.getDefaultSystemPrompt = getDefaultSystemPrompt;
