@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { fibonacciRetryDelayMs, parseRetryDelayMs } = require('../api_client.js');
+const { fibonacciRetryDelayMs, isTransientNetworkError, parseRetryDelayMs } = require('../api_client.js');
 
 test('provider defaults - local providers are removed and custom uses the local server URL', () => {
   const { PROVIDER_DEFAULTS } = require('../api_client.js');
@@ -77,6 +77,20 @@ test('fibonacciRetryDelayMs - follows Fibonacci intervals capped at five hours',
     [0, 1, 2, 3, 4, 13, 14, 15].map(index => fibonacciRetryDelayMs(index)),
     [30000, 30000, 60000, 90000, 150000, 11310000, 18000000, 18000000]
   );
+});
+
+test('isTransientNetworkError - recognizes interrupted response bodies but not cancellation', () => {
+  assert.strictEqual(
+    isTransientNetworkError(new TypeError('Content-Length header of network response exceeds response Body')),
+    true
+  );
+  assert.strictEqual(isTransientNetworkError(new TypeError('Failed to fetch')), true);
+  assert.strictEqual(isTransientNetworkError(new SyntaxError('Unexpected end of JSON input')), true);
+
+  const abortError = new Error('The operation was aborted');
+  abortError.name = 'AbortError';
+  assert.strictEqual(isTransientNetworkError(abortError), false);
+  assert.strictEqual(isTransientNetworkError(new Error('Invalid request payload')), false);
 });
 
 test('delay - should resolve after the specified time', async (t) => {
@@ -344,6 +358,51 @@ test('completeChat - retries temporary Gemini 503 errors with Fibonacci backoff'
     assert.strictEqual(fetchCalls, 3);
     assert.strictEqual(result.text, '4');
     assert.ok(statusUpdates.some(status => /Temporary provider error \(503\)/.test(status)));
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
+test('completeChat - retries an interrupted response body', async () => {
+  const { completeChat } = require('../api_client.js');
+  const originalFetch = global.fetch;
+  const statusUpdates = [];
+  let fetchCalls = 0;
+
+  global.fetch = async () => {
+    fetchCalls++;
+    if (fetchCalls === 1) {
+      throw new TypeError('Content-Length header of network response exceeds response Body');
+    }
+
+    return {
+      ok: true,
+      status: 200,
+      json: async () => ({
+        model: 'gemma4:31b',
+        choices: [{ message: { content: '4' } }],
+        usage: {}
+      }),
+      headers: new Map()
+    };
+  };
+
+  try {
+    const result = await completeChat(
+      {
+        provider: 'ollama_cloud',
+        model: 'gemma4:31b',
+        apiKey: 'test',
+        maxRetries: 1,
+        retryBaseDelayMs: 1
+      },
+      [{ role: 'user', content: 'test' }],
+      status => statusUpdates.push(status)
+    );
+
+    assert.strictEqual(fetchCalls, 2);
+    assert.strictEqual(result.text, '4');
+    assert.ok(statusUpdates.some(status => /Temporary network error/.test(status)));
   } finally {
     global.fetch = originalFetch;
   }
