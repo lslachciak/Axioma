@@ -206,8 +206,11 @@ function deobfuscateApiKey(val) {
       const savedReasoningEffort = localStorage.getItem('axioma_reasoning_effort');
       if (savedReasoningEffort) state.reasoningEffort = savedReasoningEffort;
 
-      state.rememberApiKey = localStorage.getItem('axioma_remember_api_keys') === 'true';
-      if (!state.rememberApiKey) clearPersistedApiKeys();
+      // Persistence consent is provider-specific. Remove the short-lived global
+      // preference from earlier development versions and any keys without an
+      // explicit provider-level opt-in.
+      localStorage.removeItem('axioma_remember_api_keys');
+      clearUnconsentedApiKeys();
 
       loadProviderSettings(state.provider);
     } catch (e) {
@@ -226,6 +229,7 @@ function deobfuscateApiKey(val) {
   function loadProviderSettings(provider) {
     try {
       const defaults = window.ApiClient?.PROVIDER_DEFAULTS?.[provider];
+      state.rememberApiKey = localStorage.getItem(`axioma_remember_key_${provider}`) === 'true';
       const rawKey = state.rememberApiKey ? (localStorage.getItem(`axioma_key_${provider}`) || '') : '';
       state.apiKey = deobfuscateApiKey(rawKey);
 
@@ -253,19 +257,27 @@ function deobfuscateApiKey(val) {
     }
   }
 
-  function clearPersistedApiKeys() {
+  function clearUnconsentedApiKeys() {
     for (const provider of Object.keys(window.ApiClient?.PROVIDER_DEFAULTS || {})) {
-      localStorage.removeItem(`axioma_key_${provider}`);
+      if (localStorage.getItem(`axioma_remember_key_${provider}`) !== 'true') {
+        localStorage.removeItem(`axioma_key_${provider}`);
+      }
     }
   }
 
   function setRememberApiKey(remember) {
     state.rememberApiKey = remember;
-    savePersistedOption('remember_api_keys', remember);
-    if (remember) {
-      saveApiKeyForProvider(state.provider, state.apiKey);
-    } else {
-      clearPersistedApiKeys();
+    try {
+      const preferenceKey = `axioma_remember_key_${state.provider}`;
+      if (remember) {
+        localStorage.setItem(preferenceKey, 'true');
+        saveApiKeyForProvider(state.provider, state.apiKey);
+      } else {
+        localStorage.removeItem(preferenceKey);
+        localStorage.removeItem(`axioma_key_${state.provider}`);
+      }
+    } catch (e) {
+      console.warn("Could not update API key persistence preference", e);
     }
   }
 
