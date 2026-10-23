@@ -48,16 +48,16 @@ static hosting, or any HTTP server.
 - **Response inspection** — the Items & Responses tab shows each sequential
   API response directly. Batch runs expose one shared full response alongside
   per-item parsing fragments and an explicit parsing summary.
-- **Security** — DOMPurify-sanitized rendering of model output; API keys stored
-  in `localStorage` with light obfuscation, while system-prompt edits remain
-  session-only and reset on reload (see [Security notes](#security-notes)).
+- **Security** — DOMPurify-sanitized rendering of model output; API keys remain
+  session-only by default, while system-prompt edits reset on reload (see
+  [Security notes](#security-notes)).
 
 ## Repository structure
 
 | Path | Purpose |
 
 |---|---|
-| `index.html` | Entry point; loads CDN dependencies (Tailwind, Chart.js, SheetJS, DOMPurify) |
+| `index.html` | Entry point; loads locally vendored browser dependencies |
 | `js/pvq_data.js` | 57 PVQ-RR items (EN/PL) and mappings to the 19 values |
 | `js/api_client.js` | Multi-provider LLM client, retries, reasoning extraction |
 | `js/execution_engine.js` | Batch vs. sequential evaluation, ordering, progress |
@@ -88,14 +88,15 @@ and every pull request.
 
 ## Security notes
 
-- API keys never leave the browser — requests go directly from the client to
-  the chosen provider.
-- Keys are kept in `localStorage` with light XOR+Base64 obfuscation. This deters
+- API keys are sent directly from the browser to the chosen provider and remain
+  in memory by default. Persistent storage is an explicit opt-in.
+- Remembered keys use light XOR+Base64 obfuscation in `localStorage`. This deters
   casual inspection but **is not encryption**; a browser extension or XSS can
-  still recover them.
+  still recover them. Disabling the option removes all remembered provider keys.
 - Model output is rendered through DOMPurify.
-- UI libraries are loaded from third-party CDNs, so opening the app locally still
-  requires internet access unless those assets are hosted locally.
+- Browser libraries are pinned and stored locally, and a Content Security Policy
+  prevents execution of scripts from third-party origins. Internet access is
+  needed only for provider API calls.
 - Spreadsheet imports are limited to 25 MB. SheetJS is kept on a release that
   includes the published prototype-pollution and ReDoS fixes.
 - CSV and TSV exports neutralize formula-like cells before spreadsheet software
