@@ -87,6 +87,13 @@ node tests/psychometrics.test.js   # legacy standalone parser tests
 CI (GitHub Actions) runs the suite on Node 22 and 24 for every push to `main`
 and every pull request.
 
+## Releases
+
+Merging a pull request that updates `js/version.js` automatically creates a
+matching GitHub Release and `vX.Y.Z` tag. Release notes are generated from the
+merged pull requests and grouped using `.github/release.yml` labels. Existing
+releases and tags are never overwritten by the workflow.
+
 ## Security notes
 
 - API keys are sent directly from the browser to the chosen provider and remain

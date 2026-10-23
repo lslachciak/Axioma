@@ -21,6 +21,24 @@ Examples:
 Update the version exactly once per pull request, after the appropriate change
 size is known. Include the version change in the pull request branch.
 
+## Automated GitHub releases
+
+Every merge to `main` that changes `js/version.js` is published automatically
+by `.github/workflows/release.yml` as a GitHub Release and matching `vX.Y.Z`
+tag. The workflow validates the version, refuses to reuse a tag that points to a
+different commit, and uses GitHub-generated release notes.
+
+- Do not create release tags or GitHub Releases manually for normal pull
+  requests.
+- Keep pull request titles concise and release-note ready because they become
+  part of the generated release documentation.
+- Apply `security`, `dependencies`, `enhancement`, `feature`, `bug`, or `fix`
+  labels when appropriate so `.github/release.yml` can categorize changes.
+- Apply `skip-changelog` only when a pull request should intentionally be
+  omitted from generated release notes.
+- If the release workflow fails, fix or rerun it; do not move or overwrite an
+  existing version tag.
+
 ## Project architecture
 
 - Keep the application browser-based and dependency-light.
