@@ -190,6 +190,35 @@ test('generateTSVContent generates correct TSV format', (t) => {
     assert.ok(tsv.includes("2\tTEST_KEY\t\t\t\t\tN/A"));
 });
 
+test('spreadsheet exports neutralize formula-like text', () => {
+    const exports = loadExportModule();
+
+    for (const prefix of ['=', '+', '-', '@', '\t', '\r']) {
+        assert.strictEqual(exports.sanitizeSpreadsheetFormula(`${prefix}payload`), `'${prefix}payload`);
+    }
+    assert.strictEqual(exports.sanitizeSpreadsheetFormula('safe text'), 'safe text');
+
+    const results = {
+        metadata: { config: { provider: 'test' } },
+        psychometrics: { higherOrderValues: {}, refinedValues: {}, itemRatings: { 1: null }, totalAnswered: 0 },
+        llmQueries: { 1: '=HYPERLINK("https://example.invalid")' },
+        reasoningTraces: { 1: '+cmd' },
+        rawResponses: { 1: '@SUM(1,1)' },
+        parsedFragments: { 1: '-1+1' }
+    };
+
+    const tsv = exports.generateTSVContent(results);
+    assert.ok(tsv.includes(`'=${'HYPERLINK("https://example.invalid")'}`));
+    assert.ok(tsv.includes("\t'+cmd\t'@SUM(1,1)\t'-1+1\t"));
+
+    exports.exportSessionToCSV([results], 'safe.csv');
+    const csv = lastBlobContent[0];
+    assert.ok(csv.includes('"\'=HYPERLINK(""https://example.invalid"")"'));
+    assert.ok(csv.includes('"\'+cmd"'));
+    assert.ok(csv.includes('"\'@SUM(1,1)"'));
+    assert.ok(csv.includes('"\'-1+1"'));
+});
+
 
 test('exportSessionToCSV triggers download with correct CSV content', (t) => {
     const exports = loadExportModule();
@@ -414,6 +443,20 @@ test('importSessionFromFile handles missing XLSX library', (t) => {
 
     assert.strictEqual(alertCalledCount, 1);
     assert.ok(lastAlertMessage.includes('XLSX library not loaded'));
+});
+
+test('importSessionFromFile rejects files larger than 25 MB before parsing', () => {
+    const exports = loadExportModule();
+    let readCalled = false;
+    global.window.XLSX = { read: () => { readCalled = true; } };
+
+    exports.importSessionFromFile({ size: exports.MAX_IMPORT_FILE_SIZE + 1 }, () => {
+        assert.fail('Should not call callback for an oversized file');
+    });
+
+    assert.strictEqual(readCalled, false);
+    assert.strictEqual(alertCalledCount, 1);
+    assert.ok(lastAlertMessage.includes('25 MB'));
 });
 
 test('importSessionFromFile processes valid file correctly', (t, done) => {

@@ -55,12 +55,12 @@
     lines.push("# AXIOMA LLM PSYCHOMETRIC EVALUATION - PVQ-RR (57 ITEMS)");
     lines.push(`# Timestamp\t${results.metadata?.timestamp || new Date().toISOString()}`);
     lines.push(`# Axioma Version\t${results.metadata?.appVersion || results.appVersion || APP_VERSION}`);
-    lines.push(`# Provider\t${results.metadata?.config?.provider || ""}`);
-    lines.push(`# Requested Model\t${results.metadata?.config?.model || ""}`);
-    lines.push(`# Resolved Model\t${results.metadata?.actualModel || results.actualModel || results.metadata?.config?.model || ""}`);
-    lines.push(`# System Fingerprint\t${results.metadata?.systemFingerprint || results.systemFingerprint || "N/A"}`);
-    lines.push(`# Base URL\t${results.metadata?.config?.baseUrl || ""}`);
-    lines.push(`# System Prompt\t${(results.metadata?.config?.customSystemPrompt || "").replace(/[\r\n\t]+/g, " ")}`);
+    lines.push(`# Provider\t${sanitizeSpreadsheetFormula(results.metadata?.config?.provider || "")}`);
+    lines.push(`# Requested Model\t${sanitizeSpreadsheetFormula(results.metadata?.config?.model || "")}`);
+    lines.push(`# Resolved Model\t${sanitizeSpreadsheetFormula(results.metadata?.actualModel || results.actualModel || results.metadata?.config?.model || "")}`);
+    lines.push(`# System Fingerprint\t${sanitizeSpreadsheetFormula(results.metadata?.systemFingerprint || results.systemFingerprint || "N/A")}`);
+    lines.push(`# Base URL\t${sanitizeSpreadsheetFormula(results.metadata?.config?.baseUrl || "")}`);
+    lines.push(`# System Prompt\t${sanitizeSpreadsheetFormula((results.metadata?.config?.customSystemPrompt || "").replace(/[\r\n\t]+/g, " "))}`);
     lines.push(`# Language\t${results.metadata?.config?.lang || "en"}`);
     lines.push(`# Mode\t${results.metadata?.config?.mode || ""}`);
     lines.push(`# Iterations\t${results.metadata?.config?.iterations || 1}`);
@@ -117,7 +117,7 @@
       const parsedFragment = (results.parsedFragments?.[i] || "").replace(/[\r\n\t]+/g, " ");
       const itemMeta = window.PVQData ? window.PVQData.ITEMS[i - 1] : { valueKey: "" };
       const queryText = (results.llmQueries?.[i] || "").replace(/[\r\n\t]+/g, " ");
-      lines.push(`${i}\t${itemMeta?.valueKey || ""}\t${queryText}\t${reasoning}\t${rawText}\t${parsedFragment}\t${score}`);
+      lines.push(`${i}\t${itemMeta?.valueKey || ""}\t${sanitizeSpreadsheetFormula(queryText)}\t${sanitizeSpreadsheetFormula(reasoning)}\t${sanitizeSpreadsheetFormula(rawText)}\t${sanitizeSpreadsheetFormula(parsedFragment)}\t${score}`);
     }
 
     return lines.join("\n");
@@ -138,6 +138,16 @@
    * Tab 5: Token Usage
    */
   const MAX_EXCEL_CELL_LENGTH = 32767;
+  const MAX_IMPORT_FILE_SIZE = 25 * 1024 * 1024;
+
+  /**
+   * Prevents spreadsheet applications from interpreting exported text as a
+   * formula. Quoting a CSV field alone does not disable formula evaluation.
+   */
+  function sanitizeSpreadsheetFormula(value) {
+    if (typeof value !== 'string') return value;
+    return /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
+  }
 
   /**
    * Sanitizes a cell value to prevent exceeding Excel's 32,767 character limit.
@@ -297,7 +307,7 @@
    */
   function escapeCSVCell(value) {
     if (value === null || value === undefined) return '""';
-    const str = String(value);
+    const str = String(sanitizeSpreadsheetFormula(String(value)));
     if (str.includes('"') || str.includes(',') || str.includes('\n') || str.includes('\r')) {
       return `"${str.replace(/"/g, '""')}"`;
     }
@@ -627,7 +637,9 @@
   exports.exportSessionToXLSX = exportSessionToXLSX;
   exports.importSessionFromFile = importSessionFromFile;
   exports.MAX_EXCEL_CELL_LENGTH = MAX_EXCEL_CELL_LENGTH;
+  exports.MAX_IMPORT_FILE_SIZE = MAX_IMPORT_FILE_SIZE;
   exports.sanitizeExcelCellValue = sanitizeExcelCellValue;
+  exports.sanitizeSpreadsheetFormula = sanitizeSpreadsheetFormula;
 
   /**
    * Imports a session from a CSV or XLSX file.
@@ -638,6 +650,11 @@
   function importSessionFromFile(file, callback) {
     if (typeof window.XLSX === 'undefined') {
       alert("XLSX library not loaded.");
+      return;
+    }
+
+    if (Number.isFinite(file?.size) && file.size > MAX_IMPORT_FILE_SIZE) {
+      alert(`File is too large. The maximum import size is ${MAX_IMPORT_FILE_SIZE / (1024 * 1024)} MB.`);
       return;
     }
 
