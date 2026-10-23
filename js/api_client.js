@@ -106,6 +106,18 @@
     return Math.min(previous * baseDelayMs, maxDelayMs);
   }
 
+  /**
+   * Returns true for transport failures that are safe to retry. These errors
+   * usually do not carry an HTTP status because the response body was cut off
+   * or the connection failed before a complete response could be read.
+   */
+  function isTransientNetworkError(error) {
+    if (!error || error.name === 'AbortError') return false;
+
+    const message = String(error.message || error);
+    return /content-length header of network response exceeds response body|failed to fetch|fetch failed|networkerror|network request failed|load failed|terminated|incomplete (?:response|body)|unexpected end of (?:json input|data)|body stream/i.test(message);
+  }
+
   async function waitForRetry(waitMs, statusMessage, onStatusUpdate, checkAbort) {
     let remainingMs = Math.max(0, waitMs);
 
@@ -290,15 +302,18 @@
       } catch (err) {
         const isRateLimit = err.status === 429 || /429|quota|rate limit|too many requests/i.test(err.message);
         const isTemporaryServerError = [502, 503, 504].includes(err.status);
-        const retryLimit = isTemporaryServerError ? temporaryErrorMaxRetries : rateLimitMaxRetries;
+        const isTemporaryNetworkError = isTransientNetworkError(err);
+        const retryLimit = (isTemporaryServerError || isTemporaryNetworkError) ? temporaryErrorMaxRetries : rateLimitMaxRetries;
 
-        if ((isRateLimit || isTemporaryServerError) && attempt < retryLimit) {
+        if ((isRateLimit || isTemporaryServerError || isTemporaryNetworkError) && attempt < retryLimit) {
           const waitMs = isRateLimit
             ? parseRetryDelayMs(err.message, err.responseHeaders)
             : fibonacciRetryDelayMs(attempt, retryBaseDelayMs, retryMaxDelayMs);
           const errorLabel = isRateLimit
             ? 'Rate limit (429) hit'
-            : `Temporary provider error (${err.status})`;
+            : isTemporaryServerError
+              ? `Temporary provider error (${err.status})`
+              : 'Temporary network error';
           const retryLabel = `${attempt + 1}/${retryLimit}`;
 
           console.warn(`${errorLabel}. Waiting ${Math.max(1, Math.ceil(waitMs / 1000))}s before retry ${retryLabel}...`);
@@ -661,5 +676,6 @@
   exports.completeChat = completeChat;
   exports.parseRetryDelayMs = parseRetryDelayMs;
   exports.fibonacciRetryDelayMs = fibonacciRetryDelayMs;
+  exports.isTransientNetworkError = isTransientNetworkError;
   exports.delay = delay;
 })(typeof exports !== 'undefined' ? exports : (window.ApiClient = {}));
