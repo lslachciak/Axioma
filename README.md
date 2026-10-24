@@ -21,7 +21,7 @@ static hosting, or any HTTP server.
 - **Two evaluation modes**
   - *Batch* — all 57 items rated in a single prompt.
   - *Sequential* — item by item, with optional conversation history and a
-    singular default introduction and response instruction tailored to one item.
+    shared system prompt across both evaluation modes.
 - **Multi-provider API client** — OpenAI, Anthropic, Google Gemini, xAI (Grok),
   Ollama Cloud, and any OpenAI-compatible endpoint. Local OpenAI-compatible
   servers can be configured through Custom Endpoint (default:
@@ -115,8 +115,13 @@ releases and tags are never overwritten by the workflow.
 
 - Schwartz, S. H., et al. (2012). *Refining the theory of basic individual values.* JPSP.
 - Cieciuch, J., & Schwartz, S. H. (2018). *Pomiar wartości.*
-- *PVQ-RR English documentation* (PDF included in this rep
-o).
+- Schwartz, S. H., & Cieciuch, J. (2021). [PVQ-RR questionnaires and scoring
+  resources](https://osf.io/w9as3/files/osfstorage?view_only=e1f02bf232c34d39b9884398b4f2df63).
+  Axioma's male-form item wording and instructions are based on the repository's
+  [English questionnaire](https://osf.io/download/qv39m/?view_only=e1f02bf232c34d39b9884398b4f2df63)
+  and [Polish questionnaire](https://osf.io/download/26w7h/?view_only=e1f02bf232c34d39b9884398b4f2df63).
+  The paper-form instruction to mark a response box is adapted to request a
+  corresponding numeric response from the evaluated model.
 
 ## License
 
