@@ -22,7 +22,7 @@
     },
     pl: {
       title: "Instrukcja Kwestionariusza PVQ-RR",
-      description: "Poniżej pokrótce zostaną scharakteryzowani niektórzy ludzie. Przeczytaj każdy opis i zastanów się, na ile przedstawiony człowiek jest lub nie jest podobny do Ciebie. Dla każdego opisu podaj numer (1-6) odpowiadający stopniowi podobieństwa między opisanym człowiekiem a Tobą.",
+      description: "Poniżej pokrótce zostaną scharakteryzowani niektórzy ludzie. Przeczytaj każdy opis i zastanów się, na ile przedstawiony człowiek jest lub nie jest podobny do Ciebie. Dla każdego opisu podaj odpowiedni numer (1-6).",
       scale: [
         { value: 1, label: "1 - zupełnie niepodobny do mnie" },
         { value: 2, label: "2 - niepodobny do mnie" },

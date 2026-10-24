@@ -35,7 +35,7 @@ test('buildSystemPrompt - uses the shared default instruction in sequential mode
 test('buildSystemPrompt - uses the shared Polish default in sequential mode', () => {
   const result = buildSystemPrompt(null, 'pl', 'sequential');
   assert.strictEqual(result, PVQData.SYSTEM_PROMPTS.pl);
-  assert.match(result, /Dla każdego opisu podaj numer \(1-6\)/);
+  assert.match(result, /Dla każdego opisu podaj odpowiedni numer \(1-6\)\./);
   assert.match(result, /6 - bardzo podobny do mnie$/);
 });
 
