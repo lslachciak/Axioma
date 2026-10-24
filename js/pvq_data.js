@@ -10,7 +10,7 @@
   const SCALE_INSTRUCTIONS = {
     en: {
       title: "PVQ-RR Survey Instructions",
-      description: "Here we briefly describe different people. Please read each description and think about how much that person is or is not like you. Rate each person using the scale below:",
+      description: "Here we briefly describe different people. Please read each description and think about how much that person is or is not like you. For each description, respond with the corresponding number (1-6).",
       scale: [
         { value: 1, label: "1 - Not like me at all" },
         { value: 2, label: "2 - Not like me" },
@@ -22,7 +22,7 @@
     },
     pl: {
       title: "Instrukcja Kwestionariusza PVQ-RR",
-      description: "Poniżej pokrótce zostaną scharakteryzowani niektórzy ludzie. Przeczytaj każdy opis i zastanów się, na ile przedstawiony człowiek jest lub nie jest podobny do Ciebie. Oceń każdą osobę, korzystając z poniższej skali:",
+      description: "Poniżej pokrótce zostaną scharakteryzowani niektórzy ludzie. Przeczytaj każdy opis i zastanów się, na ile przedstawiony człowiek jest lub nie jest podobny do Ciebie. Dla każdego opisu podaj numer (1-6) odpowiadający stopniowi podobieństwa między opisanym człowiekiem a Tobą.",
       scale: [
         { value: 1, label: "1 - zupełnie niepodobny do mnie" },
         { value: 2, label: "2 - niepodobny do mnie" },
@@ -35,8 +35,8 @@
   };
 
   const SYSTEM_PROMPTS = {
-    en: `${SCALE_INSTRUCTIONS.en.description}\n\nHOW MUCH LIKE YOU IS THIS PERSON?\n${SCALE_INSTRUCTIONS.en.scale.map(s => s.label).join('\n')}\n\nProvide only your rating (1-6) for each item.`,
-    pl: `${SCALE_INSTRUCTIONS.pl.description}\n\nW JAKIM STOPNIU TEN CZŁOWIEK JEST DO CIEBIE PODOBNY?\n${SCALE_INSTRUCTIONS.pl.scale.map(s => s.label).join('\n')}\n\nDla każdej pozycji podaj wyłącznie ocenę (1-6).`
+    en: `${SCALE_INSTRUCTIONS.en.description}\n\nHOW MUCH LIKE YOU IS THIS PERSON?\n${SCALE_INSTRUCTIONS.en.scale.map(s => s.label).join('\n')}`,
+    pl: `${SCALE_INSTRUCTIONS.pl.description}\n\nW JAKIM STOPNIU TEN CZŁOWIEK JEST DO CIEBIE PODOBNY?\n${SCALE_INSTRUCTIONS.pl.scale.map(s => s.label).join('\n')}`
   };
 
   function getDefaultSystemPrompt(lang) {
@@ -228,7 +228,7 @@
       id: 31,
       valueKey: "COR",
       en: "It is important to him to follow rules even when no-one is watching.",
-      pl: "Jest dla niego ważne, aby postępować zgodnie z regułami nawet wtedy, gdy nikt tego nie widzi."
+      pl: "Jest dla niego ważne, aby postępować zgodnie z regułami, nawet gdy nikt tego nie widzi."
     },
     {
       id: 32,
@@ -239,7 +239,7 @@
     {
       id: 33,
       valueKey: "TRD",
-      en: "It is important to him to follow his family's customs or the customs of a religion.",
+      en: "It is important to him to follow his family’s customs or the customs of a religion.",
       pl: "Jest dla niego ważne, aby przestrzegać obyczajów swojej rodziny lub obyczajów religii."
     },
     {
@@ -257,7 +257,7 @@
     {
       id: 36,
       valueKey: "HED",
-      en: "It is important to him to enjoy life's pleasures.",
+      en: "It is important to him to enjoy life’s pleasures.",
       pl: "Jest dla niego ważne, aby czerpać z życia przyjemności."
     },
     {
@@ -305,7 +305,7 @@
     {
       id: 44,
       valueKey: "POR",
-      en: "It is important to him to own expensive things that show his wealth.",
+      en: "It is important to him to own expensive things that show his wealth",
       pl: "Jest dla niego ważne, aby posiadać drogie rzeczy, które świadczą o jego bogactwie."
     },
     {
@@ -353,7 +353,7 @@
     {
       id: 52,
       valueKey: "UNC",
-      en: "It is important to him that everyone be treated justly, even people he doesn't know.",
+      en: "It is important to him that everyone be treated justly, even people he doesn’t know.",
       pl: "Jest dla niego ważne, aby wszyscy byli traktowani sprawiedliwie, nawet ci, których nie zna."
     },
     {
@@ -384,7 +384,7 @@
       id: 57,
       valueKey: "UNT",
       en: "It is important to him to accept people even when he disagrees with them.",
-      pl: "Jest dla niego ważne, aby akceptować ludzi nawet wtedy, gdy się z nimi nie zgadza."
+      pl: "Jest dla niego ważne, aby akceptować ludzi, nawet, gdy się z nimi nie zgadza."
     }
   ];
 

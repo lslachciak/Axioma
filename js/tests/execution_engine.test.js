@@ -27,12 +27,25 @@ test('buildSystemPrompt - returns default Polish prompt when no custom prompt is
 test('buildSystemPrompt - uses the shared default instruction in sequential mode', () => {
   const result = buildSystemPrompt(null, 'en', 'sequential');
   assert.strictEqual(result, PVQData.SYSTEM_PROMPTS.en);
-  assert.match(result, /Provide only your rating \(1-6\) for each item\.$/);
+  assert.match(result, /For each description, respond with the corresponding number \(1-6\)\./);
+  assert.match(result, /6 - Very much like me$/);
+  assert.doesNotMatch(result, /\bonly\b/i);
 });
 
 test('buildSystemPrompt - uses the shared Polish default in sequential mode', () => {
   const result = buildSystemPrompt(null, 'pl', 'sequential');
   assert.strictEqual(result, PVQData.SYSTEM_PROMPTS.pl);
+  assert.match(result, /Dla każdego opisu podaj numer \(1-6\)/);
+  assert.match(result, /6 - bardzo podobny do mnie$/);
+});
+
+test('PVQ-RR item wording matches the authorized male English and Polish forms', () => {
+  assert.strictEqual(PVQData.ITEMS[30].pl, 'Jest dla niego ważne, aby postępować zgodnie z regułami, nawet gdy nikt tego nie widzi.');
+  assert.strictEqual(PVQData.ITEMS[32].en, 'It is important to him to follow his family’s customs or the customs of a religion.');
+  assert.strictEqual(PVQData.ITEMS[35].en, 'It is important to him to enjoy life’s pleasures.');
+  assert.strictEqual(PVQData.ITEMS[43].en, 'It is important to him to own expensive things that show his wealth');
+  assert.strictEqual(PVQData.ITEMS[51].en, 'It is important to him that everyone be treated justly, even people he doesn’t know.');
+  assert.strictEqual(PVQData.ITEMS[56].pl, 'Jest dla niego ważne, aby akceptować ludzi, nawet, gdy się z nimi nie zgadza.');
 });
 
 test('buildSystemPrompt - keeps custom prompts unchanged in sequential mode', () => {
