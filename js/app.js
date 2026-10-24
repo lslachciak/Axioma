@@ -80,6 +80,7 @@ function deobfuscateApiKey(val) {
   const state = {
     provider: 'openai',
     apiKey: '',
+    rememberApiKey: false,
     baseUrl: 'https://api.openai.com/v1',
     model: '',
     fetchedModelsList: [],
@@ -205,6 +206,12 @@ function deobfuscateApiKey(val) {
       const savedReasoningEffort = localStorage.getItem('axioma_reasoning_effort');
       if (savedReasoningEffort) state.reasoningEffort = savedReasoningEffort;
 
+      // Persistence consent is provider-specific. Remove the short-lived global
+      // preference from earlier development versions and any keys without an
+      // explicit provider-level opt-in.
+      localStorage.removeItem('axioma_remember_api_keys');
+      clearUnconsentedApiKeys();
+
       loadProviderSettings(state.provider);
     } catch (e) {
       console.warn("Could not load from localStorage", e);
@@ -222,7 +229,8 @@ function deobfuscateApiKey(val) {
   function loadProviderSettings(provider) {
     try {
       const defaults = window.ApiClient?.PROVIDER_DEFAULTS?.[provider];
-      const rawKey = localStorage.getItem(`axioma_key_${provider}`) || '';
+      state.rememberApiKey = localStorage.getItem(`axioma_remember_key_${provider}`) === 'true';
+      const rawKey = state.rememberApiKey ? (localStorage.getItem(`axioma_key_${provider}`) || '') : '';
       state.apiKey = deobfuscateApiKey(rawKey);
 
       const savedModel = localStorage.getItem(`axioma_model_${provider}`);
@@ -239,13 +247,37 @@ function deobfuscateApiKey(val) {
   function saveApiKeyForProvider(provider, key) {
     try {
       const storageKey = `axioma_key_${provider}`;
-      if (key && key.trim()) {
+      if (state.rememberApiKey && key && key.trim()) {
         localStorage.setItem(storageKey, obfuscateApiKey(key.trim()));
       } else {
         localStorage.removeItem(storageKey);
       }
     } catch (e) {
       console.warn("Could not access localStorage to save API key", e);
+    }
+  }
+
+  function clearUnconsentedApiKeys() {
+    for (const provider of Object.keys(window.ApiClient?.PROVIDER_DEFAULTS || {})) {
+      if (localStorage.getItem(`axioma_remember_key_${provider}`) !== 'true') {
+        localStorage.removeItem(`axioma_key_${provider}`);
+      }
+    }
+  }
+
+  function setRememberApiKey(remember) {
+    state.rememberApiKey = remember;
+    try {
+      const preferenceKey = `axioma_remember_key_${state.provider}`;
+      if (remember) {
+        localStorage.setItem(preferenceKey, 'true');
+        saveApiKeyForProvider(state.provider, state.apiKey);
+      } else {
+        localStorage.removeItem(preferenceKey);
+        localStorage.removeItem(`axioma_key_${state.provider}`);
+      }
+    } catch (e) {
+      console.warn("Could not update API key persistence preference", e);
     }
   }
 
@@ -703,7 +735,7 @@ function deobfuscateApiKey(val) {
       ),
       (reqKey || state.provider === 'custom') ? el('div', {},
         el('label', { className: 'block text-xs font-medium text-slate-400 mb-1' },
-          state.provider === 'custom' ? 'API Key (Optional; saved obfuscated in LocalStorage)' : 'API Key (Saved obfuscated in LocalStorage)'
+          state.provider === 'custom' ? 'API Key (Optional)' : 'API Key'
         ),
         el('input', {
           type: 'password',
@@ -714,7 +746,16 @@ function deobfuscateApiKey(val) {
             saveApiKeyForProvider(state.provider, e.target.value);
           },
           className: 'w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-sky-500 code-font'
-        })
+        }),
+        el('label', { className: 'mt-2 flex items-start gap-2 text-[11px] text-slate-400' },
+          el('input', {
+            type: 'checkbox',
+            checked: state.rememberApiKey,
+            onChange: (e) => { setRememberApiKey(e.target.checked); renderApp(); },
+            className: 'mt-0.5 rounded border-slate-600 bg-slate-900 text-sky-500'
+          }),
+          el('span', {}, 'Remember this key in this browser (obfuscated, not encrypted). By default it is kept only for this page session.')
+        )
       ) : null,
       el('div', {},
         el('label', { className: 'block text-xs font-medium text-slate-400 mb-1' }, 'Base URL'),

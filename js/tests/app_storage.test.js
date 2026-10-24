@@ -23,3 +23,19 @@ test('batch and sequential prompts keep independent in-memory customization stat
   assert.match(appSource, /promptState\.customized = false/);
   assert.doesNotMatch(appSource, /isDefaultSystemPrompt/);
 });
+
+test('API keys are session-only unless persistence is explicitly enabled', () => {
+  assert.match(appSource, /rememberApiKey:\s*false/);
+  assert.match(appSource, /state\.rememberApiKey = localStorage\.getItem\(`axioma_remember_key_\$\{provider\}`\) === ['"]true['"]/);
+  assert.match(appSource, /state\.rememberApiKey \? \(localStorage\.getItem\(`axioma_key_\$\{provider\}`\)/);
+  assert.match(appSource, /if \(state\.rememberApiKey && key && key\.trim\(\)\)/);
+  assert.match(appSource, /localStorage\.removeItem\(['"]axioma_remember_api_keys['"]\)/);
+  assert.match(appSource, /clearUnconsentedApiKeys\(\)/);
+});
+
+test('API key persistence consent follows the selected provider', () => {
+  assert.match(appSource, /const preferenceKey = `axioma_remember_key_\$\{state\.provider\}`/);
+  assert.match(appSource, /localStorage\.setItem\(preferenceKey, ['"]true['"]\)/);
+  assert.match(appSource, /localStorage\.removeItem\(`axioma_key_\$\{state\.provider\}`\)/);
+  assert.match(appSource, /loadProviderSettings\(state\.provider\)/);
+});
