@@ -16,11 +16,11 @@ test('obsolete persisted system prompts are removed without reading them', () =>
   assert.match(appSource, /localStorage\.removeItem\(['"]axioma_custom_system_prompt['"]\)/);
 });
 
-test('batch and sequential prompts keep independent in-memory customization state', () => {
-  assert.match(appSource, /systemPrompts:\s*\{\s*batch:\s*\{[\s\S]*?customized:\s*false[\s\S]*?sequential:\s*\{[\s\S]*?customized:\s*false/);
-  assert.match(appSource, /return state\.systemPrompts\[state\.mode\]/);
-  assert.match(appSource, /promptState\.customized = true/);
-  assert.match(appSource, /promptState\.customized = false/);
+test('batch and sequential modes share one in-memory system prompt', () => {
+  assert.match(appSource, /systemPrompt:\s*\{\s*text:\s*PVQData\.SYSTEM_PROMPTS\.en,\s*customized:\s*false/);
+  assert.doesNotMatch(appSource, /systemPrompts|SEQUENTIAL_SYSTEM_PROMPTS|BATCH_SYSTEM_PROMPTS/);
+  assert.match(appSource, /state\.systemPrompt\.customized = true/);
+  assert.match(appSource, /state\.systemPrompt\.customized = false/);
   assert.doesNotMatch(appSource, /isDefaultSystemPrompt/);
 });
 

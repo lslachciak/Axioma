@@ -24,12 +24,12 @@
   }
 
   /**
-   * Creates evaluation prompts based on language and mode.
+   * Creates the shared evaluation system prompt for the selected language.
    */
-  function buildSystemPrompt(userCustomPrompt, lang, mode) {
+  function buildSystemPrompt(userCustomPrompt, lang) {
     // If not in a browser (e.g. Node tests), we might need to access the exported data
     const pvq = (typeof window !== 'undefined' && window.PVQData) ? window.PVQData : require('./pvq_data.js');
-    const baseDefault = pvq.getDefaultSystemPrompt(lang, mode);
+    const baseDefault = pvq.getDefaultSystemPrompt(lang);
 
     if (!userCustomPrompt || !userCustomPrompt.trim()) {
       return baseDefault;
@@ -348,7 +348,7 @@
         itemOrder: itemsToRun.map(it => it.id)
       };
 
-      const systemPrompt = buildSystemPrompt(this.config.customSystemPrompt, lang, this.config.mode);
+      const systemPrompt = buildSystemPrompt(this.config.customSystemPrompt, lang);
 
       const statusUpdateCallback = (retryMsg) => {
         if (onProgress) {
