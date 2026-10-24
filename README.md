@@ -84,7 +84,7 @@ node --test js/tests/              # main unit-test suite (no dependencies)
 node tests/psychometrics.test.js   # legacy standalone parser tests
 ```
 
-CI (GitHub Actions) runs the suite on Node 20 and 22 for every push to `main`
+CI (GitHub Actions) runs the suite on Node 22 and 24 for every push to `main`
 and every pull request.
 
 ## Security notes
@@ -97,6 +97,10 @@ and every pull request.
 - Model output is rendered through DOMPurify.
 - UI libraries are loaded from third-party CDNs, so opening the app locally still
   requires internet access unless those assets are hosted locally.
+- Spreadsheet imports are limited to 25 MB. SheetJS is kept on a release that
+  includes the published prototype-pollution and ReDoS fixes.
+- CSV and TSV exports neutralize formula-like cells before spreadsheet software
+  can evaluate them.
 - Do not commit session result files that contain sensitive data.
 
 ## References
