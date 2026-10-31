@@ -9,6 +9,86 @@
   const versionInfo = (typeof window !== 'undefined' && window.AxiomaVersion) ? window.AxiomaVersion : require('./version.js');
   const APP_VERSION = versionInfo.APP_VERSION || 'Unknown Version';
 
+  // Chunk JSON strings rather than truncating experiment evidence at Excel's cell limit.
+  // Each chunk is itself JSON encoded, so spreadsheet formula escaping is unnecessary.
+  function experimentChunks(results) {
+    if (!results.experiment && !results.metadata?.itemOrder) return [];
+    const text = JSON.stringify({
+      schemaVersion: 1, experiment: results.experiment || null,
+      itemProvenance: results.itemProvenance || {},
+      runId: results.metadata?.runId || null,
+      itemOrder: results.metadata?.itemOrder || null,
+      resolvedSystemPrompt: results.metadata?.resolvedSystemPrompt ?? null
+    });
+    const chunks = [];
+    for (let offset = 0; offset < text.length; offset += 4000) chunks.push(JSON.stringify(text.slice(offset, offset + 4000)));
+    return chunks;
+  }
+
+  function restoreExperiment(results, chunks, condition) {
+    if (!chunks.length) {
+      if (condition) throw new Error('Experiment records are missing from this export.');
+      return results;
+    }
+    const record = JSON.parse(chunks.map(chunk => {
+      const text = JSON.parse(chunk);
+      if (typeof text !== 'string') throw new Error('Invalid experiment record chunk.');
+      return text;
+    }).join(''));
+    if (record.schemaVersion !== 1 || (record.experiment && record.experiment.schemaVersion !== 1)) {
+      throw new Error('Unsupported experiment record version.');
+    }
+    if (record.experiment) results.experiment = record.experiment;
+    results.itemProvenance = record.itemProvenance || {};
+    results.metadata.runId = record.runId;
+    results.metadata.itemOrder = record.itemOrder;
+    results.metadata.resolvedSystemPrompt = record.resolvedSystemPrompt;
+    return results;
+  }
+
+  function appendExperimentSheet(XLSX, wb, results) {
+    const rows = [['Run #', 'Part', 'Data']];
+    results.forEach((result, i) => experimentChunks(result).forEach((chunk, part) => rows.push([i + 1, part + 1, chunk])));
+    if (rows.length > 1) XLSX.utils.book_append_sheet(wb, createSafeWorksheet(XLSX, rows), 'Experiment Records');
+  }
+
+  function provenanceCells(results, itemId) {
+    const entry = results.itemProvenance?.[itemId];
+    return [entry?.origin || '', entry?.historySource || '', entry?.historyRating ?? '', entry?.historyResponse || ''];
+  }
+
+  const PROVENANCE_HEADERS = ['Answer Origin', 'History Source', 'History Rating', 'History Response'];
+
+  function normalizeSingleRunWorkbook(XLSX, wb) {
+    if (wb.SheetNames.includes('Session Summary') || !wb.SheetNames.includes('Run Overview')
+      || !wb.SheetNames.includes('57 Items & Responses')) return;
+    const readRows = name => XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1 });
+    const overview = Object.fromEntries(readRows('Run Overview').slice(1));
+    const tokenRows = wb.SheetNames.includes('Token Usage') ? Object.fromEntries(readRows('Token Usage').slice(1)) : {};
+    const summary = { ...overview, 'Run #': 1,
+      'Keep Context History': String(overview['Keep Chat Context History']).startsWith('Yes') ? 'Yes' : 'No',
+      'Randomize Order': String(overview['Randomize Order (--randomize)']).startsWith('Yes') ? 'Yes' : 'No',
+      'Reasoning Enabled': String(overview['Reasoning Enabled']).startsWith('Yes') ? 'Yes' : overview['Reasoning Enabled'],
+      'Prompt Tokens': tokenRows['Prompt / Input Tokens'] || 0,
+      'Completion Tokens': tokenRows['Completion / Output Tokens'] || 0,
+      'Reasoning Tokens': tokenRows['Reasoning / Thinking Tokens'] || 0,
+      'Total Tokens': tokenRows['Total Tokens'] || 0
+    };
+    const aliases = { 'LLM Query Text': 'Query', 'Chain-of-Thought Trace': 'Reasoning',
+      'Raw LLM Response Text': 'Raw', 'Parsed Score (1-6)': 'Score' };
+    const items = readRows('57 Items & Responses');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([Object.keys(summary), Object.values(summary)]), 'Session Summary');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([
+      ['Run #', ...items[0].map(name => aliases[name] || name)], ...items.slice(1).map(row => [1, ...row])
+    ]), 'Item Results');
+    if (wb.SheetNames.includes('API Exchanges')) {
+      const exchanges = readRows('API Exchanges');
+      wb.Sheets['API Exchanges'] = XLSX.utils.aoa_to_sheet([
+        ['Run #', ...exchanges[0]], ...exchanges.slice(1).map(row => [1, ...row])
+      ]);
+    }
+  }
+
   /**
    * Triggers a browser download for blob content.
    */
@@ -120,6 +200,13 @@
       lines.push(`${i}\t${itemMeta?.valueKey || ""}\t${sanitizeSpreadsheetFormula(queryText)}\t${sanitizeSpreadsheetFormula(reasoning)}\t${sanitizeSpreadsheetFormula(rawText)}\t${sanitizeSpreadsheetFormula(parsedFragment)}\t${score}`);
     }
 
+    lines.push('', '--- CONTEXT INTERVENTION ---');
+    lines.push(`Condition\t${results.experiment?.condition || 'Unknown (legacy)'}`);
+    lines.push(['Item ID', ...PROVENANCE_HEADERS].join('\t'));
+    for (let i = 1; i <= 57; i++) lines.push([i, ...provenanceCells(results, i)]
+      .map(value => sanitizeSpreadsheetFormula(String(value).replace(/[\r\n\t]+/g, ' '))).join('\t'));
+    lines.push('Experiment Record Part\tJSON Chunk');
+    experimentChunks(results).forEach((chunk, i) => lines.push(`${i + 1}\t${chunk}`));
     return lines.join("\n");
   }
 
@@ -201,7 +288,11 @@
       ["Reasoning Effort", results.metadata?.config?.enableReasoning === true ? (results.metadata?.config?.reasoningEffort || "medium") : "N/A"],
       ["Profile Complete", results.psychometrics.complete ? "Yes" : "No"],
       ["Grand Mean Score (MRAT)", results.psychometrics.mrat ?? "N/A"],
-      ["Total Items Answered", `${results.psychometrics.totalAnswered} / 57`]
+      ["Total Items Answered", `${results.psychometrics.totalAnswered} / 57`],
+      ["Experiment Condition", results.experiment?.condition || ''],
+      ["Experiment Label", results.experiment?.label || ''],
+      ["Run ID", results.metadata?.runId || ''],
+      ["Item Order", (results.metadata?.itemOrder || []).join(', ')]
     ];
     const wsOverview = createSafeWorksheet(XLSX, overviewData);
     XLSX.utils.book_append_sheet(wb, wsOverview, "Run Overview");
@@ -245,7 +336,7 @@
 
     // Tab 4: Item Responses
     const itemRows = [
-      ["Item ID", "Refined Code", "Description (EN)", "Description (PL)", "LLM Query Text", "Chain-of-Thought Trace", "Raw LLM Response Text", "Parsed Fragment", "Parsed Score (1-6)"]
+      ["Item ID", "Refined Code", "Description (EN)", "Description (PL)", "LLM Query Text", "Chain-of-Thought Trace", "Raw LLM Response Text", "Parsed Fragment", "Parsed Score (1-6)", ...PROVENANCE_HEADERS]
     ];
     for (let i = 1; i <= 57; i++) {
       let score = results.psychometrics.itemRatings[i];
@@ -264,7 +355,7 @@
         reasoning,
         rawText,
         results.parsedFragments?.[i] || "",
-        score
+        score, ...provenanceCells(results, i)
       ]);
     }
     const wsItems = createSafeWorksheet(XLSX, itemRows);
@@ -293,6 +384,7 @@
     const wsTokens = createSafeWorksheet(XLSX, tokenRows);
     XLSX.utils.book_append_sheet(wb, wsTokens, "Token Usage");
 
+    appendExperimentSheet(XLSX, wb, [results]);
     // Save Workbook
     try {
       XLSX.writeFile(wb, filename);
@@ -383,6 +475,11 @@
       headers.push(`Item_${i}_Query`, `Item_${i}_Reasoning`, `Item_${i}_Raw`, `Item_${i}_Parsed`, `Item_${i}_Score`);
     }
 
+    headers.push('Experiment Condition', 'Experiment Label', 'Run ID', 'Item Order');
+    for (let i = 1; i <= 57; i++) headers.push(...PROVENANCE_HEADERS.map(name => `Item_${i}_${name.replace(/ /g, '_')}`));
+    const recordChunks = sessionResults.map(experimentChunks);
+    const chunkCount = Math.max(0, ...recordChunks.map(chunks => chunks.length));
+    for (let part = 1; part <= chunkCount; part++) headers.push(`Experiment Record ${part}`);
     const rows = [headers.map(escapeCSVCell).join(",")];
 
     sessionResults.forEach((results, idx) => {
@@ -452,6 +549,9 @@
         row.push(queryText, reasoning, rawText, parsedFragment, score);
       }
 
+      row.push(results.experiment?.condition || '', results.experiment?.label || '', meta.runId || '', (meta.itemOrder || []).join(', '));
+      for (let i = 1; i <= 57; i++) row.push(...provenanceCells(results, i).map(sanitizeExcelCellValue));
+      for (let part = 0; part < chunkCount; part++) row.push(recordChunks[idx][part] || '');
       rows.push(row.map(escapeCSVCell).join(","));
     });
 
@@ -504,7 +604,7 @@
       "Total Tokens",
       "MRAT Grand Mean",
       "Items Answered",
-      "Profile Complete"
+      "Profile Complete", "Experiment Condition", "Experiment Label", "Run ID", "Item Order"
     ]];
     const exchangeRows = [[
       "Run #", "Exchange #", "Mode", "Item IDs", "Requested At", "Query",
@@ -514,7 +614,7 @@
     ]];
     const itemRows = [[
       "Run #", "Item ID", "Refined Code", "Description (EN)", "Description (PL)",
-      "Query", "Reasoning", "Raw", "Parsed Fragment", "Score"
+      "Query", "Reasoning", "Raw", "Parsed Fragment", "Score", ...PROVENANCE_HEADERS
     ]];
     const refinedRows = [[
       "Run #", "Code", "Name (EN)", "Name (PL)", "Grouping", "Item IDs",
@@ -558,7 +658,8 @@
         token.totalTokens ?? 0,
         psych.mrat ?? "N/A",
         `${psych.totalAnswered ?? 0}/57`,
-        psych.complete ? "Yes" : "No"
+        psych.complete ? "Yes" : "No",
+        results.experiment?.condition || '', results.experiment?.label || '', meta.runId || '', (meta.itemOrder || []).join(', ')
       ]);
 
       (results.apiExchanges || []).forEach((exchange, exchangeIndex) => {
@@ -597,7 +698,7 @@
           results.reasoningTraces?.[i] || "",
           results.rawResponses?.[i] || "",
           results.parsedFragments?.[i] || "",
-          psych.itemRatings?.[i] ?? "N/A"
+          psych.itemRatings?.[i] ?? "N/A", ...provenanceCells(results, i)
         ]);
       }
 
@@ -620,6 +721,7 @@
       ["Refined Values", refinedRows],
       ["Higher-Order Values", higherOrderRows]
     ].forEach(([name, rows]) => XLSX.utils.book_append_sheet(wb, createSafeWorksheet(XLSX, rows), name));
+    appendExperimentSheet(XLSX, wb, sessionResults);
 
     try {
       XLSX.writeFile(wb, filename);
@@ -663,7 +765,8 @@
       try {
         const data = new Uint8Array(e.target.result);
         const XLSX = window.XLSX;
-        const wb = XLSX.read(data, { type: 'array' });
+        const wb = XLSX.read(data, { type: 'array', codepage: 65001 });
+        normalizeSingleRunWorkbook(XLSX, wb);
 
         if (wb.SheetNames.includes("Session Summary") && wb.SheetNames.includes("Item Results")) {
           const sheetObjects = (name) => {
@@ -676,6 +779,7 @@
           const summaries = sheetObjects("Session Summary");
           const items = sheetObjects("Item Results");
           const exchanges = wb.SheetNames.includes("API Exchanges") ? sheetObjects("API Exchanges") : [];
+          const records = wb.SheetNames.includes('Experiment Records') ? sheetObjects('Experiment Records') : [];
           const sessionResults = summaries.map(summary => {
             const runNumber = Number(summary["Run #"]);
             const runItems = items.filter(item => Number(item["Run #"]) === runNumber);
@@ -732,7 +836,7 @@
             const appVersion = summary["Axioma Version"] || APP_VERSION;
             const actualModel = summary["Resolved Model"] || cfg.model;
             const systemFingerprint = summary["System Fingerprint"] || null;
-            return {
+            return restoreExperiment({
               metadata: { timestamp: summary["Timestamp"] || new Date().toISOString(), appVersion, config: cfg, actualModel, systemFingerprint },
               appVersion,
               actualModel,
@@ -749,7 +853,11 @@
               parsedFragments,
               llmQueries,
               apiExchanges
-            };
+            }, records.filter(record => Number(record['Run #']) === runNumber)
+              .sort((a, b) => Number(a.Part) - Number(b.Part)).map((record, index) => {
+                if (Number(record.Part) !== index + 1) throw new Error('Missing or duplicate experiment record part.');
+                return record.Data;
+              }), summary['Experiment Condition']);
           });
           callback(sessionResults);
           return;
@@ -882,7 +990,14 @@
             }
           }
 
-          sessionResults.push({
+          const chunks = headers.map((header, index) => ({ header, value: row[index] }))
+            .filter(cell => /^Experiment Record \d+$/.test(cell.header) && cell.value !== '' && cell.value != null)
+            .sort((a, b) => Number(a.header.split(' ').at(-1)) - Number(b.header.split(' ').at(-1)))
+            .map((cell, index) => {
+              if (Number(cell.header.split(' ').at(-1)) !== index + 1) throw new Error('Missing experiment record part.');
+              return cell.value;
+            });
+          sessionResults.push(restoreExperiment({
             metadata: meta,
             appVersion: appVersion,
             actualModel: resolvedModel,
@@ -895,7 +1010,7 @@
             parsedFragments: parsedFragments,
             llmQueries: llmQueries,
             apiExchanges: apiExchanges
-          });
+          }, chunks, getValue('Experiment Condition')));
         }
 
         callback(sessionResults);

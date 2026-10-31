@@ -10,6 +10,8 @@
 
   const versionInfo = (typeof window !== 'undefined' && window.AxiomaVersion) ? window.AxiomaVersion : require('./version.js');
   const APP_VERSION = versionInfo.APP_VERSION || 'Unknown Version';
+  const interventions = (typeof window !== 'undefined' && window.ContextIntervention)
+    ? window.ContextIntervention : require('./context_intervention.js');
 
   /**
    * Helper function to shuffle an array using Fisher-Yates algorithm.
@@ -86,7 +88,7 @@
    */
   class EvaluatorEngine {
     constructor(config, pvqData, psychometrics, apiClient) {
-      this.config = config; // { provider, apiKey, baseUrl, model, temperature, seed, lang, mode, randomizeOrder, keepContext, enableReasoning, reasoningBudget, customSystemPrompt }
+      this.config = { ...config, intervention: config.intervention ? JSON.parse(JSON.stringify(config.intervention)) : undefined };
       this.pvqData = pvqData;
       this.psychometrics = psychometrics;
       this.apiClient = apiClient;
@@ -205,7 +207,24 @@
         const totalItems = itemsToRun.length;
         {
           // --- FULLY SEQUENTIAL ---
-          const conversationHistory = [];
+          const experiment = state.experiment;
+          const prefix = experiment?.condition === 'prefix' ? experiment.entries : [];
+          const conversationHistory = experiment
+            ? interventions.buildPrefixMessages(experiment, itemsToRun, lang, buildSequentialPrompt) : [];
+          state.itemProvenance = state.itemProvenance || {};
+          for (const entry of prefix) {
+            state.itemProvenance[entry.itemId] = {
+              origin: entry.source, actualTargetRating: null, actualResponse: '',
+              historyRating: entry.rating, historyResponse: String(entry.rating),
+              historySource: entry.source, position: entry.itemId,
+              question: buildSequentialPrompt(itemsToRun.find(item => item.id === entry.itemId), lang)
+            };
+          }
+          if (prefix.length && onProgress) onProgress({
+            type: 'prefix_loaded', completedCount: prefix.length, totalItems,
+            statusMessage: `${prefix.length} answers supplied; ${totalItems - prefix.length} target questions remaining.`,
+            itemProvenance: { ...state.itemProvenance }, suppliedCount: prefix.length
+          });
 
           for (let idx = 0; idx < totalItems; idx++) {
             if (this.shouldAbort) {
@@ -213,6 +232,7 @@
             }
 
             const currentItem = itemsToRun[idx];
+            if (prefix.some(entry => entry.itemId === currentItem.id)) continue;
             const itemPromptText = buildSequentialPrompt(currentItem, lang);
 
             const displayedPromptText = formatConversationDisplay(systemPrompt, conversationHistory, itemPromptText);
@@ -276,15 +296,26 @@
               error: null
             });
 
+            const replacement = experiment?.condition === 'replacement'
+              ? experiment.entries.find(entry => entry.itemId === currentItem.id) : null;
+            const historyResponse = replacement ? String(replacement.rating) : apiRes.text;
+            state.itemProvenance[currentItem.id] = {
+              origin: 'target', actualTargetRating: parsed.score, actualResponse: apiRes.text,
+              historyRating: keepContext ? (replacement ? replacement.rating : parsed.score) : null,
+              historyResponse: keepContext ? historyResponse : '',
+              historySource: keepContext ? (replacement ? 'manual' : 'target') : 'none',
+              position: idx + 1, question: itemPromptText
+            };
             if (keepContext) {
               conversationHistory.push({ role: "user", content: itemPromptText });
-              conversationHistory.push({ role: "assistant", content: apiRes.text });
+              conversationHistory.push({ role: "assistant", content: historyResponse });
             }
 
             if (onProgress) {
               onProgress({
                 type: 'item_complete',
-                statusMessage: `Item ${currentItem.id} evaluated successfully (${idx + 1}/${totalItems}).`,
+                statusMessage: `Item ${currentItem.id} evaluated successfully (${idx + 1}/${totalItems}).${replacement ? ` History replaced with ${replacement.rating}.` : ''}`,
+                itemProvenance: { ...state.itemProvenance },
                 completedCount: idx + 1,
                 totalItems: totalItems,
                 currentItemId: currentItem.id,
@@ -311,6 +342,7 @@
     }
 
     async run(onProgress) {
+      interventions.validate(this.config);
       this.isRunning = true;
       this.shouldAbort = false;
       this.abortController = typeof AbortController !== 'undefined' ? new AbortController() : null;
@@ -321,7 +353,7 @@
       const keepContext = !!this.config.keepContext;
 
       let itemsToRun = this.pvqData.ITEMS.slice();
-      if (randomize) {
+      if (randomize && !isBatch) {
         itemsToRun = shuffleArray(itemsToRun);
       }
 
@@ -349,6 +381,11 @@
       };
 
       const systemPrompt = buildSystemPrompt(this.config.customSystemPrompt, lang);
+      state.experiment = interventions.createExperiment(this.config, systemPrompt, itemsToRun.map(item => item.id));
+      runMetadata.runId = state.experiment.runId;
+      runMetadata.resolvedSystemPrompt = systemPrompt;
+      // Persist the normalized, credential-free definition only.
+      delete runMetadata.config.intervention;
 
       const statusUpdateCallback = (retryMsg) => {
         if (onProgress) {
@@ -359,10 +396,15 @@
         }
       };
 
-      if (isBatch) {
-        await this._runBatch(lang, systemPrompt, statusUpdateCallback, onProgress, state);
-      } else {
-        await this._runSequential(keepContext, itemsToRun, lang, systemPrompt, statusUpdateCallback, onProgress, state);
+      try {
+        if (isBatch) {
+          await this._runBatch(lang, systemPrompt, statusUpdateCallback, onProgress, state);
+        } else {
+          await this._runSequential(keepContext, itemsToRun, lang, systemPrompt, statusUpdateCallback, onProgress, state);
+        }
+      } finally {
+        this.isRunning = false;
+        this.abortController = null;
       }
 
       runMetadata.actualModel = state.actualModel || this.config.model || "";
@@ -371,11 +413,10 @@
       // Calculate final psychometrics
       const psychometricResults = this.psychometrics.calculatePsychometrics(state.parsedItemScores, this.pvqData);
 
-      this.isRunning = false;
-      this.abortController = null;
-
       return {
         metadata: runMetadata,
+        experiment: state.experiment,
+        itemProvenance: state.itemProvenance || {},
         appVersion: runMetadata.appVersion,
         actualModel: runMetadata.actualModel,
         systemFingerprint: runMetadata.systemFingerprint,

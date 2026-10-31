@@ -53,6 +53,8 @@ function deobfuscateApiKey(val) {
         element.value = props[key];
       } else if (key === 'checked') {
         element.checked = !!props[key];
+      } else if (key === 'disabled') {
+        element.disabled = !!props[key];
       } else if (key === 'innerHTML') {
         if (typeof DOMPurify === 'undefined') { throw new Error('DOMPurify is required for XSS protection when using innerHTML'); }
         element.innerHTML = DOMPurify.sanitize(props[key]);
@@ -96,6 +98,17 @@ function deobfuscateApiKey(val) {
     iterations: 1,
     randomizeOrder: false,
     keepContext: false,
+    interventionCondition: 'baseline',
+    donorRuns: [],
+    selectedDonor: null,
+    prefixLength: 19,
+    suppliedEdits: {},
+    replacementRatings: {},
+    experimentLabel: '',
+    baselineSelection: '',
+    interventionPreview: false,
+    liveItemProvenance: {},
+    suppliedCount: 0,
     enableReasoning: '',
     reasoningBudget: 1024,
     reasoningEffort: 'medium',
@@ -497,26 +510,41 @@ function deobfuscateApiKey(val) {
     }
   }
 
-    async function startEvaluation() {
-    state.isRunning = true;
-      state.errorMessage = '';
-      renderApp();
+  function interventionActive() {
+    return state.mode === 'sequential' && state.interventionCondition !== 'baseline';
+  }
 
-    const iterations = parseInt(state.iterations, 10) || 1;
+  function donorOptions() {
+    return [...state.sessionResults, ...state.donorRuns];
+  }
 
-    for (let i = 0; i < iterations; i++) {
-      if (!state.isRunning) break;
+  function buildInterventionDefinition() {
+    const condition = state.mode === 'sequential' ? state.interventionCondition : 'baseline';
+    const source = state.selectedDonor;
+    const entries = condition === 'prefix'
+      ? window.PVQData.ITEMS.slice(0, Number(state.prefixLength)).map(item => {
+        const originalRating = source?.psychometrics?.itemRatings?.[item.id] ?? null;
+        const edited = Object.prototype.hasOwnProperty.call(state.suppliedEdits, item.id);
+        return { itemId: item.id, originalRating,
+          rating: edited ? state.suppliedEdits[item.id] : originalRating };
+      })
+      : condition === 'replacement' ? Object.entries(state.replacementRatings)
+        .map(([id, rating]) => ({ itemId: Number(id), rating })) : [];
+    if (condition === 'prefix' && (!Number.isInteger(Number(state.prefixLength))
+      || Number(state.prefixLength) < 1 || Number(state.prefixLength) > 56)) {
+      throw new Error('Prefix length must be an integer from 1 to 56.');
+    }
+    const baseline = condition === 'baseline' || state.baselineSelection === '' ? null : state.sessionResults[Number(state.baselineSelection)];
+    if (baseline && !window.ContextIntervention.isMatchedBaseline(baseline)) {
+      throw new Error('Select a sequential baseline with history and recorded fixed order.');
+    }
+    return { condition, entries, label: state.experimentLabel,
+      source: condition === 'prefix' ? window.ContextIntervention.sourceSnapshot(source) : null,
+      baseline: window.ContextIntervention.sourceSnapshot(baseline) };
+  }
 
-      state.results = null;
-      state.liveStreamLogs = [];
-      state.completedCount = 0;
-      state.tokenUsage = { promptTokens: 0, completionTokens: 0, reasoningTokens: 0, totalTokens: 0 };
-      state.liveItemRatings = {};
-      state.liveRawResponses = {};
-      state.liveParsedFragments = {};
-      state.liveReasoningTraces = {};
-
-      const config = {
+  function evaluationConfig() {
+    return {
         appVersion: APP_VERSION,
         provider: state.provider,
         apiKey: state.apiKey,
@@ -527,13 +555,49 @@ function deobfuscateApiKey(val) {
         lang: state.lang,
         customSystemPrompt: state.systemPrompt.text,
         mode: state.mode,
-        randomizeOrder: state.randomizeOrder,
-        keepContext: state.keepContext,
+        randomizeOrder: interventionActive() ? false : state.randomizeOrder,
+        keepContext: interventionActive() ? true : state.keepContext,
         enableReasoning: state.enableReasoning,
         reasoningBudget: parseInt(state.reasoningBudget, 10),
         reasoningEffort: state.reasoningEffort,
-        iterations: iterations
-      };
+        iterations: parseInt(state.iterations, 10) || 1,
+        intervention: buildInterventionDefinition()
+    };
+  }
+
+  async function startEvaluation() {
+    if (state.isRunning) return;
+    let config;
+    try {
+      config = evaluationConfig();
+      config.intervention = window.ContextIntervention.validate(config);
+      config.intervention.experimentId = window.ContextIntervention.newId();
+    } catch (err) {
+      state.errorMessage = err.message;
+      renderApp();
+      return;
+    }
+    state.isRunning = true;
+    state.errorMessage = '';
+    renderApp();
+    const iterations = config.iterations;
+    let completedIterations = 0;
+
+    for (let i = 0; i < iterations; i++) {
+      if (!state.isRunning) break;
+      state.results = null;
+      state.liveStreamLogs = [];
+      state.completedCount = 0;
+      state.suppliedCount = 0;
+      state.liveItemProvenance = {};
+      state.activeItemPrompt = '';
+      state.activeItemResponse = '';
+      state.activeReasoningTrace = '';
+      state.tokenUsage = { promptTokens: 0, completionTokens: 0, reasoningTokens: 0, totalTokens: 0 };
+      state.liveItemRatings = {};
+      state.liveRawResponses = {};
+      state.liveParsedFragments = {};
+      state.liveReasoningTraces = {};
 
       const pvqData = window.PVQData;
       const psychometrics = window.Psychometrics;
@@ -547,6 +611,8 @@ function deobfuscateApiKey(val) {
         const runResult = await engineInstance.run((event) => {
           state.progressStatus = `Iteration ${i + 1}/${iterations}: ${event.statusMessage}`;
           if (event.completedCount !== undefined) state.completedCount = event.completedCount;
+          if (event.itemProvenance) state.liveItemProvenance = event.itemProvenance;
+          if (event.suppliedCount !== undefined) state.suppliedCount = event.suppliedCount;
           if (event.tokenUsage) state.tokenUsage = event.tokenUsage;
           if (event.currentPrompt) state.activeItemPrompt = event.currentPrompt;
           if (event.lastResponse) state.activeItemResponse = event.lastResponse;
@@ -557,7 +623,7 @@ function deobfuscateApiKey(val) {
           if (event.parsedFragments) state.liveParsedFragments = event.parsedFragments;
           if (event.reasoningTraces) state.liveReasoningTraces = event.reasoningTraces;
 
-          if (event.type === 'item_complete' || event.type === 'batch_complete') {
+          if (['item_complete', 'batch_complete', 'prefix_loaded'].includes(event.type)) {
             state.liveStreamLogs.push(`[${new Date().toLocaleTimeString()}] Iteration ${i + 1}/${iterations}: ${event.statusMessage}`);
           }
           renderApp();
@@ -566,10 +632,15 @@ function deobfuscateApiKey(val) {
         if (state.isRunning) {
           state.results = runResult;
           state.sessionResults.push(runResult);
+          completedIterations++;
           state.progressStatus = `Iteration ${i + 1} completed successfully!`;
           renderApp();
         }
       } catch (err) {
+        if (!state.isRunning) {
+          state.progressStatus = 'Evaluation stopped. The interrupted iteration was not saved.';
+          break;
+        }
         const errorMessage = err && err.message ? err.message : String(err);
         state.progressStatus = `Error in iteration ${i + 1}: ${errorMessage}`;
         state.errorMessage = errorMessage;
@@ -579,9 +650,10 @@ function deobfuscateApiKey(val) {
       }
     }
 
+    const stopped = !state.isRunning;
     state.isRunning = false;
-    if (state.progressStatus && !state.progressStatus.startsWith('Error')) {
-      state.progressStatus = `Evaluation finished successfully (${iterations} iteration${iterations > 1 ? 's' : ''}).`;
+    if (!stopped && !state.errorMessage) {
+      state.progressStatus = `Evaluation finished successfully (${completedIterations} iteration${completedIterations > 1 ? 's' : ''}).`;
     }
     renderApp();
   }
@@ -590,7 +662,7 @@ function deobfuscateApiKey(val) {
     if (engineInstance) {
       engineInstance.stop();
       state.isRunning = false;
-      state.progressStatus = 'Stopping evaluation...';
+      state.progressStatus = 'Evaluation stopped. The interrupted iteration was not saved.';
       renderApp();
     }
   }
@@ -606,7 +678,7 @@ function deobfuscateApiKey(val) {
           el('div', { className: 'flex items-start gap-2 min-w-0' },
             el('i', { className: 'fa-solid fa-triangle-exclamation mt-0.5 text-rose-400' }),
             el('div', {},
-              el('p', { className: 'font-semibold' }, state.lang === 'pl' ? 'Błąd sieci / API' : 'Network / API error'),
+              el('p', { className: 'font-semibold' }, state.lang === 'pl' ? 'Błąd oceny' : 'Evaluation error'),
               el('p', { className: 'mt-1 break-words whitespace-pre-wrap' }, state.errorMessage)
             )
           ),
@@ -663,13 +735,40 @@ function deobfuscateApiKey(val) {
                 state.sessionResults = [];
                 state.results = null;
                 state.completedCount = 0;
+                state.suppliedCount = 0;
+                state.liveItemProvenance = {};
+                state.baselineSelection = '';
+                state.selectedDonor = null;
+                state.donorRuns = [];
+                state.suppliedEdits = {};
                 state.progressStatus = 'New session started.';
                 renderApp();
               }
             },
             className: 'bg-slate-800 hover:bg-rose-900/40 text-rose-400 hover:text-rose-300 text-xs font-semibold px-3 py-1 rounded-md flex items-center gap-1.5 transition'
           }, el('i', { className: 'fa-solid fa-rotate-left' }), ' New Session'),
-            el('input', { type: 'file', id: 'sessionFileInput', accept: '.csv, .xlsx', className: 'hidden', onChange: (e) => { const file = e.target.files[0]; if(file) { if(state.sessionResults.length > 0 && !window.confirm('Importing will overwrite the current session. Continue?')) { e.target.value = ''; return; } window.DataExporter.importSessionFromFile(file, (results) => { if(results && results.length > 0) { state.sessionResults = results; state.results = results[0]; state.tokenUsage = state.results.tokenUsage; state.progressStatus = 'Loaded session from file'; } e.target.value = ''; renderApp(); }); } } }),
+            el('input', { type: 'file', id: 'sessionFileInput', accept: '.csv, .xlsx', className: 'hidden', onChange: (e) => {
+              const file = e.target.files[0];
+              if (!file) return;
+              if (state.sessionResults.length > 0 && !window.confirm('Importing will overwrite the current session. Continue?')) {
+                e.target.value = ''; return;
+              }
+              window.DataExporter.importSessionFromFile(file, results => {
+                if (results && results.length > 0) {
+                  state.sessionResults = results;
+                  state.results = results[0];
+                  state.tokenUsage = state.results.tokenUsage;
+                  state.baselineSelection = '';
+                  state.selectedDonor = null;
+                  state.suppliedEdits = {};
+                  state.suppliedCount = state.results.experiment?.condition === 'prefix' ? state.results.experiment.entries.length : 0;
+                  state.completedCount = state.suppliedCount + (state.results.metadata?.config?.mode === 'batch' ? 57 : (state.results.apiExchanges || []).length);
+                  state.progressStatus = 'Loaded session from file';
+                }
+                e.target.value = '';
+                renderApp();
+              });
+            } }),
             el('button', {
               onClick: () => document.getElementById('sessionFileInput').click(),
               className: 'bg-slate-800 hover:bg-slate-700 text-indigo-400 text-xs font-semibold px-3 py-1 rounded-md flex items-center gap-1.5 transition'
@@ -870,13 +969,14 @@ function deobfuscateApiKey(val) {
             type: 'button',
             onClick: () => setMode('sequential'),
             className: `py-2 px-3 text-xs font-medium rounded-lg border text-center transition ${state.mode === 'sequential' ? 'bg-sky-500/10 border-sky-500 text-sky-400' : 'bg-slate-900 border-slate-700 text-slate-400 hover:text-slate-200'}`
-          }, 'Sequential Mode (57 Prompts)')
+          }, 'Sequential Mode')
         ),
         state.mode === 'sequential' ? el('div', { className: 'flex items-center justify-between text-xs text-slate-300' },
           el('span', {}, 'Keep Chat Context History'),
           el('input', {
             type: 'checkbox',
-            checked: state.keepContext,
+            checked: interventionActive() ? true : state.keepContext,
+            disabled: interventionActive() || state.isRunning,
             onChange: (e) => { state.keepContext = e.target.checked; savePersistedOption('keep_context', state.keepContext); renderApp(); },
             className: 'rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-sky-500 h-4 w-4'
           })
@@ -885,11 +985,13 @@ function deobfuscateApiKey(val) {
           el('span', {}, 'Randomize Order (--randomize)'),
           el('input', {
             type: 'checkbox',
-            checked: state.randomizeOrder,
+            checked: interventionActive() ? false : state.randomizeOrder,
+            disabled: interventionActive() || state.isRunning,
             onChange: (e) => { state.randomizeOrder = e.target.checked; savePersistedOption('randomize_order', state.randomizeOrder); renderApp(); },
             className: 'rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-sky-500 h-4 w-4'
           })
-        )
+        ),
+        state.mode === 'sequential' ? InterventionPanel() : null
       ),
       el('div', { className: 'border-t border-slate-800 pt-3' },
         el('label', { className: 'block text-xs font-medium text-slate-400 mb-1' }, 'Iterations (Repeats)'),
@@ -937,6 +1039,94 @@ function deobfuscateApiKey(val) {
     );
   }
 
+  function InterventionPanel() {
+    const helper = window.ContextIntervention;
+    const fieldClass = 'w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-sm text-slate-200';
+    const condition = state.interventionCondition;
+    const donor = state.selectedDonor;
+    const label = (run, i) => `Run ${i + 1}: ${run.metadata?.actualModel || run.metadata?.config?.model || 'Unknown model'} (${run.metadata?.timestamp || 'unknown date'})`;
+    let definition;
+    let validationError = '';
+    try {
+      definition = helper.validate(evaluationConfig());
+    } catch (err) { validationError = err.message; }
+    const itemList = condition === 'prefix'
+      ? window.PVQData.ITEMS.slice(0, Math.max(0, Math.min(56, Number(state.prefixLength) || 0)))
+      : window.PVQData.ITEMS.slice(0, 56);
+    const ratingSelect = (item, value, onChange, blankLabel) => el('select', {
+      'aria-label': `History rating for item ${item.id}`, value: value ?? '',
+      className: fieldClass, onChange: e => { onChange(e.target.value === '' ? null : Number(e.target.value)); renderApp(); }
+    }, el('option', { value: '' }, blankLabel), ...[1, 2, 3, 4, 5, 6].map(n => el('option', { value: n }, n)));
+    const rows = itemList.map(item => {
+      const original = donor?.psychometrics?.itemRatings?.[item.id] ?? null;
+      const rating = condition === 'prefix'
+        ? (Object.prototype.hasOwnProperty.call(state.suppliedEdits, item.id) ? state.suppliedEdits[item.id] : original)
+        : state.replacementRatings[item.id];
+      return el('div', { className: 'border-t border-slate-700 py-2 space-y-1' },
+        el('p', { className: 'text-xs text-slate-300' }, `${item.id}. [${item.valueKey}] ${item[state.lang]}`),
+        condition === 'prefix' ? el('p', { className: 'text-xs text-slate-400' }, `Source rating: ${original ?? 'Missing'}`) : null,
+        ratingSelect(item, rating, value => {
+          if (condition === 'prefix') state.suppliedEdits[item.id] = value;
+          else if (value === null) delete state.replacementRatings[item.id];
+          else state.replacementRatings[item.id] = value;
+        }, condition === 'prefix' ? 'Missing — choose a rating' : 'Keep actual answer')
+      );
+    });
+    const preview = definition && state.interventionPreview ? (() => {
+      const system = window.ExecutionEngine.buildSystemPrompt(state.systemPrompt.text, state.lang);
+      const experiment = helper.createExperiment(evaluationConfig(), system, helper.FIXED_ORDER);
+      const messages = helper.buildPrefixMessages(experiment, window.PVQData.ITEMS, state.lang, window.ExecutionEngine.buildSequentialPrompt);
+      const nextId = condition === 'prefix' ? definition.entries.length + 1 : 1;
+      return window.ExecutionEngine.formatConversationDisplay(system, messages,
+        window.ExecutionEngine.buildSequentialPrompt(window.PVQData.ITEMS[nextId - 1], state.lang))
+        + '\n\nRemaining order: ' + helper.FIXED_ORDER.slice(nextId - 1).join(', ')
+        + (condition === 'replacement' ? '\n\nAfter each listed item, replace only its history answer:\n'
+          + definition.entries.map(entry => `Item ${entry.itemId}: ${entry.rating}`).join('\n') : '');
+    })() : '';
+    return el('fieldset', { disabled: state.isRunning, className: 'space-y-3 border-t border-slate-800 pt-3' },
+      el('legend', { className: 'text-sm font-semibold text-sky-300' }, 'Context intervention'),
+      el('select', { 'aria-label': 'Context intervention', value: condition, className: fieldClass,
+        onChange: e => { state.interventionCondition = e.target.value; state.interventionPreview = false; renderApp(); }
+      }, el('option', { value: 'baseline' }, 'None (baseline)'),
+      el('option', { value: 'prefix' }, 'Supplied prefix'), el('option', { value: 'replacement' }, 'History replacement')),
+      el('label', { className: 'block text-xs text-slate-400' }, 'Experiment label',
+        el('input', { value: state.experimentLabel, className: fieldClass,
+          onInput: e => { state.experimentLabel = e.target.value; } })),
+      condition === 'baseline' ? el('p', { className: 'text-xs text-slate-400' },
+        'For a matched baseline, enable history and turn randomization off.') : [
+        el('p', { className: 'text-xs text-sky-300' }, 'History is enabled and order is fixed at 1–57 for context interventions.'),
+        el('label', { className: 'block text-xs text-slate-400' }, 'Baseline reference (optional)',
+          el('select', { value: state.baselineSelection, className: fieldClass, onChange: e => { state.baselineSelection = e.target.value; renderApp(); } },
+            el('option', { value: '' }, 'No baseline reference'),
+            ...state.sessionResults.map((run, i) => helper.isMatchedBaseline(run)
+              ? el('option', { value: i }, label(run, i)) : null))),
+        condition === 'prefix' ? [
+          el('label', { className: 'block text-xs text-slate-400' }, 'Donor run',
+            el('select', { value: donor ? donorOptions().indexOf(donor) : '', className: fieldClass,
+              onChange: e => { state.selectedDonor = e.target.value === '' ? null : donorOptions()[Number(e.target.value)]; state.suppliedEdits = {}; renderApp(); }
+            }, el('option', { value: '' }, 'Select a donor run'), ...donorOptions().map((run, i) => el('option', { value: i }, label(run, i))))),
+          el('label', { className: 'block text-xs text-slate-400' }, 'Import donor runs (keeps current session)',
+            el('input', { type: 'file', accept: '.csv,.xlsx', className: 'text-xs w-full',
+              onChange: e => { const file = e.target.files[0]; if (file) window.DataExporter.importSessionFromFile(file, runs => {
+                state.donorRuns.push(...runs); state.selectedDonor = runs[0] || null; state.suppliedEdits = {}; renderApp();
+              }); } })),
+          el('label', { className: 'block text-xs text-slate-400' }, 'Number of supplied answers',
+            el('input', { type: 'number', min: 1, max: 56, step: 1, value: state.prefixLength, className: fieldClass,
+              onChange: e => { state.prefixLength = e.target.value; renderApp(); } })),
+          donor ? el('p', { className: 'text-xs text-amber-300' },
+            `Donor order: ${donor.metadata?.config?.randomizeOrder === true ? 'randomized' : Array.isArray(donor.metadata?.itemOrder) ? donor.metadata.itemOrder.join(', ') : 'unknown'}. Ratings are matched by item ID; the original conversation is not replayed.`) : null,
+          el('p', { className: 'text-xs text-slate-400' }, `${itemList.length} supplied · ${57 - itemList.length} target questions · ${new Set(itemList.map(item => item.valueKey)).size} values covered. Supplied ratings are not scored.`)
+        ] : el('p', { className: 'text-xs text-slate-400' }, 'Choose replacements before starting. Actual answers are saved and scored; replacement ratings affect only later questions.'),
+        el('div', { className: 'max-h-72 overflow-y-auto pr-1' }, rows),
+        validationError ? el('p', { role: 'alert', className: 'text-xs text-amber-300' }, validationError) : null,
+        el('button', { type: 'button', disabled: !!validationError, className: 'text-xs text-sky-300 disabled:opacity-40',
+          onClick: () => { state.interventionPreview = !state.interventionPreview; renderApp(); }
+        }, state.interventionPreview ? 'Hide conversation preview' : 'Preview conversation'),
+        preview ? el('pre', { className: 'text-xs whitespace-pre-wrap max-h-72 overflow-auto bg-slate-950 p-2 rounded' }, preview) : null
+      ]
+    );
+  }
+
   function ExecutionDashboard() {
     return el('div', { className: 'space-y-6' },
       // Progress Bar & Token Counters
@@ -950,7 +1140,7 @@ function deobfuscateApiKey(val) {
         ),
         el('div', { className: 'space-y-1' },
           el('div', { className: 'flex justify-between text-xs text-slate-400' },
-            el('span', {}, `Items Completed: ${state.completedCount} / 57`),
+            el('span', {}, `Items Completed: ${state.completedCount} / 57${state.suppliedCount ? ` (${state.suppliedCount} supplied, ${Math.max(0, state.completedCount - state.suppliedCount)} target responses)` : ''}`),
             el('span', {}, `${Math.round((state.completedCount / 57) * 100)}%`)
           ),
           el('div', { className: 'w-full bg-slate-800 rounded-full h-2 overflow-hidden' },
@@ -971,6 +1161,8 @@ function deobfuscateApiKey(val) {
               if (idx >= 0 && idx < state.sessionResults.length) {
                 state.results = state.sessionResults[idx];
                 state.tokenUsage = state.results.tokenUsage;
+                state.suppliedCount = state.results.experiment?.condition === 'prefix' ? state.results.experiment.entries.length : 0;
+                state.completedCount = state.suppliedCount + (state.results.metadata?.config?.mode === 'batch' ? 57 : (state.results.apiExchanges || []).length);
                 renderApp();
               }
             }
@@ -1022,6 +1214,11 @@ function deobfuscateApiKey(val) {
 
 
     return el('div', { className: 'space-y-8' },
+      state.results.experiment ? el('p', { className: 'text-sm text-sky-300' },
+        `Condition: ${state.results.experiment.condition}. ${state.results.experiment.label || ''} `,
+        state.results.experiment.condition === 'prefix'
+          ? 'Partial target-response results: supplied ratings are excluded from scoring.'
+          : state.results.experiment.condition === 'replacement' ? 'Scores use actual target responses; selected history answers were replaced.' : '') : null,
       !psych.complete ? el('div', {
         role: 'alert',
         className: 'rounded-xl border border-amber-500/40 bg-amber-950/60 px-4 py-3 text-sm text-amber-200'
@@ -1194,6 +1391,7 @@ function deobfuscateApiKey(val) {
               const score = activeRatings[item.id];
               const reasoning = activeReasoningTraces[item.id];
               const rawResponse = activeRawResponses[item.id];
+              const provenance = (state.results ? state.results.itemProvenance || {} : state.liveItemProvenance)[item.id];
               const parsedFragment = isBatch && state.results
                 ? window.ResponseView.getDisplayParsedFragment(state.results, item.id, batchExchange)
                 : activeParsedFragments[item.id];
@@ -1205,7 +1403,8 @@ function deobfuscateApiKey(val) {
                     reasoning: reasoning || '',
                     response: rawResponse || '',
                     parsedFragment: parsedFragment || '',
-                    score: score ?? null
+                    score: score ?? null,
+                    provenance
                   };
 
               return el('tr', { key: item.id, className: 'hover:bg-slate-800/30' },
@@ -1214,10 +1413,14 @@ function deobfuscateApiKey(val) {
                 el('td', { className: 'py-2 px-3 text-sky-400 code-font' }, item.valueKey),
                 el('td', { className: 'py-2 px-3' },
                   score !== undefined && score !== null ? el('span', { className: 'px-2 py-0.5 rounded bg-sky-500/20 text-sky-400 font-bold code-font' }, score) : (
+                    provenance && provenance.origin !== 'target' ? el('span', { className: 'text-amber-300 text-xs' }, 'Supplied; not scored') :
                     (state.results || rawResponse || parsedFragment) ? el('span', { className: 'px-2 py-0.5 rounded bg-rose-500/20 text-rose-400 font-medium text-[10px]' }, 'Refused / N/A') : el('span', { className: 'text-slate-600 text-[10px]' }, 'Pending')
                   )
                 ),
                 el('td', { className: 'py-2 px-3' },
+                  provenance && ['donor', 'manual'].includes(provenance.historySource)
+                    ? el('p', { className: 'text-xs text-amber-300 mb-1' },
+                      `History (${provenance.historySource}): ${provenance.historyResponse}`) : null,
                   isBatch
                     ? (parsedFragment
                         ? el('span', { className: 'block max-w-52 truncate code-font text-slate-300', title: parsedFragment }, parsedFragment)
@@ -1379,6 +1582,8 @@ function deobfuscateApiKey(val) {
           responseSection('Query', details.query, 'text-sky-300'),
           responseSection('Full Reasoning', details.reasoning, 'text-purple-300'),
           responseSection('Full Raw Response', details.response || 'No raw response stored.', 'text-emerald-300', 'max-h-72'),
+          details.provenance && ['donor', 'manual'].includes(details.provenance.historySource)
+            ? responseSection(`Answer used in history (${details.provenance.historySource})`, details.provenance.historyResponse, 'text-amber-300') : null,
           responseSection('Parsed Fragment', details.parsedFragment, 'text-slate-300')
         ),
         el('div', { className: 'pt-2 flex items-center justify-end gap-3' },

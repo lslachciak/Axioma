@@ -32,6 +32,9 @@ static hosting, or any HTTP server.
 - **Reasoning support** — extracts and stores thinking traces (thinking tags,
   Gemini 3.x thoughts) with a configurable thinking budget.
 - **Reproducibility controls** — temperature, seed, fixed or randomized item order.
+- **Context interventions** — supply a donor-answer prefix or replace selected
+  answers in sequential conversation history, with separate records of actual
+  target responses and the answers shown to later requests.
 - **Transient-error handling** — automatic retry on HTTP 429 with `Retry-After`
   support, plus cancellable 30-second Fibonacci backoff for HTTP 502, 503, and
   504 provider outages and interrupted or incomplete network responses.
@@ -62,6 +65,7 @@ static hosting, or any HTTP server.
 | `js/pvq_data.js` | 57 PVQ-RR items (EN/PL) and mappings to the 19 values |
 | `js/api_client.js` | Multi-provider LLM client, retries, reasoning extraction |
 | `js/execution_engine.js` | Batch vs. sequential evaluation, ordering, progress |
+| `js/context_intervention.js` | Experiment validation, donor snapshots, and supplied history |
 | `js/psychometrics.js` | Scoring: 19 value means, MRAT correction, higher-order groups, refusal detection |
 | `js/export.js` | JSON/TSV/CSV/XLSX export and session import |
 | `js/app.js` | UI, charts, persistence |
@@ -76,6 +80,57 @@ static hosting, or any HTTP server.
    name. Custom Endpoint accepts an optional API key.
 4. Choose the evaluation mode, temperature, seed and item order.
 5. Press **Start** — live progress, charts and export options appear as the run completes.
+
+## Context interventions
+
+In **Sequential Mode**, choose a **Context intervention** in the evaluation
+settings. Provider, model, prompt, and generation controls remain shared.
+
+- **None (baseline):** ordinary evaluation. Enable history and disable
+  randomization to create a baseline for matched experiment comparisons.
+- **Supplied prefix:** select a donor run from the session or import donor runs
+  from a session CSV/XLSX without replacing the current session. Choose 1–56
+  answers (default 19), review their item IDs and value mappings, and optionally
+  edit ratings. Axioma inserts numeric answers to items 1–N as assistant history,
+  then asks the target model items N+1–57. Donor reasoning is not replayed.
+- **History replacement:** choose replacement ratings before starting. Axioma
+  asks all 57 questions and saves the actual answers, but replaces selected
+  answers in the history used for subsequent questions. Item 57 cannot be a
+  replacement because there is no subsequent question.
+
+Interventions lock history on and question order to 1–57. Ordinary-run history
+and randomization preferences are restored when the intervention is disabled.
+The provider seed does not control question shuffling. Donor ratings are matched
+by item ID; randomized or unknown donor order is reported rather than treated as
+a replay of the original conversation. Donor and target questionnaire languages
+must match. Missing donor ratings require an explicit correction or shorter
+prefix; no ratings are imputed.
+
+Use **Preview conversation** to inspect the supplied context and remaining order.
+An optional baseline reference lists only sequential runs with history and a
+recorded fixed order. This establishes order compatibility, not equivalence of
+all experimental settings: researchers should also align language, prompt, and
+generation settings. Each Start snapshots the configuration for all iterations;
+each iteration starts with fresh history and receives its own run ID.
+
+**Only actual target responses are scored.** A 19-answer prefix makes 38 target
+requests and produces partial target-response results, without MRAT or centered
+scores. Supplied answers do not count as target ratings or API exchanges. History
+replacement preserves the original ratings for scoring. Items & Responses labels
+supplied answers and displays replacements separately from actual raw responses.
+Questionnaire wording, mappings, and scoring formulas are unchanged.
+
+JSON and TSV include experiment records. CSV/XLSX add provenance fields and
+chunked experiment records, preserving the exact supplied answers, source
+metadata, run references, resolved system prompt, and item order on session
+export/import. XLSX stores these chunks in **Experiment Records** to avoid
+truncating experiment evidence at Excel's cell limit. Existing response/query
+display cells may still be truncated in XLSX. Earlier session files remain
+importable; missing source order and identifiers remain unknown. No new
+prediction or statistical comparison metrics are calculated.
+
+Stop cancels the active request and queued retries. Completed iterations remain
+in the session; an interrupted iteration is not saved as a completed result.
 
 ## Testing
 
