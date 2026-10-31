@@ -118,7 +118,7 @@ can use their donor run from the loaded session when its run ID is available.
 The preview uses the donor's saved means and does not include manual prefix edits.
 
 Completed prefix runs show **Donor profile** and **Final profile (supplied + target)**
-radars side by side with identical scales. The final profile combines the edited
+on one radar with checkboxes to show either or both profiles on the same scale. The final profile combines the edited
 supplied prefix with actual target continuation, using the existing scoring
 formulas. It is descriptive of the combined sequence, not exclusively the target
 model's answers. Its scores are persisted separately as `combinedPsychometrics`

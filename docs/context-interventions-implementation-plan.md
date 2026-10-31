@@ -234,4 +234,4 @@ Live provider calls and the research pilot have not been performed.
 
 ### Final profile visualization
 
-Completed supplied-prefix runs display donor and final radars side by side. The final profile combines supplied ratings (including edits) with actual target continuation using unchanged scoring formulas. Persist this separately as `combinedPsychometrics` in experiment records, retaining target-only scores. Reconstruct it when importing older prefix records. Missing continuation ratings remain missing. History replacement continues to score actual target answers.
+Completed supplied-prefix runs display donor and final profiles on one radar, with checkboxes to show either or both. The final profile combines supplied ratings (including edits) with actual target continuation using unchanged scoring formulas. Persist this separately as `combinedPsychometrics` in experiment records, retaining target-only scores. Reconstruct it when importing older prefix records. Missing continuation ratings remain missing. History replacement continues to score actual target answers.

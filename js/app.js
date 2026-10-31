@@ -161,6 +161,7 @@ function deobfuscateApiKey(val) {
   let circleChartInstance = null;
   let hoEnlargedChartInstance = null;
   let donorChartInstances = [];
+  const profileVisibility = { donor: true, final: true };
 
   // LocalStorage persistence helpers
   function loadPersistedState() {
@@ -336,8 +337,7 @@ function deobfuscateApiKey(val) {
 
   function renderCharts() {
     drawDonorProfile('selectedDonorChart', state.selectedDonor?.psychometrics);
-    drawDonorProfile('resultDonorChart', resultDonorProfile());
-    drawDonorProfile('finalProfileChart', state.results?.combinedPsychometrics, true);
+    drawDonorProfile('interventionProfileChart', resultDonorProfile(), state.results?.combinedPsychometrics);
     if (state.activeTab !== 'results' || !state.results || !state.results.psychometrics) return;
 
     const psych = state.results.psychometrics;
@@ -522,16 +522,22 @@ function deobfuscateApiKey(val) {
     return donorOptions().find(run => run.metadata?.runId === source.runId)?.psychometrics || null;
   }
 
-  function drawDonorProfile(canvasId, profile, final = false) {
+  function drawDonorProfile(canvasId, profile, finalProfile = null) {
     const canvas = document.getElementById(canvasId);
-    if (!canvas || !profile || !window.Chart) return;
+    if (!canvas || (!profile && !finalProfile) || !window.Chart) return;
     const values = Object.values(window.PVQData.REFINED_VALUES);
     donorChartInstances.push(new Chart(canvas.getContext('2d'), {
       type: 'radar',
       data: {
         labels: values.map(value => value.code),
-        datasets: [{ label: final ? 'Final raw mean (supplied + target)' : 'Donor raw mean', data: values.map(value => profile.refinedValues?.[value.code]?.rawMean ?? null),
-          borderColor: final ? '#38bdf8' : '#fbbf24', backgroundColor: final ? 'rgba(56,189,248,0.12)' : 'rgba(251,191,36,0.12)', pointRadius: 2, borderWidth: 1.5 }]
+        datasets: [
+          ...(profile ? [{ label: 'Donor profile', data: values.map(value => profile.refinedValues?.[value.code]?.rawMean ?? null),
+            hidden: finalProfile ? !profileVisibility.donor : false,
+            borderColor: '#fbbf24', backgroundColor: 'rgba(251,191,36,0.08)', borderDash: [5, 3], pointStyle: 'rect', pointRadius: 3, borderWidth: 2 }] : []),
+          ...(finalProfile ? [{ label: 'Final profile (supplied + target)', data: values.map(value => finalProfile.refinedValues?.[value.code]?.rawMean ?? null),
+            hidden: !profileVisibility.final,
+            borderColor: '#38bdf8', backgroundColor: 'rgba(56,189,248,0.08)', pointRadius: 3, borderWidth: 2 }] : [])
+        ]
       },
       options: {
         responsive: true, maintainAspectRatio: false, animation: false,
@@ -561,15 +567,28 @@ function deobfuscateApiKey(val) {
     const result = state.results;
     if (result?.experiment?.condition !== 'prefix') return null;
     const profile = result.combinedPsychometrics;
-    return el('div', { className: 'grid grid-cols-1 lg:grid-cols-2 gap-4' },
-      DonorProfilePreview(resultDonorProfile(), result.experiment.source, 'resultDonorChart'),
-      el('div', { className: 'rounded-xl border border-sky-500/30 bg-slate-950/50 p-3 space-y-2' },
-        el('h4', { className: 'text-sm font-semibold text-sky-300' }, 'Final profile (supplied + target)'),
-        el('p', { className: 'text-xs text-slate-300 break-words' }, result.metadata.actualModel || result.metadata.config.model),
-        el('p', { className: 'text-xs text-slate-400' }, (profile?.totalAnswered ?? 0) + ' / 57 ratings; ' + result.experiment.entries.length + ' supplied + ' + result.psychometrics.totalAnswered + ' target ratings'),
-        el('div', { style: { height: '220px' } }, el('canvas', { id: 'finalProfileChart', role: 'img', 'aria-label': 'Final profile: supplied prefix and actual target continuation, 19 value raw means' })),
-        el('p', { className: 'text-xs text-slate-400' }, 'Includes supplied-rating edits and actual target continuation. This combined profile is not exclusively model-generated answers. Missing responses remain missing.')
-      )
+    const donor = resultDonorProfile();
+    const control = (key, label, available, color) => el('label', { className: 'flex items-center gap-2 text-sm ' + color },
+      el('input', { type: 'checkbox', checked: available && profileVisibility[key], disabled: !available,
+        onChange: event => {
+          profileVisibility[key] = event.target.checked;
+          const chart = window.Chart?.getChart('interventionProfileChart');
+          if (chart) {
+            const index = chart.data.datasets.findIndex(dataset => dataset.label === label);
+            if (index >= 0) { chart.setDatasetVisibility(index, event.target.checked); chart.update(); }
+          }
+        } }), label);
+    return el('div', { className: 'rounded-xl border border-sky-500/30 bg-slate-950/50 p-4 space-y-3' },
+      el('h4', { className: 'text-sm font-semibold text-sky-300' }, 'Donor and final profiles'),
+      el('div', { className: 'flex flex-wrap gap-4' },
+        control('donor', 'Donor profile', !!donor, 'text-amber-300'),
+        control('final', 'Final profile (supplied + target)', !!profile, 'text-sky-300')),
+      el('p', { className: 'text-xs text-slate-400' }, 'Select either profile or both. Yellow dashed line: original donor; blue solid line: final profile. Both show 19 value raw means on the same scale.'),
+      !donor ? el('p', { className: 'text-xs text-amber-300' }, 'Donor profile unavailable. Load the original donor run to compare it.') : null,
+      el('div', { style: { height: '360px' } }, el('canvas', { id: 'interventionProfileChart', role: 'img', 'aria-label': 'Donor and final profiles: 19 value raw means' })),
+      el('p', { className: 'text-xs text-slate-300 break-words' }, 'Target: ' + (result.metadata.actualModel || result.metadata.config.model)),
+      el('p', { className: 'text-xs text-slate-400' }, (profile?.totalAnswered ?? 0) + ' / 57 final ratings; ' + result.experiment.entries.length + ' supplied + ' + result.psychometrics.totalAnswered + ' target ratings'),
+      el('p', { className: 'text-xs text-slate-400' }, 'The donor profile is unchanged by prefix edits. The final profile includes supplied-rating edits and actual target continuation; it is not exclusively model-generated answers. Missing responses remain missing.')
     );
   }
 
