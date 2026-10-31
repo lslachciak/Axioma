@@ -574,22 +574,27 @@ function deobfuscateApiKey(val) {
     );
   }
 
-  function InterventionProfiles() {
-    const result = state.results;
-    if (result?.experiment?.condition !== 'prefix') return null;
-    const profile = result.combinedPsychometrics;
-    const donor = resultDonorProfile();
+  function ProfileVisibilityControls() {
+    if (state.results?.experiment?.condition !== 'prefix') return null;
     const control = (key, label, available, color) => el('label', { className: 'flex items-center gap-2 text-sm ' + color },
       el('input', { type: 'checkbox', checked: available && profileVisibility[key], disabled: !available,
         onChange: event => {
           profileVisibility[key] = event.target.checked;
           renderApp();
         } }), label);
+    return el('div', { className: 'flex flex-wrap gap-4 mb-3 shrink-0', 'aria-label': 'Profile visibility' },
+      control('donor', 'Donor profile', !!resultDonorProfile(), 'text-amber-300'),
+      control('final', 'Final profile (supplied + target)', !!state.results.combinedPsychometrics, 'text-sky-300'));
+  }
+
+  function InterventionProfiles() {
+    const result = state.results;
+    if (result?.experiment?.condition !== 'prefix') return null;
+    const profile = result.combinedPsychometrics;
+    const donor = resultDonorProfile();
     return el('div', { className: 'rounded-xl border border-sky-500/30 bg-slate-950/50 p-4 space-y-3' },
       el('h4', { className: 'text-sm font-semibold text-sky-300' }, 'Donor and final profiles'),
-      el('div', { className: 'flex flex-wrap gap-4' },
-        control('donor', 'Donor profile', !!donor, 'text-amber-300'),
-        control('final', 'Final profile (supplied + target)', !!profile, 'text-sky-300')),
+      ProfileVisibilityControls(),
       el('p', { className: 'text-xs text-slate-400' }, 'Select either profile or both in the charts below. Dashed lines show the donor; solid lines show the final profile. Both include raw means and centered scores. Click a chart to enlarge it.'),
       !donor ? el('p', { className: 'text-xs text-amber-300' }, 'Donor profile unavailable. Load the original donor run to compare it.') : null,
       el('p', { className: 'text-xs text-slate-300 break-words' }, 'Target: ' + (result.metadata.actualModel || result.metadata.config.model)),
@@ -1573,6 +1578,7 @@ function deobfuscateApiKey(val) {
             className: 'text-slate-400 hover:text-slate-200 text-xl'
           }, el('i', { className: 'fa-solid fa-xmark' }))
         ),
+        ProfileVisibilityControls(),
         el('div', { className: 'flex-1 min-h-0 relative' },
           el('canvas', { id: 'hoEnlargedChartCanvas' })
         )
@@ -1598,6 +1604,7 @@ function deobfuscateApiKey(val) {
             className: 'text-slate-400 hover:text-slate-200 text-xl'
           }, el('i', { className: 'fa-solid fa-xmark' }))
         ),
+        ProfileVisibilityControls(),
         el('div', { className: 'flex-1 min-h-0 relative' },
           el('canvas', { id: 'circleChartCanvas' })
         )

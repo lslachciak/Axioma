@@ -118,7 +118,7 @@ can use their donor run from the loaded session when its run ID is available.
 The preview uses the donor's saved means and does not include manual prefix edits.
 
 Completed prefix runs show **Donor profile** and **Final profile (supplied + target)**
-using the same profile view as normal runs: higher-order and 19-value radars, full labels, raw and centered scores, and click-to-enlarge controls. Checkboxes show either or both profiles on each chart. Summary cards and tables describe the final (supplied + target) profile; target-only response count and MRAT remain explicitly identified. The final profile combines the edited
+using the same profile view as normal runs: higher-order and 19-value radars, full labels, raw and centered scores, and click-to-enlarge controls. Shared checkboxes in the main view and both enlarged charts show either or both profiles; visibility stays synchronized. Summary cards and tables describe the final (supplied + target) profile; target-only response count and MRAT remain explicitly identified. The final profile combines the edited
 supplied prefix with actual target continuation, using the existing scoring
 formulas. It is descriptive of the combined sequence, not exclusively the target
 model's answers. Its scores are persisted separately as `combinedPsychometrics`
