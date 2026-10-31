@@ -235,3 +235,5 @@ Live provider calls and the research pilot have not been performed.
 ### Final profile visualization
 
 Completed supplied-prefix runs display donor and final profiles on one radar, with checkboxes to show either or both. The final profile combines supplied ratings (including edits) with actual target continuation using unchanged scoring formulas. Persist this separately as `combinedPsychometrics` in experiment records, retaining target-only scores. Reconstruct it when importing older prefix records. Missing continuation ratings remain missing. History replacement continues to score actual target answers.
+
+Normal and prefix results share the same profile cards, radar renderer, tables, and enlarged views. Prefix comparisons add donor raw/centered series to both radars with visibility controls. Summary cards and tables display the labelled final combined profile; target-only scores remain persisted separately.

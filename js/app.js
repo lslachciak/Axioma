@@ -337,10 +337,9 @@ function deobfuscateApiKey(val) {
 
   function renderCharts() {
     drawDonorProfile('selectedDonorChart', state.selectedDonor?.psychometrics);
-    drawDonorProfile('interventionProfileChart', resultDonorProfile(), state.results?.combinedPsychometrics);
     if (state.activeTab !== 'results' || !state.results || !state.results.psychometrics) return;
 
-    const psych = state.results.psychometrics;
+    const psych = state.results.combinedPsychometrics || state.results.psychometrics;
 
     const buildRadarChart = ({
       canvas,
@@ -367,13 +366,18 @@ function deobfuscateApiKey(val) {
         return `rgba(${r}, ${g}, ${b}, ${alpha})`;
       };
 
+      const comparison = state.results.experiment?.condition === 'prefix';
+      const donor = comparison ? resultDonorProfile() : null;
+      const group = ['higherOrderChartCanvas', 'hoEnlargedChartCanvas'].includes(canvas.id) ? 'higherOrderValues' : 'refinedValues';
+      const donorValues = Object.keys(psych[group]).map(key => donor?.[group]?.[key]);
       const nextChart = new Chart(canvas.getContext('2d'), {
         type: 'radar',
         data: {
           labels,
           datasets: [
             {
-              label: state.lang === 'pl' ? 'Średnia surowa' : 'Raw Mean',
+              label: comparison ? 'Final - Raw Mean' : state.lang === 'pl' ? '?rednia surowa' : 'Raw Mean',
+              hidden: comparison && !profileVisibility.final,
               data: rawValues,
               backgroundColor: hexToRgba(rawColor, backgroundAlpha),
               borderColor: rawColor,
@@ -381,13 +385,20 @@ function deobfuscateApiKey(val) {
               borderWidth
             },
             {
-              label: state.lang === 'pl' ? 'Wynik wycentrowany' : 'Centered Score',
+              label: comparison ? 'Final - Centered Score' : state.lang === 'pl' ? 'Wynik wycentrowany' : 'Centered Score',
+              hidden: comparison && !profileVisibility.final,
               data: centeredValues,
               backgroundColor: hexToRgba(centeredColor, backgroundAlpha),
               borderColor: centeredColor,
               pointBackgroundColor: centeredColor,
               borderWidth
-            }
+            },
+            ...(donor ? [
+              { label: 'Donor - Raw Mean', data: donorValues.map(value => value?.rawMean ?? null),
+                hidden: !profileVisibility.donor, borderColor: '#fbbf24', backgroundColor: 'rgba(251,191,36,0.08)', borderDash: [5, 3], pointStyle: 'rect', borderWidth },
+              { label: 'Donor - Centered Score', data: donorValues.map(value => value?.centeredMean ?? null),
+                hidden: !profileVisibility.donor, borderColor: '#fb923c', backgroundColor: 'rgba(251,146,60,0.08)', borderDash: [5, 3], pointStyle: 'rect', borderWidth }
+            ] : [])
           ]
         },
         options: {
@@ -572,20 +583,15 @@ function deobfuscateApiKey(val) {
       el('input', { type: 'checkbox', checked: available && profileVisibility[key], disabled: !available,
         onChange: event => {
           profileVisibility[key] = event.target.checked;
-          const chart = window.Chart?.getChart('interventionProfileChart');
-          if (chart) {
-            const index = chart.data.datasets.findIndex(dataset => dataset.label === label);
-            if (index >= 0) { chart.setDatasetVisibility(index, event.target.checked); chart.update(); }
-          }
+          renderApp();
         } }), label);
     return el('div', { className: 'rounded-xl border border-sky-500/30 bg-slate-950/50 p-4 space-y-3' },
       el('h4', { className: 'text-sm font-semibold text-sky-300' }, 'Donor and final profiles'),
       el('div', { className: 'flex flex-wrap gap-4' },
         control('donor', 'Donor profile', !!donor, 'text-amber-300'),
         control('final', 'Final profile (supplied + target)', !!profile, 'text-sky-300')),
-      el('p', { className: 'text-xs text-slate-400' }, 'Select either profile or both. Yellow dashed line: original donor; blue solid line: final profile. Both show 19 value raw means on the same scale.'),
+      el('p', { className: 'text-xs text-slate-400' }, 'Select either profile or both in the charts below. Dashed lines show the donor; solid lines show the final profile. Both include raw means and centered scores. Click a chart to enlarge it.'),
       !donor ? el('p', { className: 'text-xs text-amber-300' }, 'Donor profile unavailable. Load the original donor run to compare it.') : null,
-      el('div', { style: { height: '360px' } }, el('canvas', { id: 'interventionProfileChart', role: 'img', 'aria-label': 'Donor and final profiles: 19 value raw means' })),
       el('p', { className: 'text-xs text-slate-300 break-words' }, 'Target: ' + (result.metadata.actualModel || result.metadata.config.model)),
       el('p', { className: 'text-xs text-slate-400' }, (profile?.totalAnswered ?? 0) + ' / 57 final ratings; ' + result.experiment.entries.length + ' supplied + ' + result.psychometrics.totalAnswered + ' target ratings'),
       el('p', { className: 'text-xs text-slate-400' }, 'The donor profile is unchanged by prefix edits. The final profile includes supplied-rating edits and actual target continuation; it is not exclusively model-generated answers. Missing responses remain missing.')
@@ -1280,24 +1286,21 @@ function deobfuscateApiKey(val) {
     }
 
 
-    const psych = state.results.psychometrics;
+    const psych = state.results.combinedPsychometrics || state.results.psychometrics;
 
 
 
     return el('div', { className: 'space-y-8' },
-      InterventionProfiles(),
       state.results.experiment ? el('p', { className: 'text-sm text-sky-300' },
         `Condition: ${state.results.experiment.condition}. ${state.results.experiment.label || ''} `,
         state.results.experiment.condition === 'prefix'
-          ? 'The final radar combines supplied and target ratings. Target-only scores are reported separately below.'
+          ? 'Charts and tables show the final profile (supplied + target). Original target-only scores remain separate in saved results.'
           : state.results.experiment.condition === 'replacement' ? 'Scores use actual target responses; selected history answers were replaced.' : '') : null,
       !psych.complete ? el('div', {
         role: 'alert',
         className: 'rounded-xl border border-amber-500/40 bg-amber-950/60 px-4 py-3 text-sm text-amber-200'
-      }, state.results.experiment?.condition === 'prefix'
-        ? `Target-only profile: ${psych.totalAnswered} actual ratings; ${state.results.experiment.entries.length} supplied answers are kept separate. Value means need all three target ratings per value, and MRAT needs all 57. The combined final radar above includes supplied ratings; the target-only scores below exclude them.`
-        : `Incomplete profile: ${psych.totalAnswered} of 57 items have valid ratings. MRAT and centered scores were not calculated.`) : null,
-      state.results.experiment?.condition === 'prefix' ? el('h3', { className: 'text-sm font-semibold text-sky-300' }, 'Target-only scores') : null,
+      }, `Incomplete profile: ${psych.totalAnswered} of 57 items have valid ratings. MRAT and centered scores were not calculated.`) : null,
+      state.results.experiment?.condition === 'prefix' ? el('p', { className: 'text-xs text-slate-400' }, 'Final profile (supplied + target). Actual target responses: ' + state.results.psychometrics.totalAnswered + ' / 57; target-only MRAT: ' + (state.results.psychometrics.mrat ?? 'N/A')) : null,
       el('div', { className: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4' },
         el('div', { className: 'bg-slate-900/60 p-4 rounded-xl border border-slate-800' },
           el('p', { className: 'text-xs text-slate-400' }, 'Total Items Answered'),
@@ -1317,6 +1320,7 @@ function deobfuscateApiKey(val) {
           el('p', { className: 'text-xs code-font text-slate-300 mt-1' }, new Date(state.results.metadata.timestamp).toLocaleString())
         )
       ),
+      InterventionProfiles(),
       Object.values(psych.refinedValues).some(value => Number.isFinite(value.rawMean)) ? el('div', { className: 'grid grid-cols-1 lg:grid-cols-2 gap-6' },
         el('div', {
             className: 'bg-slate-950/50 p-4 rounded-xl border border-slate-800 cursor-pointer hover:border-sky-500/50 transition relative group',
