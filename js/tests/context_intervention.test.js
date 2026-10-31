@@ -100,20 +100,42 @@ test('source snapshot allowlists metadata, and legacy order stays unknown', () =
   assert.equal(snapshot.runId, null);
   source.metadata.config.lang = 'pl';
   assert.equal(snapshot.config.lang, 'en');
-  assert.equal(interventions.isMatchedBaseline(source), false);
 });
 
-test('only fixed-order sequential history baselines qualify for matched references', () => {
-  const run = { metadata: { config: { mode: 'sequential', keepContext: true, randomizeOrder: false }, itemOrder: interventions.FIXED_ORDER.slice() } };
-  assert.equal(interventions.isMatchedBaseline(run), true);
-  run.metadata.config.randomizeOrder = true;
-  assert.equal(interventions.isMatchedBaseline(run), false);
-  run.metadata.config.randomizeOrder = false;
-  delete run.metadata.itemOrder;
-  assert.equal(interventions.isMatchedBaseline(run), false);
-  run.metadata.itemOrder = interventions.FIXED_ORDER.slice();
-  run.experiment = { condition: 'replacement' };
-  assert.equal(interventions.isMatchedBaseline(run), false);
+test('donor profile snapshot survives validation and remains independent of the donor run', async () => {
+  const donor = { metadata: { runId: 'donor-profile', config: { lang: 'en', model: 'donor' } },
+    psychometrics: psych.calculatePsychometrics(Object.fromEntries(interventions.FIXED_ORDER.map(id => [id, 4])), pvq) };
+  const cfg = config();
+  cfg.intervention.source = interventions.sourceSnapshot(donor);
+  const engine = new EvaluatorEngine(cfg, pvq, psych, client([]));
+  donor.psychometrics.refinedValues.SDT.rawMean = 1;
+  donor.psychometrics.itemRatings[1] = 1;
+  const result = await engine.run();
+  assert.equal(result.experiment.source.profile.refinedValues.SDT.rawMean, 4);
+  assert.equal(result.experiment.source.profile.itemRatings[1], 4);
+  assert.equal(result.experiment.source.profile.mrat, 4);
+  assert.equal(result.experiment.source.profile.refinedValues.SDT.centeredMean, 0);
+});
+
+test('donor previews retain missing metrics without deriving partial means', () => {
+  const profile = psych.calculatePsychometrics({ 1: 4 }, pvq);
+  const snapshot = interventions.profileSnapshot(profile);
+  assert.equal(snapshot.refinedValues.SDT.rawMean, null);
+  assert.equal(snapshot.mrat, null);
+  assert.equal(snapshot.itemRatings[2], null);
+  assert.equal(snapshot.totalAnswered, 1);
+});
+
+test('new experiments omit baseline references even when an older definition supplies one', () => {
+  for (const condition of ['baseline', 'prefix', 'replacement']) {
+    const cfg = config(condition, condition === 'baseline' ? 0 : 1);
+    cfg.intervention.baseline = { runId: 'older-baseline', config: { model: 'earlier-model' } };
+    const definition = interventions.validate(cfg);
+    const experiment = interventions.createExperiment(cfg, 'Prompt', interventions.FIXED_ORDER);
+    assert.equal(Object.hasOwn(definition, 'baseline'), false);
+    assert.equal(Object.hasOwn(experiment, 'baseline'), false);
+    assert.equal(experiment.condition, condition);
+  }
 });
 
 test('manual corrections are identified and missing target responses stay missing', async () => {

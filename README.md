@@ -107,22 +107,33 @@ must match. Missing donor ratings require an explicit correction or shorter
 prefix; no ratings are imputed.
 
 Use **Preview conversation** to inspect the supplied context and remaining order.
-An optional baseline reference lists only sequential runs with history and a
-recorded fixed order. This establishes order compatibility, not equivalence of
-all experimental settings: researchers should also align language, prompt, and
+When comparing separate runs, align question order, model, language, prompt, and
 generation settings. Each Start snapshots the configuration for all iterations;
 each iteration starts with fresh history and receives its own run ID.
 
+Selecting a donor shows a compact preview of its original 19-value profile.
+New prefix runs save a snapshot of that donor profile, so the preview stays with
+the result after export/import or changing the selected donor. Earlier results
+can use their donor run from the loaded session when its run ID is available.
+The preview uses the donor's saved means and does not include manual prefix edits.
+
+Completed intervention runs show an **Item-by-item response comparison** with
+actual target answers, original donor answers where available, and separately
+marked supplied or replaced history ratings. Missing answers stay blank. This
+visual comparison uses recorded ratings, without deriving comparison statistics.
+
 **Only actual target responses are scored.** A 19-answer prefix makes 38 target
 requests and produces partial target-response results, without MRAT or centered
-scores. Supplied answers do not count as target ratings or API exchanges. History
-replacement preserves the original ratings for scoring. Items & Responses labels
+scores. Each value still needs all three target ratings for its mean; empty radar
+charts are hidden when none can be calculated. Supplied answers do not count as
+target ratings or API exchanges. History replacement preserves the original
+ratings for scoring. Items & Responses labels
 supplied answers and displays replacements separately from actual raw responses.
 Questionnaire wording, mappings, and scoring formulas are unchanged.
 
 JSON and TSV include experiment records. CSV/XLSX add provenance fields and
 chunked experiment records, preserving the exact supplied answers, source
-metadata, run references, resolved system prompt, and item order on session
+metadata, donor-run references, resolved system prompt, and item order on session
 export/import. XLSX stores these chunks in **Experiment Records** to avoid
 truncating experiment evidence at Excel's cell limit. Existing response/query
 display cells may still be truncated in XLSX. Earlier session files remain

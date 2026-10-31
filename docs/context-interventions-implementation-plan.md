@@ -44,7 +44,9 @@ Extend `js/app.js` with:
   rating, and supplied rating.
 - Selection of individual history replacements.
 - A preview of the supplied conversation and remaining question order.
-- An experiment label and optional reference to a baseline run.
+- An experiment label.
+- A compact preview of the selected donor's persisted 19-value profile, retained
+  as a snapshot with each new prefix run for later visual comparison.
 
 Validate unique item IDs, integer ratings from 1–6, compatible questionnaire
 language, and at least one remaining target question. Missing source ratings must
@@ -64,6 +66,7 @@ Persist:
 - Source-run reference and available donor model/configuration metadata,
   including its randomization setting and original item order when available.
 - An immutable snapshot of the supplied items and ratings.
+- A snapshot of the donor's existing profile metrics and item ratings.
 - Exact item order and resolved system prompt.
 - Per-item provenance: target response, donor-supplied answer, or manual
   intervention.
@@ -113,8 +116,8 @@ provider seed does not control questionnaire order.
 
 All intervention runs use fixed order 1–57. “First 19 answers” therefore means
 answers to item IDs 1–19, followed by target-model requests for items 20–57.
-Matched baseline runs must also have randomization off. A baseline with randomized
-or unknown order must not be presented as an order-matched comparison.
+Researchers preparing baseline runs for comparison must also turn randomization
+off and align the other experimental settings themselves.
 
 Match donor ratings by item ID, regardless of their source order. If a donor run
 used randomized order, preserve and display that fact: replaying its ratings in
@@ -139,6 +142,9 @@ Recommended first-release policy:
 - Retain existing missing-value and completeness rules.
 - Show supplied and observed answers distinctly in results, progress, and
   exports.
+- Show an item-by-item comparison of actual target, donor, and supplied history
+  ratings. Preserve missing responses and hide empty radar charts when target
+  value means cannot be calculated; do not combine donor and target scores.
 
 **Consequently, a 19-answer prefix leaves only 38 target responses: the existing
 scoring rules will not produce a complete MRAT-corrected profile.** This is an
@@ -172,7 +178,6 @@ Cover these behaviors:
   order 1–57, while ordinary runs retain their randomization behavior.
 - Donor answers are matched by item ID even when the source order differs;
   randomized or unknown donor order remains visible in metadata and exports.
-- Randomized or unknown-order baselines are not labelled as order-matched.
 - A history replacement affects later requests while preserving the actual
   response and score.
 - Source runs remain unchanged, and iterations do not share mutable history.
@@ -220,8 +225,9 @@ persisted format are agreed.
 
 ## Implementation status
 
-Implemented in v1.7.0. Verification passed: 145 automated tests, 39 legacy
+Implemented in v1.7.0. Verification passed: 148 automated tests, 39 legacy
 psychometrics checks, and syntax checks for all nine changed JavaScript files.
 Browser checks covered local-file and static-hosted operation, donor import,
-prefix and replacement runs, and session reload using mocked provider responses.
+prefix and replacement runs, donor previews, item comparisons, and session reload
+using mocked provider responses.
 Live provider calls and the research pilot have not been performed.

@@ -105,7 +105,6 @@ function deobfuscateApiKey(val) {
     suppliedEdits: {},
     replacementRatings: {},
     experimentLabel: '',
-    baselineSelection: '',
     interventionPreview: false,
     liveItemProvenance: {},
     suppliedCount: 0,
@@ -161,6 +160,7 @@ function deobfuscateApiKey(val) {
   let higherOrderChartInstance = null;
   let circleChartInstance = null;
   let hoEnlargedChartInstance = null;
+  let donorChartInstances = [];
 
   // LocalStorage persistence helpers
   function loadPersistedState() {
@@ -325,6 +325,8 @@ function deobfuscateApiKey(val) {
   }
 
   function renderApp() {
+    donorChartInstances.forEach(chart => chart.destroy());
+    donorChartInstances = [];
     const root = document.getElementById('root');
     root.innerHTML = '';
     root.appendChild(App());
@@ -333,6 +335,9 @@ function deobfuscateApiKey(val) {
 
 
   function renderCharts() {
+    drawDonorProfile('selectedDonorChart', state.selectedDonor?.psychometrics);
+    drawDonorProfile('resultDonorChart', resultDonorProfile());
+    drawRatingComparison();
     if (state.activeTab !== 'results' || !state.results || !state.results.psychometrics) return;
 
     const psych = state.results.psychometrics;
@@ -510,6 +515,92 @@ function deobfuscateApiKey(val) {
     }
   }
 
+  function resultDonorProfile() {
+    const source = state.results?.experiment?.source;
+    if (source?.profile) return source.profile;
+    if (!source?.runId) return null;
+    return donorOptions().find(run => run.metadata?.runId === source.runId)?.psychometrics || null;
+  }
+
+  function drawDonorProfile(canvasId, profile) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas || !profile || !window.Chart) return;
+    const values = Object.values(window.PVQData.REFINED_VALUES);
+    donorChartInstances.push(new Chart(canvas.getContext('2d'), {
+      type: 'radar',
+      data: {
+        labels: values.map(value => value.code),
+        datasets: [{ label: 'Donor raw mean', data: values.map(value => profile.refinedValues?.[value.code]?.rawMean ?? null),
+          borderColor: '#fbbf24', backgroundColor: 'rgba(251,191,36,0.12)', pointRadius: 2, borderWidth: 1.5 }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, animation: false,
+        scales: { r: { min: 0, max: 6, ticks: { display: false },
+          grid: { color: 'rgba(255,255,255,0.15)' }, angleLines: { color: 'rgba(255,255,255,0.15)' },
+          pointLabels: { color: '#cbd5e1', font: { size: 10 } } } },
+        plugins: { legend: { display: false }, tooltip: {
+          callbacks: { title: items => { const value = values[items[0]?.dataIndex]; return value ? value[state.lang === 'pl' ? 'namePl' : 'nameEn'] : ''; } }
+        } }
+      }
+    }));
+  }
+
+  function DonorProfilePreview(profile, source, canvasId) {
+    return el('div', { className: 'rounded-xl border border-amber-500/30 bg-slate-950/50 p-3 space-y-2' },
+      el('h4', { className: 'text-sm font-semibold text-amber-300' }, 'Donor profile'),
+      el('p', { className: 'text-xs text-slate-300 break-words' }, source?.actualModel || source?.config?.model || 'Unknown model'),
+      profile ? [
+        el('p', { className: 'text-xs text-slate-400' }, `${profile.totalAnswered ?? '?'} / 57 donor ratings · 19 value raw means`),
+        el('div', { style: { height: '220px' } }, el('canvas', { id: canvasId, role: 'img', 'aria-label': 'Donor profile: 19 value raw means' })),
+        el('p', { className: 'text-xs text-slate-400' }, 'Original donor profile, before any supplied-rating edits. Missing value means are left blank.')
+      ] : el('p', { className: 'text-xs text-slate-400' }, 'This earlier result does not include a donor-profile snapshot. Load or select its donor run to preview it in settings.')
+    );
+  }
+
+  function drawRatingComparison() {
+    const canvas = document.getElementById('interventionRatingsChart');
+    const result = state.results;
+    if (!canvas || !result || !window.Chart) return;
+    const items = window.PVQData.ITEMS;
+    const donor = resultDonorProfile();
+    const entries = result.experiment?.entries || [];
+    const datasets = [];
+    if (donor) datasets.push({ label: 'Original donor answers', borderColor: '#fbbf24',
+      backgroundColor: '#fbbf24', borderDash: [4, 3], pointRadius: 2,
+      data: items.map(item => donor.itemRatings?.[item.id] ?? null) });
+    datasets.push({ label: 'Actual target answers', borderColor: '#38bdf8', backgroundColor: '#38bdf8', pointRadius: 3,
+      data: items.map(item => result.psychometrics.itemRatings[item.id] ?? null) });
+    datasets.push({ label: result.experiment?.condition === 'prefix' ? 'Supplied prefix (not target answers)' : 'History replacements (not target answers)',
+      borderColor: '#c084fc', backgroundColor: '#0f172a', pointBorderColor: '#c084fc', pointStyle: 'rect', pointRadius: 5,
+      showLine: false, data: items.map(item => entries.find(entry => entry.itemId === item.id)?.rating ?? null) });
+    donorChartInstances.push(new Chart(canvas.getContext('2d'), {
+      type: 'line', data: { labels: items.map(item => item.id), datasets },
+      options: { responsive: true, maintainAspectRatio: false, animation: false, spanGaps: false,
+        elements: { line: { borderWidth: 1.5, tension: 0 } },
+        scales: {
+          x: { title: { display: true, text: 'Questionnaire item', color: '#cbd5e1' }, ticks: { color: '#94a3b8', maxRotation: 0 }, grid: { color: 'rgba(255,255,255,0.06)' } },
+          y: { min: 1, max: 6, ticks: { stepSize: 1, color: '#94a3b8' }, title: { display: true, text: 'Rating', color: '#cbd5e1' }, grid: { color: 'rgba(255,255,255,0.12)' } }
+        },
+        plugins: { legend: { position: 'bottom', labels: { color: '#cbd5e1' } }, tooltip: {
+          callbacks: { title: points => { const item = items[points[0]?.dataIndex]; return item ? `Item ${item.id} · ${item.valueKey}` : ''; } }
+        } }
+      }
+    }));
+  }
+
+  function InterventionComparison() {
+    if (!['prefix', 'replacement'].includes(state.results?.experiment?.condition)) return null;
+    return el('div', { className: 'rounded-xl border border-sky-500/30 bg-slate-950/50 p-4 space-y-3' },
+      el('h3', { className: 'text-sm font-semibold text-sky-300' }, 'Item-by-item response comparison'),
+      el('p', { className: 'text-xs text-slate-400' },
+        'Compare actual target answers with the original donor answers where available. Purple squares show supplied or replaced history ratings; they are not scored as target answers. Missing responses stay blank.'),
+      el('div', { className: 'overflow-x-auto' },
+        el('div', { style: { minWidth: '700px', height: '300px' } },
+          el('canvas', { id: 'interventionRatingsChart', role: 'img', 'aria-label': 'Item ratings: donor, actual target, and supplied history shown separately' }))),
+      el('button', { type: 'button', className: 'text-xs text-sky-300', onClick: () => { state.activeTab = 'items'; renderApp(); } }, 'Inspect individual responses')
+    );
+  }
+
   function interventionActive() {
     return state.mode === 'sequential' && state.interventionCondition !== 'baseline';
   }
@@ -534,13 +625,8 @@ function deobfuscateApiKey(val) {
       || Number(state.prefixLength) < 1 || Number(state.prefixLength) > 56)) {
       throw new Error('Prefix length must be an integer from 1 to 56.');
     }
-    const baseline = condition === 'baseline' || state.baselineSelection === '' ? null : state.sessionResults[Number(state.baselineSelection)];
-    if (baseline && !window.ContextIntervention.isMatchedBaseline(baseline)) {
-      throw new Error('Select a sequential baseline with history and recorded fixed order.');
-    }
     return { condition, entries, label: state.experimentLabel,
-      source: condition === 'prefix' ? window.ContextIntervention.sourceSnapshot(source) : null,
-      baseline: window.ContextIntervention.sourceSnapshot(baseline) };
+      source: condition === 'prefix' ? window.ContextIntervention.sourceSnapshot(source) : null };
   }
 
   function evaluationConfig() {
@@ -737,7 +823,6 @@ function deobfuscateApiKey(val) {
                 state.completedCount = 0;
                 state.suppliedCount = 0;
                 state.liveItemProvenance = {};
-                state.baselineSelection = '';
                 state.selectedDonor = null;
                 state.donorRuns = [];
                 state.suppliedEdits = {};
@@ -758,7 +843,6 @@ function deobfuscateApiKey(val) {
                   state.sessionResults = results;
                   state.results = results[0];
                   state.tokenUsage = state.results.tokenUsage;
-                  state.baselineSelection = '';
                   state.selectedDonor = null;
                   state.suppliedEdits = {};
                   state.suppliedCount = state.results.experiment?.condition === 'prefix' ? state.results.experiment.entries.length : 0;
@@ -1095,16 +1179,12 @@ function deobfuscateApiKey(val) {
       condition === 'baseline' ? el('p', { className: 'text-xs text-slate-400' },
         'For a matched baseline, enable history and turn randomization off.') : [
         el('p', { className: 'text-xs text-sky-300' }, 'History is enabled and order is fixed at 1–57 for context interventions.'),
-        el('label', { className: 'block text-xs text-slate-400' }, 'Baseline reference (optional)',
-          el('select', { value: state.baselineSelection, className: fieldClass, onChange: e => { state.baselineSelection = e.target.value; renderApp(); } },
-            el('option', { value: '' }, 'No baseline reference'),
-            ...state.sessionResults.map((run, i) => helper.isMatchedBaseline(run)
-              ? el('option', { value: i }, label(run, i)) : null))),
         condition === 'prefix' ? [
           el('label', { className: 'block text-xs text-slate-400' }, 'Donor run',
             el('select', { value: donor ? donorOptions().indexOf(donor) : '', className: fieldClass,
               onChange: e => { state.selectedDonor = e.target.value === '' ? null : donorOptions()[Number(e.target.value)]; state.suppliedEdits = {}; renderApp(); }
             }, el('option', { value: '' }, 'Select a donor run'), ...donorOptions().map((run, i) => el('option', { value: i }, label(run, i))))),
+          donor ? DonorProfilePreview(donor.psychometrics, donor.metadata, 'selectedDonorChart') : null,
           el('label', { className: 'block text-xs text-slate-400' }, 'Import donor runs (keeps current session)',
             el('input', { type: 'file', accept: '.csv,.xlsx', className: 'text-xs w-full',
               onChange: e => { const file = e.target.files[0]; if (file) window.DataExporter.importSessionFromFile(file, runs => {
@@ -1214,6 +1294,8 @@ function deobfuscateApiKey(val) {
 
 
     return el('div', { className: 'space-y-8' },
+      state.results.experiment?.condition === 'prefix'
+        ? DonorProfilePreview(resultDonorProfile(), state.results.experiment.source, 'resultDonorChart') : null,
       state.results.experiment ? el('p', { className: 'text-sm text-sky-300' },
         `Condition: ${state.results.experiment.condition}. ${state.results.experiment.label || ''} `,
         state.results.experiment.condition === 'prefix'
@@ -1222,7 +1304,10 @@ function deobfuscateApiKey(val) {
       !psych.complete ? el('div', {
         role: 'alert',
         className: 'rounded-xl border border-amber-500/40 bg-amber-950/60 px-4 py-3 text-sm text-amber-200'
-      }, `Incomplete profile: ${psych.totalAnswered} of 57 items have valid ratings. MRAT and centered scores were not calculated.`) : null,
+      }, state.results.experiment?.condition === 'prefix'
+        ? `Target-only profile: ${psych.totalAnswered} actual ratings; ${state.results.experiment.entries.length} supplied answers are kept separate. Value means need all three target ratings per value, and MRAT needs all 57. Compare the observed answers below; supplied ratings do not fill missing target responses.`
+        : `Incomplete profile: ${psych.totalAnswered} of 57 items have valid ratings. MRAT and centered scores were not calculated.`) : null,
+      InterventionComparison(),
       el('div', { className: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4' },
         el('div', { className: 'bg-slate-900/60 p-4 rounded-xl border border-slate-800' },
           el('p', { className: 'text-xs text-slate-400' }, 'Total Items Answered'),
@@ -1242,7 +1327,7 @@ function deobfuscateApiKey(val) {
           el('p', { className: 'text-xs code-font text-slate-300 mt-1' }, new Date(state.results.metadata.timestamp).toLocaleString())
         )
       ),
-      el('div', { className: 'grid grid-cols-1 lg:grid-cols-2 gap-6' },
+      Object.values(psych.refinedValues).some(value => Number.isFinite(value.rawMean)) ? el('div', { className: 'grid grid-cols-1 lg:grid-cols-2 gap-6' },
         el('div', {
             className: 'bg-slate-950/50 p-4 rounded-xl border border-slate-800 cursor-pointer hover:border-sky-500/50 transition relative group',
             onClick: () => { state.showHoModal = true; renderApp(); },
@@ -1261,7 +1346,7 @@ function deobfuscateApiKey(val) {
           el('h3', { className: 'text-xs font-bold text-slate-300 mb-3 uppercase tracking-wider' }, '19 Refined Basic Values'),
           el('div', { className: 'h-64' }, el('canvas', { id: 'refinedChartCanvas' }))
         )
-      ),
+      ) : null,
       // 4 Higher-Order Table
       el('div', { className: 'space-y-3' },
         el('h3', { className: 'text-sm font-semibold text-sky-400' }, '4 Higher-Order Value Group Aggregations'),

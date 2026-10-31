@@ -6,6 +6,25 @@
   const FIXED_ORDER = Array.from({ length: 57 }, (_, i) => i + 1);
   const copy = value => JSON.parse(JSON.stringify(value));
   const validRating = value => Number.isInteger(value) && value >= 1 && value <= 6;
+  const pvq = typeof window !== 'undefined' && window.PVQData ? window.PVQData : require('./pvq_data.js');
+
+  // Preserve existing persisted donor metrics; do not derive a new profile here.
+  function profileSnapshot(profile) {
+    if (!profile) return null;
+    const numberOrNull = value => Number.isFinite(value) ? value : null;
+    const values = (keys, source) => Object.fromEntries(keys.map(key => [key, {
+      rawMean: numberOrNull(source?.[key]?.rawMean),
+      centeredMean: numberOrNull(source?.[key]?.centeredMean)
+    }]));
+    return {
+      complete: profile.complete === true,
+      totalAnswered: Number.isInteger(profile.totalAnswered) ? profile.totalAnswered : null,
+      mrat: numberOrNull(profile.mrat),
+      itemRatings: Object.fromEntries(FIXED_ORDER.map(id => [id, validRating(profile.itemRatings?.[id]) ? profile.itemRatings[id] : null])),
+      refinedValues: values(Object.keys(pvq.REFINED_VALUES), profile.refinedValues),
+      higherOrderValues: values(Object.keys(pvq.HIGHER_ORDER_VALUES), profile.higherOrderValues)
+    };
+  }
 
   function newId() {
     return typeof crypto !== 'undefined' && crypto.randomUUID
@@ -27,19 +46,10 @@
       appVersion: meta.appVersion || run.appVersion || null,
       actualModel: meta.actualModel || config.model || null,
       systemFingerprint: meta.systemFingerprint || null,
+      profile: profileSnapshot(run.psychometrics || meta.profile),
       config: safeConfig,
       itemOrder: Array.isArray(meta.itemOrder) ? meta.itemOrder.slice() : null
     };
-  }
-
-  function isMatchedBaseline(run) {
-    const cfg = run?.metadata?.config;
-    const order = run?.metadata?.itemOrder;
-    return cfg?.mode === 'sequential' && cfg.keepContext === true
-      && cfg.randomizeOrder === false
-      && (!run.experiment || run.experiment.condition === 'baseline')
-      && Array.isArray(order) && order.length === 57
-      && order.every((id, i) => id === i + 1);
   }
 
   function validate(config) {
@@ -51,7 +61,7 @@
     if (condition === 'baseline') {
       if (entries.length) throw new Error('Baseline cannot contain supplied answers.');
       return { condition, entries: [], label: String(definition.label || ''),
-        experimentId: definition.experimentId || null, source: null, baseline: null };
+        experimentId: definition.experimentId || null, source: null };
     }
     if (config.mode !== 'sequential' || config.keepContext !== true || config.randomizeOrder) {
       throw new Error('Context interventions require sequential mode, history enabled, and fixed order.');
@@ -81,7 +91,6 @@
     })).sort((a, b) => a.itemId - b.itemId);
     // Re-allowlist source snapshots rather than trusting imported definitions.
     normalized.source = condition === 'prefix' ? sourceSnapshot({ metadata: definition.source }) : null;
-    normalized.baseline = definition.baseline ? sourceSnapshot({ metadata: definition.baseline }) : null;
     return normalized;
   }
 
@@ -94,7 +103,6 @@
       condition: definition.condition,
       label: String(definition.label || ''),
       source: definition.source || null,
-      baseline: definition.baseline || null,
       entries: copy(definition.entries),
       itemOrder: itemOrder.slice(),
       systemPrompt
@@ -109,6 +117,6 @@
     ]);
   }
 
-  Object.assign(exports, { CONDITIONS, FIXED_ORDER, validRating, newId, sourceSnapshot,
-    isMatchedBaseline, validate, createExperiment, buildPrefixMessages });
+  Object.assign(exports, { CONDITIONS, FIXED_ORDER, validRating, newId, sourceSnapshot, profileSnapshot,
+    validate, createExperiment, buildPrefixMessages });
 })(typeof exports !== 'undefined' ? exports : (window.ContextIntervention = {}));

@@ -17,7 +17,10 @@ const exporter = require('../export.js');
 async function result(condition = 'prefix') {
   return new EvaluatorEngine({ mode: 'sequential', keepContext: true, randomizeOrder: false, lang: 'en',
     customSystemPrompt: 'Prompt\n' + 'Long context 🧪 '.repeat(3000),
-    intervention: { condition, label: '=not-a-formula', source: { config: { lang: 'en', model: 'donor', randomizeOrder: true }, itemOrder: null },
+    intervention: { condition, label: '=not-a-formula', source: {
+      config: { lang: 'en', model: 'donor', randomizeOrder: true }, itemOrder: null,
+      profile: psych.calculatePsychometrics(Object.fromEntries(pvq.ITEMS.map(item => [item.id, 4])), pvq)
+    },
       entries: [{ itemId: 1, rating: 6, originalRating: 6 }] }
   }, pvq, psych, { completeChat: async () => ({ text: '2', reasoning: '', tokenUsage: { promptTokens: 1, completionTokens: 1, reasoningTokens: 0 } }) }).run();
 }
@@ -31,6 +34,7 @@ function importBytes(bytes) {
 
 for (const format of ['CSV', 'XLSX']) test(`${format} round-trip preserves full intervention evidence, order, and target-only scores`, async () => {
   const original = await result();
+  assert.equal(Object.hasOwn(original.experiment, 'baseline'), false);
   exporter[`exportSessionTo${format}`]([original]);
   const bytes = format === 'CSV' ? new TextEncoder().encode(downloaded)
     : XLSX.write(workbook, { type: 'array', bookType: 'xlsx' });
@@ -72,6 +76,7 @@ test('JSON, TSV and individual XLSX include intervention records and readable pr
 
 test('replacement exports retain actual ratings and effective history separately in both formats', async () => {
   const original = await result('replacement');
+  assert.equal(Object.hasOwn(original.experiment, 'baseline'), false);
   for (const format of ['CSV', 'XLSX']) {
     exporter[`exportSessionTo${format}`]([original]);
     const bytes = format === 'CSV' ? new TextEncoder().encode(downloaded)
@@ -81,6 +86,19 @@ test('replacement exports retain actual ratings and effective history separately
     assert.equal(restored.itemProvenance[1].historyRating, 6);
     assert.equal(restored.itemProvenance[1].actualResponse, '2');
     assert.equal(restored.apiExchanges.length, 57);
+  }
+});
+
+test('older experiment exports with baseline metadata remain importable in CSV and XLSX', async () => {
+  const original = await result('replacement');
+  original.experiment.baseline = { runId: 'older-baseline', config: { model: 'earlier-model' } };
+  for (const format of ['CSV', 'XLSX']) {
+    exporter[`exportSessionTo${format}`]([original]);
+    const bytes = format === 'CSV' ? new TextEncoder().encode(downloaded)
+      : XLSX.write(workbook, { type: 'array', bookType: 'xlsx' });
+    const restored = importBytes(bytes)[0];
+    assert.deepEqual(restored.experiment, original.experiment);
+    assert.deepEqual(restored.psychometrics, original.psychometrics);
   }
 });
 
