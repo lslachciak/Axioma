@@ -51,6 +51,7 @@ for (const format of ['CSV', 'XLSX']) test(`${format} round-trip preserves full 
   assert.equal(restored.metadata.runId, original.metadata.runId);
   assert.equal(restored.metadata.resolvedSystemPrompt, original.metadata.resolvedSystemPrompt);
   assert.deepEqual(restored.psychometrics, original.psychometrics);
+  assert.deepEqual(restored.combinedPsychometrics, original.combinedPsychometrics);
   assert.equal(restored.apiExchanges.length, 56);
   assert.equal(restored.psychometrics.itemRatings[1], null);
 });
@@ -69,6 +70,7 @@ test('JSON, TSV and individual XLSX include intervention records and readable pr
   const restored = importBytes(XLSX.write(workbook, { type: 'array', bookType: 'xlsx' }))[0];
   assert.deepEqual(restored.experiment, original.experiment);
   assert.deepEqual(restored.psychometrics, original.psychometrics);
+  assert.deepEqual(restored.combinedPsychometrics, original.combinedPsychometrics);
   assert.deepEqual(restored.tokenUsage, original.tokenUsage);
   assert.equal(restored.metadata.config.keepContext, true);
   assert.equal(restored.apiExchanges.length, 56);
@@ -99,6 +101,7 @@ test('older experiment exports with baseline metadata remain importable in CSV a
     const restored = importBytes(bytes)[0];
     assert.deepEqual(restored.experiment, original.experiment);
     assert.deepEqual(restored.psychometrics, original.psychometrics);
+  assert.deepEqual(restored.combinedPsychometrics, original.combinedPsychometrics);
   }
 });
 
@@ -111,4 +114,15 @@ test('missing experiment records are rejected instead of silently discarding pro
   try {
     assert.throws(() => importBytes(XLSX.write(workbook, { type: 'array', bookType: 'xlsx' })), /Failed to parse file/);
   } finally { console.error = previousError; }
+});
+
+for (const format of ['CSV', 'XLSX']) test(format + ' restores combined profiles for older prefix sessions', async () => {
+  const original = await result();
+  const expected = original.combinedPsychometrics;
+  delete original.combinedPsychometrics;
+  exporter['exportSessionTo' + format]([original]);
+  const bytes = format === 'CSV' ? new TextEncoder().encode(downloaded) : XLSX.write(workbook, { type: 'array', bookType: 'xlsx' });
+  const restored = importBytes(bytes)[0];
+  assert.deepEqual(restored.combinedPsychometrics, expected);
+  assert.deepEqual(restored.psychometrics, original.psychometrics);
 });

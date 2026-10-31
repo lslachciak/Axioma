@@ -117,6 +117,16 @@
     ]);
   }
 
+  // Separate descriptive profile; never modify actual target scoring.
+  function combinedProfile(experiment, targetProfile, scoring, data) {
+    if (experiment?.condition !== 'prefix') return null;
+    const ratings = { ...targetProfile.itemRatings };
+    for (const entry of experiment.entries || []) {
+      if (validRating(entry.rating)) ratings[entry.itemId] = entry.rating;
+    }
+    return scoring.calculatePsychometrics(ratings, data);
+  }
+
   Object.assign(exports, { CONDITIONS, FIXED_ORDER, validRating, newId, sourceSnapshot, profileSnapshot,
-    validate, createExperiment, buildPrefixMessages });
+    validate, createExperiment, buildPrefixMessages, combinedProfile });
 })(typeof exports !== 'undefined' ? exports : (window.ContextIntervention = {}));

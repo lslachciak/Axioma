@@ -16,6 +16,7 @@
     const text = JSON.stringify({
       schemaVersion: 1, experiment: results.experiment || null,
       itemProvenance: results.itemProvenance || {},
+      combinedPsychometrics: results.combinedPsychometrics || null,
       runId: results.metadata?.runId || null,
       itemOrder: results.metadata?.itemOrder || null,
       resolvedSystemPrompt: results.metadata?.resolvedSystemPrompt ?? null
@@ -40,6 +41,16 @@
     }
     if (record.experiment) results.experiment = record.experiment;
     results.itemProvenance = record.itemProvenance || {};
+    results.combinedPsychometrics = record.combinedPsychometrics || null;
+    if (!results.combinedPsychometrics && results.experiment?.condition === 'prefix') {
+      const interventions = typeof window !== 'undefined' && window.ContextIntervention
+        ? window.ContextIntervention : require('./context_intervention.js');
+      const scoring = typeof window !== 'undefined' && window.Psychometrics
+        ? window.Psychometrics : require('./psychometrics.js');
+      const data = typeof window !== 'undefined' && window.PVQData
+        ? window.PVQData : require('./pvq_data.js');
+      results.combinedPsychometrics = interventions.combinedProfile(results.experiment, results.psychometrics, scoring, data);
+    }
     results.metadata.runId = record.runId;
     results.metadata.itemOrder = record.itemOrder;
     results.metadata.resolvedSystemPrompt = record.resolvedSystemPrompt;

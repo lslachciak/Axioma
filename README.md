@@ -117,17 +117,19 @@ the result after export/import or changing the selected donor. Earlier results
 can use their donor run from the loaded session when its run ID is available.
 The preview uses the donor's saved means and does not include manual prefix edits.
 
-Completed intervention runs show an **Item-by-item response comparison** with
-actual target answers, original donor answers where available, and separately
-marked supplied or replaced history ratings. Missing answers stay blank. This
-visual comparison uses recorded ratings, without deriving comparison statistics.
+Completed prefix runs show **Donor profile** and **Final profile (supplied + target)**
+radars side by side with identical scales. The final profile combines the edited
+supplied prefix with actual target continuation, using the existing scoring
+formulas. It is descriptive of the combined sequence, not exclusively the target
+model's answers. Its scores are persisted separately as `combinedPsychometrics`
+in JSON and the chunked TSV/CSV/XLSX experiment records. Importing earlier prefix
+sessions reconstructs this separate profile from their recorded prefix and target
+ratings. Missing continuation ratings are never filled from the donor.
 
-**Only actual target responses are scored.** A 19-answer prefix makes 38 target
-requests and produces partial target-response results, without MRAT or centered
-scores. Each value still needs all three target ratings for its mean; empty radar
-charts are hidden when none can be calculated. Supplied answers do not count as
-target ratings or API exchanges. History replacement preserves the original
-ratings for scoring. Items & Responses labels
+**Target-only scores remain separate.** A 19-answer prefix makes 38 target
+requests; those target-only results have no MRAT or centered scores. Supplied
+answers do not count as target ratings or API exchanges. History replacement
+preserves the original ratings for scoring. Items & Responses labels
 supplied answers and displays replacements separately from actual raw responses.
 Questionnaire wording, mappings, and scoring formulas are unchanged.
 

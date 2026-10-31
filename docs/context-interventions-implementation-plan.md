@@ -231,3 +231,7 @@ Browser checks covered local-file and static-hosted operation, donor import,
 prefix and replacement runs, donor previews, item comparisons, and session reload
 using mocked provider responses.
 Live provider calls and the research pilot have not been performed.
+
+### Final profile visualization
+
+Completed supplied-prefix runs display donor and final radars side by side. The final profile combines supplied ratings (including edits) with actual target continuation using unchanged scoring formulas. Persist this separately as `combinedPsychometrics` in experiment records, retaining target-only scores. Reconstruct it when importing older prefix records. Missing continuation ratings remain missing. History replacement continues to score actual target answers.

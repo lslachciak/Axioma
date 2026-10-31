@@ -337,7 +337,7 @@ function deobfuscateApiKey(val) {
   function renderCharts() {
     drawDonorProfile('selectedDonorChart', state.selectedDonor?.psychometrics);
     drawDonorProfile('resultDonorChart', resultDonorProfile());
-    drawRatingComparison();
+    drawDonorProfile('finalProfileChart', state.results?.combinedPsychometrics, true);
     if (state.activeTab !== 'results' || !state.results || !state.results.psychometrics) return;
 
     const psych = state.results.psychometrics;
@@ -522,7 +522,7 @@ function deobfuscateApiKey(val) {
     return donorOptions().find(run => run.metadata?.runId === source.runId)?.psychometrics || null;
   }
 
-  function drawDonorProfile(canvasId, profile) {
+  function drawDonorProfile(canvasId, profile, final = false) {
     const canvas = document.getElementById(canvasId);
     if (!canvas || !profile || !window.Chart) return;
     const values = Object.values(window.PVQData.REFINED_VALUES);
@@ -530,8 +530,8 @@ function deobfuscateApiKey(val) {
       type: 'radar',
       data: {
         labels: values.map(value => value.code),
-        datasets: [{ label: 'Donor raw mean', data: values.map(value => profile.refinedValues?.[value.code]?.rawMean ?? null),
-          borderColor: '#fbbf24', backgroundColor: 'rgba(251,191,36,0.12)', pointRadius: 2, borderWidth: 1.5 }]
+        datasets: [{ label: final ? 'Final raw mean (supplied + target)' : 'Donor raw mean', data: values.map(value => profile.refinedValues?.[value.code]?.rawMean ?? null),
+          borderColor: final ? '#38bdf8' : '#fbbf24', backgroundColor: final ? 'rgba(56,189,248,0.12)' : 'rgba(251,191,36,0.12)', pointRadius: 2, borderWidth: 1.5 }]
       },
       options: {
         responsive: true, maintainAspectRatio: false, animation: false,
@@ -557,47 +557,19 @@ function deobfuscateApiKey(val) {
     );
   }
 
-  function drawRatingComparison() {
-    const canvas = document.getElementById('interventionRatingsChart');
+  function InterventionProfiles() {
     const result = state.results;
-    if (!canvas || !result || !window.Chart) return;
-    const items = window.PVQData.ITEMS;
-    const donor = resultDonorProfile();
-    const entries = result.experiment?.entries || [];
-    const datasets = [];
-    if (donor) datasets.push({ label: 'Original donor answers', borderColor: '#fbbf24',
-      backgroundColor: '#fbbf24', borderDash: [4, 3], pointRadius: 2,
-      data: items.map(item => donor.itemRatings?.[item.id] ?? null) });
-    datasets.push({ label: 'Actual target answers', borderColor: '#38bdf8', backgroundColor: '#38bdf8', pointRadius: 3,
-      data: items.map(item => result.psychometrics.itemRatings[item.id] ?? null) });
-    datasets.push({ label: result.experiment?.condition === 'prefix' ? 'Supplied prefix (not target answers)' : 'History replacements (not target answers)',
-      borderColor: '#c084fc', backgroundColor: '#0f172a', pointBorderColor: '#c084fc', pointStyle: 'rect', pointRadius: 5,
-      showLine: false, data: items.map(item => entries.find(entry => entry.itemId === item.id)?.rating ?? null) });
-    donorChartInstances.push(new Chart(canvas.getContext('2d'), {
-      type: 'line', data: { labels: items.map(item => item.id), datasets },
-      options: { responsive: true, maintainAspectRatio: false, animation: false, spanGaps: false,
-        elements: { line: { borderWidth: 1.5, tension: 0 } },
-        scales: {
-          x: { title: { display: true, text: 'Questionnaire item', color: '#cbd5e1' }, ticks: { color: '#94a3b8', maxRotation: 0 }, grid: { color: 'rgba(255,255,255,0.06)' } },
-          y: { min: 1, max: 6, ticks: { stepSize: 1, color: '#94a3b8' }, title: { display: true, text: 'Rating', color: '#cbd5e1' }, grid: { color: 'rgba(255,255,255,0.12)' } }
-        },
-        plugins: { legend: { position: 'bottom', labels: { color: '#cbd5e1' } }, tooltip: {
-          callbacks: { title: points => { const item = items[points[0]?.dataIndex]; return item ? `Item ${item.id} · ${item.valueKey}` : ''; } }
-        } }
-      }
-    }));
-  }
-
-  function InterventionComparison() {
-    if (!['prefix', 'replacement'].includes(state.results?.experiment?.condition)) return null;
-    return el('div', { className: 'rounded-xl border border-sky-500/30 bg-slate-950/50 p-4 space-y-3' },
-      el('h3', { className: 'text-sm font-semibold text-sky-300' }, 'Item-by-item response comparison'),
-      el('p', { className: 'text-xs text-slate-400' },
-        'Compare actual target answers with the original donor answers where available. Purple squares show supplied or replaced history ratings; they are not scored as target answers. Missing responses stay blank.'),
-      el('div', { className: 'overflow-x-auto' },
-        el('div', { style: { minWidth: '700px', height: '300px' } },
-          el('canvas', { id: 'interventionRatingsChart', role: 'img', 'aria-label': 'Item ratings: donor, actual target, and supplied history shown separately' }))),
-      el('button', { type: 'button', className: 'text-xs text-sky-300', onClick: () => { state.activeTab = 'items'; renderApp(); } }, 'Inspect individual responses')
+    if (result?.experiment?.condition !== 'prefix') return null;
+    const profile = result.combinedPsychometrics;
+    return el('div', { className: 'grid grid-cols-1 lg:grid-cols-2 gap-4' },
+      DonorProfilePreview(resultDonorProfile(), result.experiment.source, 'resultDonorChart'),
+      el('div', { className: 'rounded-xl border border-sky-500/30 bg-slate-950/50 p-3 space-y-2' },
+        el('h4', { className: 'text-sm font-semibold text-sky-300' }, 'Final profile (supplied + target)'),
+        el('p', { className: 'text-xs text-slate-300 break-words' }, result.metadata.actualModel || result.metadata.config.model),
+        el('p', { className: 'text-xs text-slate-400' }, (profile?.totalAnswered ?? 0) + ' / 57 ratings; ' + result.experiment.entries.length + ' supplied + ' + result.psychometrics.totalAnswered + ' target ratings'),
+        el('div', { style: { height: '220px' } }, el('canvas', { id: 'finalProfileChart', role: 'img', 'aria-label': 'Final profile: supplied prefix and actual target continuation, 19 value raw means' })),
+        el('p', { className: 'text-xs text-slate-400' }, 'Includes supplied-rating edits and actual target continuation. This combined profile is not exclusively model-generated answers. Missing responses remain missing.')
+      )
     );
   }
 
@@ -1294,20 +1266,19 @@ function deobfuscateApiKey(val) {
 
 
     return el('div', { className: 'space-y-8' },
-      state.results.experiment?.condition === 'prefix'
-        ? DonorProfilePreview(resultDonorProfile(), state.results.experiment.source, 'resultDonorChart') : null,
+      InterventionProfiles(),
       state.results.experiment ? el('p', { className: 'text-sm text-sky-300' },
         `Condition: ${state.results.experiment.condition}. ${state.results.experiment.label || ''} `,
         state.results.experiment.condition === 'prefix'
-          ? 'Partial target-response results: supplied ratings are excluded from scoring.'
+          ? 'The final radar combines supplied and target ratings. Target-only scores are reported separately below.'
           : state.results.experiment.condition === 'replacement' ? 'Scores use actual target responses; selected history answers were replaced.' : '') : null,
       !psych.complete ? el('div', {
         role: 'alert',
         className: 'rounded-xl border border-amber-500/40 bg-amber-950/60 px-4 py-3 text-sm text-amber-200'
       }, state.results.experiment?.condition === 'prefix'
-        ? `Target-only profile: ${psych.totalAnswered} actual ratings; ${state.results.experiment.entries.length} supplied answers are kept separate. Value means need all three target ratings per value, and MRAT needs all 57. Compare the observed answers below; supplied ratings do not fill missing target responses.`
+        ? `Target-only profile: ${psych.totalAnswered} actual ratings; ${state.results.experiment.entries.length} supplied answers are kept separate. Value means need all three target ratings per value, and MRAT needs all 57. The combined final radar above includes supplied ratings; the target-only scores below exclude them.`
         : `Incomplete profile: ${psych.totalAnswered} of 57 items have valid ratings. MRAT and centered scores were not calculated.`) : null,
-      InterventionComparison(),
+      state.results.experiment?.condition === 'prefix' ? el('h3', { className: 'text-sm font-semibold text-sky-300' }, 'Target-only scores') : null,
       el('div', { className: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4' },
         el('div', { className: 'bg-slate-900/60 p-4 rounded-xl border border-slate-800' },
           el('p', { className: 'text-xs text-slate-400' }, 'Total Items Answered'),

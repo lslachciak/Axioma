@@ -431,6 +431,7 @@
           reasoningTokens: state.totalReasoningTokens,
           totalTokens: state.totalPromptTokens + state.totalCompletionTokens
         },
+        combinedPsychometrics: interventions.combinedProfile(state.experiment, psychometricResults, this.psychometrics, this.pvqData),
         psychometrics: psychometricResults
       };
     }

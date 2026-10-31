@@ -207,3 +207,32 @@ test('stopping during a continuation retry prevents another provider request', a
     assert.equal(engine.isRunning, false);
   } finally { global.fetch = previousFetch; console.warn = previousWarn; }
 });
+
+
+test('combined prefix profile uses supplied ratings and target continuation without changing target scores', async () => {
+  const result = await new EvaluatorEngine(config(), pvq, psych, client([])).run();
+  const combined = result.combinedPsychometrics;
+  assert.equal(combined.totalAnswered, 57);
+  assert.equal(combined.mrat, 3.333);
+  assert.equal(combined.itemRatings[1], 6);
+  assert.equal(combined.itemRatings[20], 2);
+  for (const value of Object.values(combined.refinedValues)) {
+    assert.equal(value.rawMean, 3.333);
+    assert.equal(value.centeredMean, 0);
+  }
+  assert.equal(result.psychometrics.mrat, null);
+  assert.equal(result.psychometrics.itemRatings[1], null);
+});
+
+test('combined profile uses edited prefix, preserves missing continuation, and excludes history replacements', () => {
+  const target = psych.calculatePsychometrics(Object.fromEntries(pvq.ITEMS.map(item => [item.id, item.id === 57 ? null : 2])), pvq);
+  const experiment = { condition: 'prefix', entries: [{ itemId: 1, rating: 6, originalRating: 2 }], source: { profile: { itemRatings: { 57: 6 } } } };
+  const combined = interventions.combinedProfile(experiment, target, psych, pvq);
+  assert.equal(combined.itemRatings[1], 6);
+  assert.equal(combined.itemRatings[57], null);
+  assert.equal(combined.totalAnswered, 56);
+  assert.equal(combined.mrat, null);
+  assert.equal(combined.refinedValues.SDT.rawMean, 3.333);
+  assert.equal(target.itemRatings[1], 2);
+  assert.equal(interventions.combinedProfile({ ...experiment, condition: 'replacement' }, target, psych, pvq), null);
+});
