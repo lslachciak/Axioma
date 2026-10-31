@@ -34,6 +34,7 @@
     const exchange = findItemExchange(results, itemId);
     return {
       itemId: Number(itemId),
+      ...(results?.itemProvenance?.[itemId] ? { provenance: results.itemProvenance[itemId] } : {}),
       query: exchange?.query || results?.llmQueries?.[itemId] || '',
       reasoning: exchange?.reasoning || results?.reasoningTraces?.[itemId] || '',
       response: exchange?.response || results?.rawResponses?.[itemId] || '',
