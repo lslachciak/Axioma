@@ -84,7 +84,7 @@ static hosting, or any HTTP server.
 ## Context interventions
 
 In **Sequential Mode**, choose a **Context intervention** in the evaluation
-settings. On desktop, endpoint settings are on the left and execution settings on the right, with full-width results below. Smaller screens stack the panels. Value controls use a compact grid; the individual-item editor is collapsible and retains its open state during edits. Provider, model, prompt, and generation controls remain shared.
+settings. The **Setup** workspace keeps endpoint and execution settings side by side on desktop and stacked on mobile. Reasoning and system-prompt controls are under collapsed **Advanced settings**. **Edit injections** opens a dialog (full-screen on mobile); the setup panel shows a compact summary of selected values. Changes apply immediately and survive closing the editor or switching views. The separate **Results** workspace contains profile, responses, and output tabs, with numerical tables under **Show score details**. Persistent Setup/Results navigation and Start/Stop controls remain accessible while scrolling. Starting an evaluation or loading a session opens Results automatically. Provider, model, prompt, and generation controls remain shared.
 
 - **None (baseline):** ordinary evaluation. Enable history and disable
   randomization to create a baseline for matched experiment comparisons.
