@@ -93,7 +93,7 @@ settings. Provider, model, prompt, and generation controls remain shared.
   answers (default 19), review their item IDs and value mappings, and optionally
   edit ratings. Axioma inserts numeric answers to items 1–N as assistant history,
   then asks the target model items N+1–57. Donor reasoning is not replayed.
-- **Supplied answers (skip selected questions):** select ratings by value (such
+- **History injection (skip selected questions):** select ratings by value (such
   as POR or POD) or by individual item. Selected questions make no model request.
   Their question/answer pairs enter history at the normal position; later model
   requests see those supplied answers. Select up to 56 items, including item 57.
@@ -201,4 +201,6 @@ releases and tags are never overwritten by the workflow.
 
 [MIT](LICENSE)
 
-The supplied-answer mode supports **Replace by value**: selecting 6 for POR or POD supplies 6 for every related question. Individual edits appear as mixed settings. Selecting **Ask the model** clears that value?s supplied ratings.
+The supplied-answer mode supports **Inject by value**: selecting 6 for POR or POD supplies 6 for every related question. Individual edits appear as mixed settings. Selecting **Ask the model** clears that value?s supplied ratings.
+
+History injection highlights affected value axes with orange labels, asterisks, and diamond markers on both normal and enlarged charts. Tooltips and the visible injection key list exact item IDs and supplied ratings from the saved experiment. Higher-order axes are marked when their constituent values contain injected items; unchanged axes retain their normal styling. The stored condition remains `supplied` for export compatibility.

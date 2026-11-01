@@ -370,10 +370,21 @@ function deobfuscateApiKey(val) {
       const donor = comparison ? resultDonorProfile() : null;
       const group = ['higherOrderChartCanvas', 'hoEnlargedChartCanvas'].includes(canvas.id) ? 'higherOrderValues' : 'refinedValues';
       const donorValues = Object.keys(psych[group]).map(key => donor?.[group]?.[key]);
+      const injected = state.results.experiment?.condition === 'supplied' ? state.results.experiment.entries : [];
+      const affected = Object.keys(psych[group]).map(key => injected.filter(entry => {
+        const item = window.PVQData.ITEMS.find(item => item.id === entry.itemId);
+        return group === 'refinedValues' ? item?.valueKey === key : psych[group][key].refinedKeys.includes(item?.valueKey);
+      }));
+      const injectionPoints = {
+        pointStyle: affected.map(entries => entries.length ? 'rectRot' : 'circle'),
+        pointRadius: affected.map(entries => entries.length ? 6 : 3),
+        pointBorderWidth: affected.map(entries => entries.length ? 3 : 1),
+        pointBorderColor: affected.map(entries => entries.length ? '#fb923c' : undefined)
+      };
       const nextChart = new Chart(canvas.getContext('2d'), {
         type: 'radar',
         data: {
-          labels,
+          labels: labels.map((label, i) => affected[i].length ? label + ' *' : label),
           datasets: [
             {
               label: comparison ? 'Final - Raw Mean' : state.lang === 'pl' ? '?rednia surowa' : 'Raw Mean',
@@ -382,6 +393,7 @@ function deobfuscateApiKey(val) {
               backgroundColor: hexToRgba(rawColor, backgroundAlpha),
               borderColor: rawColor,
               pointBackgroundColor: rawColor,
+              ...injectionPoints,
               borderWidth
             },
             {
@@ -391,6 +403,7 @@ function deobfuscateApiKey(val) {
               backgroundColor: hexToRgba(centeredColor, backgroundAlpha),
               borderColor: centeredColor,
               pointBackgroundColor: centeredColor,
+              ...injectionPoints,
               borderWidth
             },
             ...(donor ? [
@@ -412,7 +425,7 @@ function deobfuscateApiKey(val) {
               suggestedMax: 6,
               grid: { color: 'rgba(255, 255, 255, 0.15)' },
               angleLines: { color: 'rgba(255, 255, 255, 0.15)' },
-              pointLabels: { color: '#f8fafc', font: { size: pointLabelSize, weight: 'bold' } },
+              pointLabels: { color: context => affected[context.index]?.length ? '#fb923c' : '#f8fafc', font: { size: pointLabelSize, weight: 'bold' } },
               ticks: showTicks ? { color: '#94a3b8', backdropColor: 'transparent', z: 10 } : { display: false }
             }
           },
@@ -420,7 +433,11 @@ function deobfuscateApiKey(val) {
             legend: showLegend ? { labels: { color: '#f8fafc', font: { size: 14 } }, position: 'bottom' } : { display: false },
             tooltip: {
               bodyFont: { size: 14 },
-              titleFont: { size: 14 }
+              titleFont: { size: 14 },
+              callbacks: { afterBody: points => {
+                const entries = affected[points[0]?.dataIndex] || [];
+                return entries.length ? ['Injected answers (not model responses):', ...entries.map(entry => 'Item ' + entry.itemId + ' = ' + entry.rating)] : [];
+              } }
             }
           }
         }
@@ -571,6 +588,18 @@ function deobfuscateApiKey(val) {
         el('div', { style: { height: '220px' } }, el('canvas', { id: canvasId, role: 'img', 'aria-label': 'Donor profile: 19 value raw means' })),
         el('p', { className: 'text-xs text-slate-400' }, 'Original donor profile, before any supplied-rating edits. Missing value means are left blank.')
       ] : el('p', { className: 'text-xs text-slate-400' }, 'This earlier result does not include a donor-profile snapshot. Load or select its donor run to preview it in settings.')
+    );
+  }
+
+  function InjectionLegend() {
+    const experiment = state.results?.experiment;
+    if (experiment?.condition !== 'supplied') return null;
+    return el('div', { className: 'text-xs text-orange-300 space-y-1 mb-3 shrink-0 max-h-28 overflow-y-auto', 'aria-label': 'Injected answers' },
+      el('p', {}, '* Orange labels and diamond markers identify values containing injected answers. Other answers in those values may be model-generated.'),
+      el('p', {}, 'Injected items: ' + experiment.entries.map(entry => {
+        const item = window.PVQData.ITEMS.find(item => item.id === entry.itemId);
+        return (item?.valueKey || '') + ' #' + entry.itemId + ' = ' + entry.rating;
+      }).join('; '))
     );
   }
 
@@ -1181,7 +1210,7 @@ function deobfuscateApiKey(val) {
       el('select', { 'aria-label': 'Context intervention', value: condition, className: fieldClass,
         onChange: e => { state.interventionCondition = e.target.value; state.interventionPreview = false; renderApp(); }
       }, el('option', { value: 'baseline' }, 'None (baseline)'),
-      el('option', { value: 'prefix' }, 'Supplied prefix'), el('option', { value: 'supplied' }, 'Supplied answers (skip selected questions)')),
+      el('option', { value: 'prefix' }, 'Supplied prefix'), el('option', { value: 'supplied' }, 'History injection (skip selected questions)')),
       el('label', { className: 'block text-xs text-slate-400' }, 'Experiment label',
         el('input', { value: state.experimentLabel, className: fieldClass,
           onInput: e => { state.experimentLabel = e.target.value; } })),
@@ -1207,7 +1236,7 @@ function deobfuscateApiKey(val) {
           el('p', { className: 'text-xs text-slate-400' }, `${itemList.length} supplied · ${57 - itemList.length} target questions · ${new Set(itemList.map(item => item.valueKey)).size} values covered. Supplied ratings are not scored.`)
         ] : el('p', { className: 'text-xs text-slate-400' }, 'Selected questions are not sent to the model. Their supplied answers enter the conversation at their normal position. The final profile combines supplied and target answers; target-only scores stay separate.'),
         condition === 'supplied' ? el('div', { className: 'space-y-2' },
-          el('h4', { className: 'text-sm font-semibold text-sky-300' }, 'Replace by value'),
+          el('h4', { className: 'text-sm font-semibold text-sky-300' }, 'Inject by value'),
           el('p', { className: 'text-xs text-slate-400' }, 'Supply a rating for all related questions, then adjust individual items below if needed. Leave at least one question for the model.'),
           el('div', { className: 'max-h-64 overflow-y-auto space-y-2 pr-1' },
             Object.values(window.PVQData.REFINED_VALUES).map(value => {
@@ -1229,7 +1258,7 @@ function deobfuscateApiKey(val) {
                 ...[1, 2, 3, 4, 5, 6].map(rating => el('option', { value: rating }, rating)))
               );
             })),
-          el('h4', { className: 'text-sm font-semibold text-sky-300' }, 'Individual item replacements')
+          el('h4', { className: 'text-sm font-semibold text-sky-300' }, 'Individual item injections')
         ) : null,
         el('div', { className: 'max-h-72 overflow-y-auto pr-1' }, rows),
         validationError ? el('p', { role: 'alert', className: 'text-xs text-amber-300' }, validationError) : null,
@@ -1358,6 +1387,7 @@ function deobfuscateApiKey(val) {
         )
       ),
       InterventionProfiles(),
+      InjectionLegend(),
       Object.values(psych.refinedValues).some(value => Number.isFinite(value.rawMean)) ? el('div', { className: 'grid grid-cols-1 lg:grid-cols-2 gap-6' },
         el('div', {
             className: 'bg-slate-950/50 p-4 rounded-xl border border-slate-800 cursor-pointer hover:border-sky-500/50 transition relative group',
@@ -1611,6 +1641,7 @@ function deobfuscateApiKey(val) {
           }, el('i', { className: 'fa-solid fa-xmark' }))
         ),
         ProfileVisibilityControls(),
+        InjectionLegend(),
         el('div', { className: 'flex-1 min-h-0 relative' },
           el('canvas', { id: 'hoEnlargedChartCanvas' })
         )
@@ -1637,6 +1668,7 @@ function deobfuscateApiKey(val) {
           }, el('i', { className: 'fa-solid fa-xmark' }))
         ),
         ProfileVisibilityControls(),
+        InjectionLegend(),
         el('div', { className: 'flex-1 min-h-0 relative' },
           el('canvas', { id: 'circleChartCanvas' })
         )
