@@ -105,6 +105,9 @@ function deobfuscateApiKey(val) {
     suppliedEdits: {},
     replacementRatings: {},
     itemEditorOpen: false,
+    workspaceTab: 'setup',
+    showInjectionEditor: false,
+    expandedSections: {},
     experimentLabel: '',
     interventionPreview: false,
     liveItemProvenance: {},
@@ -330,8 +333,16 @@ function deobfuscateApiKey(val) {
     donorChartInstances.forEach(chart => chart.destroy());
     donorChartInstances = [];
     const root = document.getElementById('root');
+    const editorScroll = document.getElementById('injectionEditorBody')?.scrollTop || 0;
+    const editorFocus = document.getElementById('injectionEditor')?.contains(document.activeElement) ? document.activeElement.getAttribute('aria-label') : null;
     root.innerHTML = '';
     root.appendChild(App());
+    const editor = document.getElementById('injectionEditor');
+    if (editor) {
+      editor.showModal();
+      document.getElementById('injectionEditorBody').scrollTop = editorScroll;
+      if (editorFocus) editor.querySelector('[aria-label="' + CSS.escape(editorFocus) + '"]')?.focus({ preventScroll: true });
+    }
     renderCharts();
   }
 
@@ -695,6 +706,8 @@ function deobfuscateApiKey(val) {
       renderApp();
       return;
     }
+    state.workspaceTab = 'results';
+    state.showInjectionEditor = false;
     state.isRunning = true;
     state.errorMessage = '';
     renderApp();
@@ -785,6 +798,74 @@ function deobfuscateApiKey(val) {
     }
   }
 
+  function Collapsible(key, title, ...children) {
+    return el('details', { ...(state.expandedSections[key] ? { open: true } : {}),
+      onToggle: event => { if (event.target.isConnected) state.expandedSections[key] = event.target.open; },
+      className: 'border-t border-slate-800 pt-3' },
+      el('summary', { className: 'cursor-pointer text-sm font-semibold text-sky-300' }, title),
+      el('div', { className: 'space-y-4 mt-3' }, ...children));
+  }
+
+  function WorkspaceControls() {
+    return el('nav', { className: 'workspace-controls', 'aria-label': 'Evaluation workspace' },
+      el('div', { className: 'max-w-7xl mx-auto flex flex-wrap items-center gap-3' },
+        ...['setup', 'results'].map(tab => el('button', {
+          type: 'button', 'aria-pressed': state.workspaceTab === tab,
+          className: 'px-4 py-2 rounded-lg text-sm font-semibold ' + (state.workspaceTab === tab ? 'bg-sky-600 text-white' : 'bg-slate-800 text-slate-300'),
+          onClick: () => { state.workspaceTab = tab; renderApp(); window.scrollTo(0, 0); }
+        }, tab === 'setup' ? 'Setup' : 'Results')),
+        el('span', { className: 'text-xs text-slate-400 flex-1 min-w-0', role: 'status' },
+          state.isRunning ? 'Running: ' + state.completedCount + ' / 57' : state.errorMessage ? 'Evaluation error' : state.results ? 'Evaluation complete' : 'Ready'),
+        el('button', { type: 'button',
+          className: 'px-4 py-2 rounded-lg text-sm font-semibold text-white ' + (state.isRunning ? 'bg-rose-600' : 'bg-sky-600'),
+          onClick: state.isRunning ? stopEvaluation : startEvaluation
+        }, state.isRunning ? 'Stop Evaluation' : 'Start Evaluation')));
+  }
+
+  function InjectionSetup() {
+    const groups = Object.values(window.PVQData.REFINED_VALUES).map(value => {
+      const ratings = window.PVQData.ITEMS.filter(item => item.valueKey === value.code)
+        .map(item => state.replacementRatings[item.id]);
+      if (!ratings.some(rating => rating !== undefined)) return null;
+      return value.code + ' = ' + (ratings.every(rating => rating === ratings[0]) ? ratings[0] : 'mixed');
+    }).filter(Boolean);
+    const summary = state.interventionCondition === 'prefix'
+      ? state.prefixLength + ' supplied answers; donor: ' + (state.selectedDonor?.metadata?.actualModel || state.selectedDonor?.metadata?.config?.model || 'not selected')
+      : state.interventionCondition === 'supplied'
+        ? (groups.join(', ') || 'No ratings selected') + '; ' + Object.keys(state.replacementRatings).length + ' items injected'
+        : 'No context intervention';
+    return el('div', { className: 'space-y-3 border-t border-slate-800 pt-3' },
+      el('label', { className: 'block text-xs text-slate-400' }, 'Context intervention',
+        el('select', { 'aria-label': 'Context intervention', value: state.interventionCondition, disabled: state.isRunning,
+          className: 'w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-2 text-sm text-slate-200',
+          onChange: event => { state.interventionCondition = event.target.value; renderApp(); }
+        }, el('option', { value: 'baseline' }, 'None (baseline)'), el('option', { value: 'prefix' }, 'Supplied prefix'),
+          el('option', { value: 'supplied' }, 'History injection (skip selected questions)'))),
+      el('p', { className: 'text-xs text-slate-300', 'aria-label': 'Injection summary' }, summary),
+      state.interventionCondition === 'baseline' ? el('label', { className: 'block text-xs text-slate-400' }, 'Experiment label',
+        el('input', { value: state.experimentLabel, disabled: state.isRunning,
+          className: 'w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-2 text-sm text-slate-200',
+          onInput: event => { state.experimentLabel = event.target.value; } })) : null,
+      state.interventionCondition !== 'baseline' ? el('button', { type: 'button', disabled: state.isRunning,
+        className: 'text-sm font-semibold text-sky-300',
+        onClick: () => { state.showInjectionEditor = true; renderApp(); }
+      }, 'Edit injections') : null);
+  }
+
+  function InjectionEditor() {
+    if (!state.showInjectionEditor) return null;
+    const close = () => { state.showInjectionEditor = false; renderApp();
+      [...document.querySelectorAll('button')].find(button => button.textContent === 'Edit injections')?.focus(); };
+    return el('dialog', { id: 'injectionEditor', className: 'injection-editor', 'aria-labelledby': 'injectionEditorTitle',
+      onCancel: event => { event.preventDefault(); close(); } },
+      el('div', { className: 'flex items-center justify-between gap-3 border-b border-slate-700 p-4' },
+        el('h2', { id: 'injectionEditorTitle', className: 'text-lg font-semibold text-sky-300' }, 'Edit injections'),
+        el('button', { type: 'button', className: 'px-3 py-2 bg-slate-800 rounded-lg', onClick: close }, 'Done')),
+      el('div', { id: 'injectionEditorBody', className: 'p-4 overflow-y-auto min-h-0' },
+        el('p', { className: 'text-xs text-slate-400 mb-3' }, 'Changes are applied immediately. Close this editor to return to setup.'),
+        InterventionPanel()));
+  }
+
   function App() {
     return el('div', { className: 'min-h-screen flex flex-col bg-slate-900 text-slate-100' },
       Header(),
@@ -808,11 +889,15 @@ function deobfuscateApiKey(val) {
           }, el('i', { className: 'fa-solid fa-xmark' }))
         )
       ) : null,
-      el('main', { className: 'max-w-7xl mx-auto px-4 py-6 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 w-full' },
-        el('div', { className: 'lg:col-span-4 space-y-6' }, ConfigPanel()),
-        el('div', { className: 'lg:col-span-8 space-y-6 min-w-0' }, ExecutionPanel()),
-        el('div', { className: 'lg:col-span-12 min-w-0' }, ExecutionDashboard())
+      el('main', { id: 'workspacePanel', className: 'max-w-7xl mx-auto px-4 py-6 flex-1 w-full', style: { paddingBottom: '110px' } },
+        state.workspaceTab === 'setup'
+          ? el('div', { className: 'grid grid-cols-1 lg:grid-cols-12 gap-6' },
+              el('div', { className: 'lg:col-span-4 min-w-0' }, ConfigPanel()),
+              el('div', { className: 'lg:col-span-8 min-w-0' }, ExecutionPanel()))
+          : ExecutionDashboard()
       ),
+      WorkspaceControls(),
+      InjectionEditor(),
       responseModal(),
       circleModal(),
       hoModal()
@@ -859,6 +944,7 @@ function deobfuscateApiKey(val) {
                 state.selectedDonor = null;
                 state.donorRuns = [];
                 state.suppliedEdits = {};
+                state.workspaceTab = 'setup';
                 state.progressStatus = 'New session started.';
                 renderApp();
               }
@@ -880,6 +966,7 @@ function deobfuscateApiKey(val) {
                   state.suppliedEdits = {};
                   state.suppliedCount = ['prefix', 'supplied'].includes(state.results.experiment?.condition) ? state.results.experiment.entries.length : 0;
                   state.completedCount = state.suppliedCount + (state.results.metadata?.config?.mode === 'batch' ? 57 : (state.results.apiExchanges || []).length);
+                  state.workspaceTab = 'results';
                   state.progressStatus = 'Loaded session from file';
                 }
                 e.target.value = '';
@@ -1017,7 +1104,7 @@ function deobfuscateApiKey(val) {
           })
         )
       ),
-      el('div', { className: 'border-t border-slate-800 pt-3 space-y-3' },
+      Collapsible('reasoning', 'Advanced settings: reasoning',
         el('div', { className: 'flex items-center justify-between' },
           el('span', { className: 'text-xs font-medium text-slate-300 flex items-center gap-1.5' },
             el('i', { className: 'fa-solid fa-brain text-purple-400' }), ' Reasoning / Thinking'
@@ -1113,7 +1200,7 @@ function deobfuscateApiKey(val) {
             className: 'rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-sky-500 h-4 w-4'
           })
         ),
-        state.mode === 'sequential' ? InterventionPanel() : null
+        state.mode === 'sequential' ? InjectionSetup() : null
       ),
       el('div', { className: 'border-t border-slate-800 pt-3' },
         el('label', { className: 'block text-xs font-medium text-slate-400 mb-1' }, 'Iterations (Repeats)'),
@@ -1125,7 +1212,7 @@ function deobfuscateApiKey(val) {
           className: 'w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-sky-500 code-font'
         })
       ),
-      el('div', { className: 'border-t border-slate-800 pt-3' },
+      Collapsible('prompt', 'Advanced settings: system prompt',
         el('div', { className: 'flex items-center justify-between mb-1' },
           el('label', { className: 'block text-xs font-medium text-slate-400' }, 'System Prompt'),
           el('button', {
@@ -1148,15 +1235,6 @@ function deobfuscateApiKey(val) {
           },
           className: 'w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-sky-500'
         })
-      ),
-      el('div', { className: 'pt-2' },
-        !state.isRunning ? el('button', {
-          onClick: startEvaluation,
-          className: 'w-full bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-semibold py-2.5 px-4 rounded-xl shadow-lg shadow-sky-500/20 flex items-center justify-center gap-2 transition'
-        }, el('i', { className: 'fa-solid fa-play' }), ' Start Evaluation') : el('button', {
-          onClick: stopEvaluation,
-          className: 'w-full bg-rose-600 hover:bg-rose-500 text-white font-semibold py-2.5 px-4 rounded-xl shadow-lg shadow-rose-600/20 flex items-center justify-center gap-2 transition'
-        }, el('i', { className: 'fa-solid fa-stop' }), ' Stop Evaluation')
       )
     );
   }
@@ -1335,7 +1413,7 @@ function deobfuscateApiKey(val) {
       ),
       // Tabs Navigation & View Panel
       el('div', { className: 'glass-panel p-5 rounded-2xl border border-slate-800 space-y-6' },
-        el('div', { className: 'flex border-b border-slate-800 gap-4' },
+        el('div', { className: 'flex flex-wrap border-b border-slate-800 gap-4' },
           el('button', {
             onClick: () => { state.activeTab = 'results'; renderApp(); },
             className: `pb-3 text-sm font-semibold border-b-2 transition ${state.activeTab === 'results' ? 'border-sky-500 text-sky-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`
@@ -1398,7 +1476,7 @@ function deobfuscateApiKey(val) {
         )
       ),
       InterventionProfiles(),
-      InjectionLegend(),
+      state.results?.experiment?.condition === 'supplied' ? Collapsible('injectionDetails', 'Injected answers: chart markers and item details', InjectionLegend()) : null,
       Object.values(psych.refinedValues).some(value => Number.isFinite(value.rawMean)) ? el('div', { className: 'grid grid-cols-1 lg:grid-cols-2 gap-6' },
         el('div', {
             className: 'bg-slate-950/50 p-4 rounded-xl border border-slate-800 cursor-pointer hover:border-sky-500/50 transition relative group',
@@ -1419,6 +1497,7 @@ function deobfuscateApiKey(val) {
           el('div', { className: 'h-64' }, el('canvas', { id: 'refinedChartCanvas' }))
         )
       ) : null,
+      Collapsible('scores', 'Show score details',
       // 4 Higher-Order Table
       el('div', { className: 'space-y-3' },
         el('h3', { className: 'text-sm font-semibold text-sky-400' }, '4 Higher-Order Value Group Aggregations'),
@@ -1478,6 +1557,7 @@ function deobfuscateApiKey(val) {
             )
           )
         )
+      )
       )
     );
   }
