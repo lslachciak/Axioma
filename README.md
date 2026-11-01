@@ -84,7 +84,7 @@ static hosting, or any HTTP server.
 ## Context interventions
 
 In **Sequential Mode**, choose a **Context intervention** in the evaluation
-settings. Provider, model, prompt, and generation controls remain shared.
+settings. On desktop, endpoint settings are on the left and execution settings on the right, with full-width results below. Smaller screens stack the panels. Value controls use a compact grid; the individual-item editor is collapsible and retains its open state during edits. Provider, model, prompt, and generation controls remain shared.
 
 - **None (baseline):** ordinary evaluation. Enable history and disable
   randomization to create a baseline for matched experiment comparisons.

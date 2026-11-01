@@ -104,6 +104,7 @@ function deobfuscateApiKey(val) {
     prefixLength: 19,
     suppliedEdits: {},
     replacementRatings: {},
+    itemEditorOpen: false,
     experimentLabel: '',
     interventionPreview: false,
     liveItemProvenance: {},
@@ -809,7 +810,8 @@ function deobfuscateApiKey(val) {
       ) : null,
       el('main', { className: 'max-w-7xl mx-auto px-4 py-6 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 w-full' },
         el('div', { className: 'lg:col-span-4 space-y-6' }, ConfigPanel()),
-        el('div', { className: 'lg:col-span-8 space-y-6' }, ExecutionDashboard())
+        el('div', { className: 'lg:col-span-8 space-y-6 min-w-0' }, ExecutionPanel()),
+        el('div', { className: 'lg:col-span-12 min-w-0' }, ExecutionDashboard())
       ),
       responseModal(),
       circleModal(),
@@ -1072,8 +1074,13 @@ function deobfuscateApiKey(val) {
           )
         ) : null
       ),
-      el('div', { className: 'border-t border-slate-800 pt-3 space-y-3' },
-        el('h3', { className: 'text-xs font-semibold text-slate-400 uppercase tracking-wider' }, 'Execution Logic'),
+    );
+  }
+
+  function ExecutionPanel() {
+    return el('div', { className: 'glass-panel p-5 rounded-2xl border border-slate-800 space-y-4', 'aria-label': 'Execution settings' },
+      el('h2', { className: 'text-base font-semibold text-sky-400' }, 'Execution Logic'),
+      el('div', { className: 'space-y-3' },
         el('div', { className: 'grid grid-cols-2 gap-2' },
           el('button', {
             type: 'button',
@@ -1238,7 +1245,7 @@ function deobfuscateApiKey(val) {
         condition === 'supplied' ? el('div', { className: 'space-y-2' },
           el('h4', { className: 'text-sm font-semibold text-sky-300' }, 'Inject by value'),
           el('p', { className: 'text-xs text-slate-400' }, 'Supply a rating for all related questions, then adjust individual items below if needed. Leave at least one question for the model.'),
-          el('div', { className: 'max-h-64 overflow-y-auto space-y-2 pr-1' },
+          el('div', { className: 'max-h-64 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-3 pr-1' },
             Object.values(window.PVQData.REFINED_VALUES).map(value => {
               const items = itemList.filter(item => item.valueKey === value.code);
               const ratings = items.map(item => state.replacementRatings[item.id] ?? '');
@@ -1257,10 +1264,14 @@ function deobfuscateApiKey(val) {
                 el('option', { value: 'mixed', disabled: true }, 'Mixed individual settings'),
                 ...[1, 2, 3, 4, 5, 6].map(rating => el('option', { value: rating }, rating)))
               );
-            })),
-          el('h4', { className: 'text-sm font-semibold text-sky-300' }, 'Individual item injections')
+            }))
         ) : null,
-        el('div', { className: 'max-h-72 overflow-y-auto pr-1' }, rows),
+        el('details', { ...(state.itemEditorOpen ? { open: true } : {}),
+          onToggle: event => { state.itemEditorOpen = event.target.open; },
+          className: 'border-t border-slate-700 pt-2' },
+          el('summary', { className: 'cursor-pointer text-sm font-semibold text-sky-300' },
+            condition === 'prefix' ? 'Review / edit supplied answers' : 'Individual item injections (' + Object.keys(state.replacementRatings).length + ' selected)'),
+          el('div', { className: 'max-h-72 overflow-y-auto pr-1 mt-2' }, rows)),
         validationError ? el('p', { role: 'alert', className: 'text-xs text-amber-300' }, validationError) : null,
         el('button', { type: 'button', disabled: !!validationError, className: 'text-xs text-sky-300 disabled:opacity-40',
           onClick: () => { state.interventionPreview = !state.interventionPreview; renderApp(); }
