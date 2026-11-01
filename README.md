@@ -84,7 +84,7 @@ static hosting, or any HTTP server.
 ## Context interventions
 
 In **Sequential Mode**, choose a **Context intervention** in the evaluation
-settings. Provider, model, prompt, and generation controls remain shared.
+settings. On desktop, endpoint settings are on the left and execution settings on the right, with full-width results below. Smaller screens stack the panels. Value controls use a compact grid; the individual-item editor is collapsible and retains its open state during edits. Provider, model, prompt, and generation controls remain shared.
 
 - **None (baseline):** ordinary evaluation. Enable history and disable
   randomization to create a baseline for matched experiment comparisons.
@@ -93,10 +93,16 @@ settings. Provider, model, prompt, and generation controls remain shared.
   answers (default 19), review their item IDs and value mappings, and optionally
   edit ratings. Axioma inserts numeric answers to items 1–N as assistant history,
   then asks the target model items N+1–57. Donor reasoning is not replayed.
-- **History replacement:** choose replacement ratings before starting. Axioma
-  asks all 57 questions and saves the actual answers, but replaces selected
-  answers in the history used for subsequent questions. Item 57 cannot be a
-  replacement because there is no subsequent question.
+- **History injection (skip selected questions):** select ratings by value (such
+  as POR or POD) or by individual item. Selected questions make no model request.
+  Their question/answer pairs enter history at the normal position; later model
+  requests see those supplied answers. Select up to 56 items, including item 57.
+  Leave at least one item for the model. The final profile combines supplied and
+  target answers, with target-only scores persisted separately.
+
+Older **History replacement** results remain readable with their original
+ask-then-replace behavior. New runs use the distinct `supplied` condition, so
+skipped questions cannot be confused with actual model responses.
 
 Interventions lock history on and question order to 1–57. Ordinary-run history
 and randomization preferences are restored when the intervention is disabled.
@@ -194,3 +200,7 @@ releases and tags are never overwritten by the workflow.
 ## License
 
 [MIT](LICENSE)
+
+The supplied-answer mode supports **Inject by value**: selecting 6 for POR or POD supplies 6 for every related question. Individual edits appear as mixed settings. Selecting **Ask the model** clears that value?s supplied ratings.
+
+History injection highlights affected value axes with orange labels, asterisks, and diamond markers on both normal and enlarged charts. Tooltips and the visible injection key list exact item IDs and supplied ratings from the saved experiment. Higher-order axes are marked when their constituent values contain injected items; unchanged axes retain their normal styling. The stored condition remains `supplied` for export compatibility.

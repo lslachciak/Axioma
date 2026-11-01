@@ -2,7 +2,7 @@
 (function (exports) {
   'use strict';
 
-  const CONDITIONS = ['baseline', 'prefix', 'replacement'];
+  const CONDITIONS = ['baseline', 'prefix', 'replacement', 'supplied'];
   const FIXED_ORDER = Array.from({ length: 57 }, (_, i) => i + 1);
   const copy = value => JSON.parse(JSON.stringify(value));
   const validRating = value => Number.isInteger(value) && value >= 1 && value <= 6;
@@ -66,11 +66,14 @@
     if (config.mode !== 'sequential' || config.keepContext !== true || config.randomizeOrder) {
       throw new Error('Context interventions require sequential mode, history enabled, and fixed order.');
     }
-    if (!entries.length || entries.length > 56) throw new Error('Supply between 1 and 56 intervention answers.');
+    if (!entries.length || entries.length > 56) throw new Error(condition === 'supplied'
+      ? 'Select 1–56 of the 57 items to inject. Leave at least one question for the model.'
+      : 'Supply between 1 and 56 intervention answers.');
+    const maxItemId = condition === 'supplied' ? 57 : 56;
     const seen = new Set();
     for (const entry of entries) {
-      if (!Number.isInteger(entry.itemId) || entry.itemId < 1 || entry.itemId > 56 || seen.has(entry.itemId)) {
-        throw new Error('Intervention item IDs must be unique integers from 1 to 56, leaving a later question.');
+      if (!Number.isInteger(entry.itemId) || entry.itemId < 1 || entry.itemId > maxItemId || seen.has(entry.itemId)) {
+        throw new Error(`Intervention item IDs must be unique integers from 1 to ${maxItemId}.`);
       }
       seen.add(entry.itemId);
       if (!validRating(entry.rating)) throw new Error(`Item ${entry.itemId}: supply an integer rating from 1 to 6.`);
@@ -119,7 +122,7 @@
 
   // Separate descriptive profile; never modify actual target scoring.
   function combinedProfile(experiment, targetProfile, scoring, data) {
-    if (experiment?.condition !== 'prefix') return null;
+    if (!['prefix', 'supplied'].includes(experiment?.condition)) return null;
     const ratings = { ...targetProfile.itemRatings };
     for (const entry of experiment.entries || []) {
       if (validRating(entry.rating)) ratings[entry.itemId] = entry.rating;

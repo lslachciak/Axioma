@@ -235,6 +235,24 @@
             if (prefix.some(entry => entry.itemId === currentItem.id)) continue;
             const itemPromptText = buildSequentialPrompt(currentItem, lang);
 
+            const supplied = experiment?.condition === 'supplied'
+              ? experiment.entries.find(entry => entry.itemId === currentItem.id) : null;
+            if (supplied) {
+              conversationHistory.push({ role: 'user', content: itemPromptText }, { role: 'assistant', content: String(supplied.rating) });
+              state.itemProvenance[currentItem.id] = {
+                origin: 'manual', actualTargetRating: null, actualResponse: '',
+                historyRating: supplied.rating, historyResponse: String(supplied.rating), historySource: 'manual',
+                position: idx + 1, question: itemPromptText
+              };
+              if (onProgress) onProgress({
+                type: 'item_supplied', completedCount: idx + 1, totalItems,
+                statusMessage: 'Item ' + currentItem.id + ' supplied as ' + supplied.rating + ' (no model request).',
+                itemProvenance: { ...state.itemProvenance },
+                suppliedCount: Object.values(state.itemProvenance).filter(entry => entry.origin !== 'target').length
+              });
+              continue;
+            }
+
             const displayedPromptText = formatConversationDisplay(systemPrompt, conversationHistory, itemPromptText);
 
             if (onProgress) {

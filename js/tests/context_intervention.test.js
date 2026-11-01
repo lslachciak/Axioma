@@ -236,3 +236,42 @@ test('combined profile uses edited prefix, preserves missing continuation, and e
   assert.equal(target.itemRatings[1], 2);
   assert.equal(interventions.combinedProfile({ ...experiment, condition: 'replacement' }, target, psych, pvq), null);
 });
+
+
+test('selected supplied items skip requests and enter history only at their positions', async () => {
+  const cfg = config('supplied', 1);
+  cfg.intervention.entries = [6, 12, 57].map(itemId => ({ itemId, rating: 6 }));
+  const requests = [], events = [];
+  const result = await new EvaluatorEngine(cfg, pvq, psych, client(requests)).run(e => events.push(e));
+  assert.equal(requests.length, 54);
+  assert.equal(result.apiExchanges.length, 54);
+  assert.equal(result.tokenUsage.completionTokens, 54);
+  assert.match(requests[5].at(-1).content, /^Item 7:/);
+  assert.match(requests[5][10].content, /^Item 6:/);
+  assert.equal(requests[5][11].content, '6');
+  assert.equal(requests[4].length, 9);
+  for (const id of [6, 12, 57]) {
+    assert.equal(result.rawResponses[id], undefined);
+    assert.equal(result.psychometrics.itemRatings[id], null);
+    assert.equal(result.itemProvenance[id].origin, 'manual');
+    assert.equal(result.itemProvenance[id].actualTargetRating, null);
+    assert.equal(result.combinedPsychometrics.itemRatings[id], 6);
+    assert.ok(!result.apiExchanges.some(exchange => exchange.itemIds.includes(id)));
+  }
+  assert.equal(result.psychometrics.totalAnswered, 54);
+  assert.equal(result.psychometrics.mrat, null);
+  assert.equal(result.combinedPsychometrics.totalAnswered, 57);
+  assert.equal(result.combinedPsychometrics.mrat, 2.211);
+  assert.equal(events.at(-1).completedCount, 57);
+  assert.equal(events.at(-1).suppliedCount, 3);
+});
+
+test('supplying the first 56 items leaves one real request with the complete supplied history', async () => {
+  const cfg = config('supplied', 56), requests = [];
+  const result = await new EvaluatorEngine(cfg, pvq, psych, client(requests)).run();
+  assert.equal(requests.length, 1);
+  assert.equal(requests[0].length, 113);
+  assert.match(requests[0].at(-1).content, /^Item 57:/);
+  assert.equal(result.psychometrics.totalAnswered, 1);
+  assert.equal(result.combinedPsychometrics.mrat, 5.93);
+});

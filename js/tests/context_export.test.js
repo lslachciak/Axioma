@@ -126,3 +126,16 @@ for (const format of ['CSV', 'XLSX']) test(format + ' restores combined profiles
   assert.deepEqual(restored.combinedPsychometrics, expected);
   assert.deepEqual(restored.psychometrics, original.psychometrics);
 });
+
+for (const format of ['CSV', 'XLSX']) test(format + ' preserves skipped supplied items separately from target answers', async () => {
+  const original = await result('supplied');
+  exporter['exportSessionTo' + format]([original]);
+  const bytes = format === 'CSV' ? new TextEncoder().encode(downloaded) : XLSX.write(workbook, { type: 'array', bookType: 'xlsx' });
+  const restored = importBytes(bytes)[0];
+  assert.equal(restored.experiment.condition, 'supplied');
+  assert.equal(restored.psychometrics.itemRatings[1], null);
+  assert.equal(restored.itemProvenance[1].actualTargetRating, null);
+  assert.equal(restored.itemProvenance[1].historyRating, 6);
+  assert.equal(restored.apiExchanges.length, 56);
+  assert.deepEqual(restored.combinedPsychometrics, original.combinedPsychometrics);
+});
