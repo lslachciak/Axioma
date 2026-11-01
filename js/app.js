@@ -1199,6 +1199,31 @@ function deobfuscateApiKey(val) {
             `Donor order: ${donor.metadata?.config?.randomizeOrder === true ? 'randomized' : Array.isArray(donor.metadata?.itemOrder) ? donor.metadata.itemOrder.join(', ') : 'unknown'}. Ratings are matched by item ID; the original conversation is not replayed.`) : null,
           el('p', { className: 'text-xs text-slate-400' }, `${itemList.length} supplied · ${57 - itemList.length} target questions · ${new Set(itemList.map(item => item.valueKey)).size} values covered. Supplied ratings are not scored.`)
         ] : el('p', { className: 'text-xs text-slate-400' }, 'Choose replacements before starting. Actual answers are saved and scored; replacement ratings affect only later questions.'),
+        condition === 'replacement' ? el('div', { className: 'space-y-2' },
+          el('h4', { className: 'text-sm font-semibold text-sky-300' }, 'Replace by value'),
+          el('p', { className: 'text-xs text-slate-400' }, 'Set a rating for all related history answers, then adjust individual items below if needed. Item 57 is excluded because no later question uses its history.'),
+          el('div', { className: 'max-h-64 overflow-y-auto space-y-2 pr-1' },
+            Object.values(window.PVQData.REFINED_VALUES).map(value => {
+              const items = itemList.filter(item => item.valueKey === value.code);
+              const ratings = items.map(item => state.replacementRatings[item.id] ?? '');
+              const selected = ratings.every(rating => rating === ratings[0]) ? ratings[0] : 'mixed';
+              return el('label', { className: 'block text-xs text-slate-300 space-y-1' },
+                value.code + ' ? ' + value[state.lang === 'pl' ? 'namePl' : 'nameEn'] + ' (items ' + items.map(item => item.id).join(', ') + ')',
+                el('select', { 'aria-label': 'History rating for value ' + value.code, value: selected, className: fieldClass,
+                  onChange: event => {
+                    for (const item of items) {
+                      if (event.target.value === '') delete state.replacementRatings[item.id];
+                      else state.replacementRatings[item.id] = Number(event.target.value);
+                    }
+                    renderApp();
+                  }
+                }, el('option', { value: '' }, 'Keep actual answers'),
+                el('option', { value: 'mixed', disabled: true }, 'Mixed individual settings'),
+                ...[1, 2, 3, 4, 5, 6].map(rating => el('option', { value: rating }, rating)))
+              );
+            })),
+          el('h4', { className: 'text-sm font-semibold text-sky-300' }, 'Individual item replacements')
+        ) : null,
         el('div', { className: 'max-h-72 overflow-y-auto pr-1' }, rows),
         validationError ? el('p', { role: 'alert', className: 'text-xs text-amber-300' }, validationError) : null,
         el('button', { type: 'button', disabled: !!validationError, className: 'text-xs text-sky-300 disabled:opacity-40',

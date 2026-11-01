@@ -194,3 +194,5 @@ releases and tags are never overwritten by the workflow.
 ## License
 
 [MIT](LICENSE)
+
+History replacement also supports **Replace by value**: selecting 6 for POR or POD sets every related eligible item to 6. Value controls reflect individual edits as mixed settings; selecting Keep actual answers clears that value?s replacements. Item 57 is excluded because it has no subsequent question. These controls expand into the existing per-item experiment records, preserving actual target responses and scoring.
