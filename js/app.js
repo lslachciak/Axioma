@@ -621,7 +621,7 @@ function deobfuscateApiKey(val) {
         return { itemId: item.id, originalRating,
           rating: edited ? state.suppliedEdits[item.id] : originalRating };
       })
-      : condition === 'replacement' ? Object.entries(state.replacementRatings)
+      : condition === 'supplied' ? Object.entries(state.replacementRatings)
         .map(([id, rating]) => ({ itemId: Number(id), rating })) : [];
     if (condition === 'prefix' && (!Number.isInteger(Number(state.prefixLength))
       || Number(state.prefixLength) < 1 || Number(state.prefixLength) > 56)) {
@@ -711,7 +711,7 @@ function deobfuscateApiKey(val) {
           if (event.parsedFragments) state.liveParsedFragments = event.parsedFragments;
           if (event.reasoningTraces) state.liveReasoningTraces = event.reasoningTraces;
 
-          if (['item_complete', 'batch_complete', 'prefix_loaded'].includes(event.type)) {
+          if (['item_complete', 'batch_complete', 'prefix_loaded', 'item_supplied'].includes(event.type)) {
             state.liveStreamLogs.push(`[${new Date().toLocaleTimeString()}] Iteration ${i + 1}/${iterations}: ${event.statusMessage}`);
           }
           renderApp();
@@ -847,7 +847,7 @@ function deobfuscateApiKey(val) {
                   state.tokenUsage = state.results.tokenUsage;
                   state.selectedDonor = null;
                   state.suppliedEdits = {};
-                  state.suppliedCount = state.results.experiment?.condition === 'prefix' ? state.results.experiment.entries.length : 0;
+                  state.suppliedCount = ['prefix', 'supplied'].includes(state.results.experiment?.condition) ? state.results.experiment.entries.length : 0;
                   state.completedCount = state.suppliedCount + (state.results.metadata?.config?.mode === 'batch' ? 57 : (state.results.apiExchanges || []).length);
                   state.progressStatus = 'Loaded session from file';
                 }
@@ -1138,7 +1138,7 @@ function deobfuscateApiKey(val) {
     } catch (err) { validationError = err.message; }
     const itemList = condition === 'prefix'
       ? window.PVQData.ITEMS.slice(0, Math.max(0, Math.min(56, Number(state.prefixLength) || 0)))
-      : window.PVQData.ITEMS.slice(0, 56);
+      : window.PVQData.ITEMS;
     const ratingSelect = (item, value, onChange, blankLabel) => el('select', {
       'aria-label': `History rating for item ${item.id}`, value: value ?? '',
       className: fieldClass, onChange: e => { onChange(e.target.value === '' ? null : Number(e.target.value)); renderApp(); }
@@ -1155,18 +1155,25 @@ function deobfuscateApiKey(val) {
           if (condition === 'prefix') state.suppliedEdits[item.id] = value;
           else if (value === null) delete state.replacementRatings[item.id];
           else state.replacementRatings[item.id] = value;
-        }, condition === 'prefix' ? 'Missing — choose a rating' : 'Keep actual answer')
+        }, condition === 'prefix' ? 'Missing — choose a rating' : 'Ask the model')
       );
     });
     const preview = definition && state.interventionPreview ? (() => {
       const system = window.ExecutionEngine.buildSystemPrompt(state.systemPrompt.text, state.lang);
       const experiment = helper.createExperiment(evaluationConfig(), system, helper.FIXED_ORDER);
       const messages = helper.buildPrefixMessages(experiment, window.PVQData.ITEMS, state.lang, window.ExecutionEngine.buildSequentialPrompt);
-      const nextId = condition === 'prefix' ? definition.entries.length + 1 : 1;
+      const nextId = condition === 'prefix' ? definition.entries.length + 1
+        : condition === 'supplied' ? helper.FIXED_ORDER.find(id => !definition.entries.some(entry => entry.itemId === id)) : 1;
+      if (condition === 'supplied') {
+        for (const entry of definition.entries.filter(entry => entry.itemId < nextId)) {
+          messages.push({ role: 'user', content: window.ExecutionEngine.buildSequentialPrompt(window.PVQData.ITEMS[entry.itemId - 1], state.lang) },
+            { role: 'assistant', content: String(entry.rating) });
+        }
+      }
       return window.ExecutionEngine.formatConversationDisplay(system, messages,
         window.ExecutionEngine.buildSequentialPrompt(window.PVQData.ITEMS[nextId - 1], state.lang))
         + '\n\nRemaining order: ' + helper.FIXED_ORDER.slice(nextId - 1).join(', ')
-        + (condition === 'replacement' ? '\n\nAfter each listed item, replace only its history answer:\n'
+        + (condition === 'supplied' ? '\n\nSkip these questions and insert the supplied answer when their turn is reached:\n'
           + definition.entries.map(entry => `Item ${entry.itemId}: ${entry.rating}`).join('\n') : '');
     })() : '';
     return el('fieldset', { disabled: state.isRunning, className: 'space-y-3 border-t border-slate-800 pt-3' },
@@ -1174,7 +1181,7 @@ function deobfuscateApiKey(val) {
       el('select', { 'aria-label': 'Context intervention', value: condition, className: fieldClass,
         onChange: e => { state.interventionCondition = e.target.value; state.interventionPreview = false; renderApp(); }
       }, el('option', { value: 'baseline' }, 'None (baseline)'),
-      el('option', { value: 'prefix' }, 'Supplied prefix'), el('option', { value: 'replacement' }, 'History replacement')),
+      el('option', { value: 'prefix' }, 'Supplied prefix'), el('option', { value: 'supplied' }, 'Supplied answers (skip selected questions)')),
       el('label', { className: 'block text-xs text-slate-400' }, 'Experiment label',
         el('input', { value: state.experimentLabel, className: fieldClass,
           onInput: e => { state.experimentLabel = e.target.value; } })),
@@ -1198,10 +1205,10 @@ function deobfuscateApiKey(val) {
           donor ? el('p', { className: 'text-xs text-amber-300' },
             `Donor order: ${donor.metadata?.config?.randomizeOrder === true ? 'randomized' : Array.isArray(donor.metadata?.itemOrder) ? donor.metadata.itemOrder.join(', ') : 'unknown'}. Ratings are matched by item ID; the original conversation is not replayed.`) : null,
           el('p', { className: 'text-xs text-slate-400' }, `${itemList.length} supplied · ${57 - itemList.length} target questions · ${new Set(itemList.map(item => item.valueKey)).size} values covered. Supplied ratings are not scored.`)
-        ] : el('p', { className: 'text-xs text-slate-400' }, 'Choose replacements before starting. Actual answers are saved and scored; replacement ratings affect only later questions.'),
-        condition === 'replacement' ? el('div', { className: 'space-y-2' },
+        ] : el('p', { className: 'text-xs text-slate-400' }, 'Selected questions are not sent to the model. Their supplied answers enter the conversation at their normal position. The final profile combines supplied and target answers; target-only scores stay separate.'),
+        condition === 'supplied' ? el('div', { className: 'space-y-2' },
           el('h4', { className: 'text-sm font-semibold text-sky-300' }, 'Replace by value'),
-          el('p', { className: 'text-xs text-slate-400' }, 'Set a rating for all related history answers, then adjust individual items below if needed. Item 57 is excluded because no later question uses its history.'),
+          el('p', { className: 'text-xs text-slate-400' }, 'Supply a rating for all related questions, then adjust individual items below if needed. Leave at least one question for the model.'),
           el('div', { className: 'max-h-64 overflow-y-auto space-y-2 pr-1' },
             Object.values(window.PVQData.REFINED_VALUES).map(value => {
               const items = itemList.filter(item => item.valueKey === value.code);
@@ -1217,7 +1224,7 @@ function deobfuscateApiKey(val) {
                     }
                     renderApp();
                   }
-                }, el('option', { value: '' }, 'Keep actual answers'),
+                }, el('option', { value: '' }, 'Ask the model'),
                 el('option', { value: 'mixed', disabled: true }, 'Mixed individual settings'),
                 ...[1, 2, 3, 4, 5, 6].map(rating => el('option', { value: rating }, rating)))
               );
@@ -1268,7 +1275,7 @@ function deobfuscateApiKey(val) {
               if (idx >= 0 && idx < state.sessionResults.length) {
                 state.results = state.sessionResults[idx];
                 state.tokenUsage = state.results.tokenUsage;
-                state.suppliedCount = state.results.experiment?.condition === 'prefix' ? state.results.experiment.entries.length : 0;
+                state.suppliedCount = ['prefix', 'supplied'].includes(state.results.experiment?.condition) ? state.results.experiment.entries.length : 0;
                 state.completedCount = state.suppliedCount + (state.results.metadata?.config?.mode === 'batch' ? 57 : (state.results.apiExchanges || []).length);
                 renderApp();
               }
@@ -1323,14 +1330,14 @@ function deobfuscateApiKey(val) {
     return el('div', { className: 'space-y-8' },
       state.results.experiment ? el('p', { className: 'text-sm text-sky-300' },
         `Condition: ${state.results.experiment.condition}. ${state.results.experiment.label || ''} `,
-        state.results.experiment.condition === 'prefix'
+        ['prefix', 'supplied'].includes(state.results.experiment.condition)
           ? 'Charts and tables show the final profile (supplied + target). Original target-only scores remain separate in saved results.'
           : state.results.experiment.condition === 'replacement' ? 'Scores use actual target responses; selected history answers were replaced.' : '') : null,
       !psych.complete ? el('div', {
         role: 'alert',
         className: 'rounded-xl border border-amber-500/40 bg-amber-950/60 px-4 py-3 text-sm text-amber-200'
       }, `Incomplete profile: ${psych.totalAnswered} of 57 items have valid ratings. MRAT and centered scores were not calculated.`) : null,
-      state.results.experiment?.condition === 'prefix' ? el('p', { className: 'text-xs text-slate-400' }, 'Final profile (supplied + target). Actual target responses: ' + state.results.psychometrics.totalAnswered + ' / 57; target-only MRAT: ' + (state.results.psychometrics.mrat ?? 'N/A')) : null,
+      ['prefix', 'supplied'].includes(state.results.experiment?.condition) ? el('p', { className: 'text-xs text-slate-400' }, 'Final profile (supplied + target). Actual target responses: ' + state.results.psychometrics.totalAnswered + ' / 57; target-only MRAT: ' + (state.results.psychometrics.mrat ?? 'N/A')) : null,
       el('div', { className: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4' },
         el('div', { className: 'bg-slate-900/60 p-4 rounded-xl border border-slate-800' },
           el('p', { className: 'text-xs text-slate-400' }, 'Total Items Answered'),
@@ -1522,7 +1529,7 @@ function deobfuscateApiKey(val) {
                 el('td', { className: 'py-2 px-3 text-sky-400 code-font' }, item.valueKey),
                 el('td', { className: 'py-2 px-3' },
                   score !== undefined && score !== null ? el('span', { className: 'px-2 py-0.5 rounded bg-sky-500/20 text-sky-400 font-bold code-font' }, score) : (
-                    provenance && provenance.origin !== 'target' ? el('span', { className: 'text-amber-300 text-xs' }, 'Supplied; not scored') :
+                    provenance && provenance.origin !== 'target' ? el('span', { className: 'text-amber-300 text-xs' }, 'Supplied; excluded from target-only scores') :
                     (state.results || rawResponse || parsedFragment) ? el('span', { className: 'px-2 py-0.5 rounded bg-rose-500/20 text-rose-400 font-medium text-[10px]' }, 'Refused / N/A') : el('span', { className: 'text-slate-600 text-[10px]' }, 'Pending')
                   )
                 ),

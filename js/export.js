@@ -42,7 +42,7 @@
     if (record.experiment) results.experiment = record.experiment;
     results.itemProvenance = record.itemProvenance || {};
     results.combinedPsychometrics = record.combinedPsychometrics || null;
-    if (!results.combinedPsychometrics && results.experiment?.condition === 'prefix') {
+    if (!results.combinedPsychometrics && ['prefix', 'supplied'].includes(results.experiment?.condition)) {
       const interventions = typeof window !== 'undefined' && window.ContextIntervention
         ? window.ContextIntervention : require('./context_intervention.js');
       const scoring = typeof window !== 'undefined' && window.Psychometrics
