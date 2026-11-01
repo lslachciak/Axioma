@@ -66,7 +66,9 @@
     if (config.mode !== 'sequential' || config.keepContext !== true || config.randomizeOrder) {
       throw new Error('Context interventions require sequential mode, history enabled, and fixed order.');
     }
-    if (!entries.length || entries.length > 56) throw new Error('Supply between 1 and 56 intervention answers.');
+    if (!entries.length || entries.length > 56) throw new Error(condition === 'supplied'
+      ? 'Select 1–56 of the 57 items to inject. Leave at least one question for the model.'
+      : 'Supply between 1 and 56 intervention answers.');
     const maxItemId = condition === 'supplied' ? 57 : 56;
     const seen = new Set();
     for (const entry of entries) {
